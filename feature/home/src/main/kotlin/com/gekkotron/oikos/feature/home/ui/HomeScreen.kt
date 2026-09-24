@@ -53,11 +53,11 @@ import com.gekkotron.oikos.model.Command
 import java.time.LocalTime
 
 @Composable
-fun HomeRoute(viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeRoute(onSetUpAgain: () -> Unit = {}, viewModel: HomeViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send)
-    HomeScreen(state, viewModel::select, viewModel::tap, viewModel::send, snackbar)
+    HomeScreen(state, viewModel::select, viewModel::tap, viewModel::send, snackbar, onSetUpAgain = onSetUpAgain)
 }
 
 @Composable
@@ -69,9 +69,11 @@ fun HomeScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     now: LocalTime = LocalTime.now(),
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    onSetUpAgain: () -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var linkSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -95,7 +97,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }) }
                 item(key = "chips", span = { GridItemSpan(maxLineSpan) }) { HomeChips(state, onSelect) }
                 if (state.loading) {
                     item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
@@ -124,17 +126,20 @@ fun HomeScreen(
     if (sheetCard != null) {
         ControlSheet(sheetCard, onSend = { onSend(sheetCard.id, it) }, onDismiss = { sheetId = null })
     }
+    if (linkSheet) {
+        LinkSheet(state.link, onSetUpAgain = { linkSheet = false; onSetUpAgain() }, onDismiss = { linkSheet = false })
+    }
 }
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}) {
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = OikosTheme.type.display, modifier = Modifier.weight(1f))
             state.hero?.let { Text(cardValueText(it.value), style = OikosTheme.type.display) }
         }
         Spacer(Modifier.height(8.dp))
-        LinkPill(state.link)
+        LinkPill(state.link, onClick = onPillClick)
     }
 }
 

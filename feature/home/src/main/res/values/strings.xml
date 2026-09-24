@@ -63,4 +63,13 @@
     <string name="home_not_confirmed">Not confirmed</string>
     <string name="home_retry">Retry</string>
     <string name="home_rejected">Command refused: %1$s</string>
+    <string name="link_details">Connection details</string>
+    <string name="link_direct">Connected directly to your broker.</string>
+    <string name="link_gateway">Connected through the gateway.</string>
+    <string name="link_demo">You\'re exploring the demo house. Nothing leaves this phone.</string>
+    <string name="link_connecting">Connecting to your broker…</string>
+    <string name="link_reconnecting">Connection lost. Reconnecting (attempt %1$d)…</string>
+    <string name="link_rejected">The broker rejected the username or password.</string>
+    <string name="link_offline">Offline: %1$s</string>
+    <string name="link_set_up_again">Set up connection again</string>
 </resources>
