@@ -10,15 +10,21 @@ import com.gekkotron.oikos.source.MqttDiscoverySource
 import com.gekkotron.oikos.transport.DirectFailure
 import com.gekkotron.oikos.transport.DirectMqttTransport
 import com.gekkotron.oikos.transport.LinkState
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -28,6 +34,7 @@ import kotlin.time.Duration.Companion.seconds
 class DirectConnectionTester(
     private val clientId: suspend () -> String,
     private val connectTimeout: Duration = 5.seconds,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ConnectionTester {
     override fun test(draft: ConnectionProfile.Direct): Flow<TestState> = channelFlow {
         send(TestState.Connecting)
@@ -49,12 +56,23 @@ class DirectConnectionTester(
                 return@channelFlow
             }
             val source = MqttDiscoverySource(transport, this, prefix = draft.prefix)
+            // conflate() keeps only the latest pending list while this collector is delaying, so a burst of
+            // retained configs never grows the UI update rate past CONNECTED_THROTTLE, and the delay after
+            // send (rather than a fixed-interval sample) guarantees the final list is always the one delivered.
             combine(source.devices, source.entities, ::deviceNames)
                 .distinctUntilChanged()
-                .collect { send(TestState.Connected(it)) }
+                .conflate()
+                .collect { names ->
+                    send(TestState.Connected(names))
+                    delay(CONNECTED_THROTTLE)
+                }
         } finally {
             withContext(NonCancellable) { transport.close() }
         }
+    }.flowOn(dispatcher)
+
+    private companion object {
+        val CONNECTED_THROTTLE = 250.milliseconds
     }
 }
 

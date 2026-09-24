@@ -14,11 +14,13 @@ import com.gekkotron.oikos.transport.testing.EmbeddedBroker
 import com.gekkotron.oikos.transport.testing.freePort
 import com.hivemq.client.mqtt.datatypes.MqttQos
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 class DirectConnectionTesterTest {
@@ -59,6 +61,43 @@ class DirectConnectionTesterTest {
         val b = broker(credentials = "oikos" to "secret")
         val result = withTimeout(10.seconds) { tester.test(draft(b.port, "oikos", "wrong")).first { it is TestState.Failed } }
         assertEquals(TestState.Failed(TestFailure.Rejected), result)
+    }
+
+    @Test
+    fun `a burst of retained discovery configs collapses into far fewer Connected emissions, with the last one complete`() = runBlocking {
+        val b = broker()
+        val peer = b.peer()
+        val count = 60
+        repeat(count) { i ->
+            val id = "device-$i"
+            val name = "Device %02d".format(i)
+            val config = """{"name":"Dev $i","unique_id":"$id","command_topic":"$id/set","state_topic":"$id/state",
+                "device":{"identifiers":["$id"],"name":"$name"}}"""
+            peer.publishWith().topic("homeassistant/switch/$id/config").payload(config.encodeToByteArray())
+                .qos(MqttQos.AT_LEAST_ONCE).retain(true).send()
+        }
+        var connectedEmissions = 0
+        val marks = mutableListOf<Long>()
+        val last = withTimeout(15.seconds) {
+            tester.test(draft(b.port))
+                .onEach { if (it is TestState.Connected) { connectedEmissions++; marks += System.nanoTime() } }
+                .first { it is TestState.Connected && it.devices.size == count }
+        } as TestState.Connected
+        val gapsMs = marks.zipWithNext { a, z -> (z - a) / 1_000_000 }
+        val expected = (0 until count).map { "Device %02d".format(it) }.sortedBy { it.lowercase() }
+        assertEquals(expected, last.devices)
+        assertTrue(
+            connectedEmissions < count / 2,
+            "expected far fewer than $count Connected emissions for a burst of $count configs, got $connectedEmissions",
+        )
+        // The throttle guarantees at most one Connected update per ~250ms; allow scheduling jitter down to 200ms.
+        if (gapsMs.isNotEmpty()) {
+            assertTrue(
+                gapsMs.min() >= 200,
+                "expected Connected emissions at least ~250ms apart, got gaps (ms): $gapsMs",
+            )
+        }
+        peer.disconnect()
     }
 
     @Test

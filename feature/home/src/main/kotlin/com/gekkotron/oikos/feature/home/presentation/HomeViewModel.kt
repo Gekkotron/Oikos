@@ -7,22 +7,35 @@ import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.source.EntitySource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
+import javax.inject.Qualifier
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DefaultDispatcher
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val source: EntitySource,
     private val savedState: SavedStateHandle,
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
+    // conflate() collapses a burst of state messages to one rebuild per collection turn instead of one
+    // per message, and flowOn moves the combine (and HomeUiBuilder.build) off Main; the final value is
+    // never dropped.
     val state: StateFlow<HomeUiState> = combine(
         source.entities,
         source.states(),
@@ -31,7 +44,7 @@ class HomeViewModel @Inject constructor(
         source.link,
     ) { entities, states, areas, key, link ->
         HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+    }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
     val events: Flow<HomeEvent> = _events.receiveAsFlow()

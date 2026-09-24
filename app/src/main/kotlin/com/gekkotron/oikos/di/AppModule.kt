@@ -9,6 +9,7 @@ import com.gekkotron.oikos.connection.toSpec
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.demo.DemoBroker
+import com.gekkotron.oikos.feature.home.presentation.DefaultDispatcher
 import com.gekkotron.oikos.feature.onboarding.ConnectionTester
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.ActiveTransport
@@ -19,6 +20,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +41,10 @@ object AppModule {
     @Singleton
     @ApplicationScope
     fun applicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @Provides
+    @DefaultDispatcher
+    fun defaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
 
     @Provides
     @Singleton

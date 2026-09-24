@@ -44,7 +44,7 @@ class HomeViewModelTest {
 
     @Test
     fun `state reflects the source`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle())
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
         backgroundScope.launch { vm.state.collect {} }
         assertFalse(vm.state.value.loading)
         assertEquals(setOf("lamp", "shutter"), vm.state.value.cards.map { it.id }.toSet())
@@ -53,8 +53,8 @@ class HomeViewModelTest {
     @Test
     fun `selected room survives recreation`() = runTest(dispatcher) {
         val handle = SavedStateHandle()
-        HomeViewModel(source, handle).select(RoomFilter.Area("kitchen"))
-        val recreated = HomeViewModel(source, handle)
+        HomeViewModel(source, handle, dispatcher).select(RoomFilter.Area("kitchen"))
+        val recreated = HomeViewModel(source, handle, dispatcher)
         backgroundScope.launch { recreated.state.collect {} }
         assertEquals(RoomFilter.Area("kitchen"), recreated.state.value.selected)
     }
@@ -62,7 +62,7 @@ class HomeViewModelTest {
     @Test
     fun `tapping sends an absolute on-off so Retry repeats the intent, and ignores sheet cards`() = runTest(dispatcher) {
         source.entities.value += "off" to testEntity("off", Kind.SWITCH, area = "kitchen")
-        val vm = HomeViewModel(source, SavedStateHandle())
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
         backgroundScope.launch { vm.state.collect {} }
         val cards = vm.state.value.cards.associateBy { it.id }
         vm.tap(cards.getValue("lamp"))
@@ -73,7 +73,7 @@ class HomeViewModelTest {
 
     @Test
     fun `unconfirmed command becomes a NotConfirmed event`() = runTest(dispatcher) {
-        val vm = HomeViewModel(source, SavedStateHandle())
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
         source.commandFailures.emit(CommandFailure("lamp", Command.Toggle, "timeout"))
         assertEquals(HomeEvent.NotConfirmed("lamp", Command.Toggle), vm.events.first())
     }
@@ -81,8 +81,19 @@ class HomeViewModelTest {
     @Test
     fun `rejected command becomes a Rejected event`() = runTest(dispatcher) {
         source.result = CommandResult.Rejected("unavailable")
-        val vm = HomeViewModel(source, SavedStateHandle())
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
         vm.send("lamp", Command.TurnOff)
         assertEquals(HomeEvent.Rejected("lamp", "unavailable"), vm.events.first())
+    }
+
+    @Test
+    fun `a burst of state updates collapses, with the final state reflecting the last update`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        repeat(50) { i ->
+            source.stateMap.value = mapOf("lamp" to EntityState("lamp", StateValue.Light(on = i % 2 == 0, brightness = i)))
+        }
+        val lamp = vm.state.value.cards.first { it.id == "lamp" }
+        assertFalse(lamp.on)
     }
 }
