@@ -36,18 +36,15 @@ interface KindMapper {
 
 object KindMappers {
     fun forKind(kind: Kind): KindMapper = when (kind) {
-        Kind.SWITCH -> SwitchMapper
-        Kind.BINARY_SENSOR -> BinarySensorMapper
-        Kind.SENSOR -> SensorMapper
-        Kind.BUTTON -> ButtonMapper
         Kind.LIGHT -> LightMapper
+        Kind.SWITCH -> SwitchMapper
         Kind.COVER -> CoverMapper
         Kind.CLIMATE -> ClimateMapper
-        else -> UnmappedKind // replaced by real mappers in Tasks 6–8
+        Kind.SENSOR -> SensorMapper
+        Kind.BINARY_SENSOR -> BinarySensorMapper
+        Kind.ALARM_PANEL -> AlarmPanelMapper
+        Kind.NUMBER -> NumberMapper
+        Kind.SELECT -> SelectMapper
+        Kind.BUTTON -> ButtonMapper
     }
-}
-
-private object UnmappedKind : KindMapper {
-    override fun stateTopics(b: MqttBindings): Set<String> = emptySet()
-    override fun decode(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded = Decoded.Ignored
 }
