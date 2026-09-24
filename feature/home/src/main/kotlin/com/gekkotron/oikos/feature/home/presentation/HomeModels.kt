@@ -1,0 +1,88 @@
+package com.gekkotron.oikos.feature.home.presentation
+
+import com.gekkotron.oikos.model.AlarmState
+import com.gekkotron.oikos.model.Capabilities
+import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.CoverState
+import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.transport.LinkState
+
+sealed interface RoomFilter {
+    val key: String
+
+    data object All : RoomFilter {
+        override val key = "all"
+    }
+
+    data object Favorites : RoomFilter {
+        override val key = "favorites"
+    }
+
+    data class Area(val id: String) : RoomFilter {
+        override val key get() = AREA_PREFIX + id
+    }
+
+    companion object {
+        private const val AREA_PREFIX = "area:"
+
+        fun fromKey(key: String): RoomFilter = when {
+            key == Favorites.key -> Favorites
+            key.startsWith(AREA_PREFIX) -> Area(key.removePrefix(AREA_PREFIX))
+            else -> All
+        }
+    }
+}
+
+/** A null [label] is localized by the UI: All, Favourites or Unassigned. */
+data class ChipUi(val filter: RoomFilter, val label: String?)
+
+enum class TapAction { TOGGLE, PRESS, OPEN_SHEET, NONE }
+
+/** What a card shows, before localisation. */
+sealed interface CardValue {
+    data object None : CardValue
+    data class OnOff(val on: Boolean) : CardValue
+    data class Brightness(val percent: Int) : CardValue
+    data class Measurement(val text: String, val unit: String?) : CardValue
+    data class Text(val value: String) : CardValue
+    data class Cover(val state: CoverState, val position: Int?) : CardValue
+    data class Climate(val current: String?, val target: String?, val mode: String?) : CardValue
+    data class Alarm(val state: AlarmState) : CardValue
+    data class Contact(val deviceClass: String?, val on: Boolean) : CardValue
+}
+
+data class CardUi(
+    val id: String,
+    val name: String,
+    val kind: Kind,
+    val deviceClass: String?,
+    /** Null means Unassigned (localized by the UI). */
+    val areaName: String?,
+    val value: CardValue,
+    val state: StateValue,
+    val capabilities: Capabilities,
+    val unit: String?,
+    val on: Boolean,
+    val wide: Boolean,
+    val available: Boolean,
+    val pending: Boolean,
+    val tap: TapAction,
+    val hasSheet: Boolean,
+)
+
+data class HomeUiState(
+    val loading: Boolean = true,
+    val link: LinkState = LinkState.Connecting,
+    val hero: CardUi? = null,
+    val chips: List<ChipUi> = listOf(ChipUi(RoomFilter.All, null)),
+    val selected: RoomFilter = RoomFilter.All,
+    val cards: List<CardUi> = emptyList(),
+) {
+    fun card(id: String): CardUi? = cards.firstOrNull { it.id == id } ?: hero?.takeIf { it.id == id }
+}
+
+sealed interface HomeEvent {
+    data class NotConfirmed(val id: String, val command: Command) : HomeEvent
+    data class Rejected(val id: String, val reason: String) : HomeEvent
+}
