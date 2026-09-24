@@ -3,7 +3,7 @@ package com.gekkotron.oikos.transport
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
-enum class TransportMode { DIRECT, GATEWAY }
+enum class TransportMode { DIRECT, GATEWAY, DEMO }
 
 sealed interface LinkState {
     data object Connecting : LinkState

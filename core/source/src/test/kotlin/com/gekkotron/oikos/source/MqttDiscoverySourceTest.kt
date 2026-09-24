@@ -8,6 +8,7 @@ import com.gekkotron.oikos.model.Diagnostic
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.MqttMessage
 import com.gekkotron.oikos.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,6 +54,13 @@ class MqttDiscoverySourceTest {
     }
 
     private suspend fun Harness.state(id: String) = source.states().first().getValue(id)
+
+    @Test
+    fun `link mirrors the transport`() = runTest {
+        val h = start()
+        h.transport.setLink(LinkState.Offline("test"))
+        assertEquals(LinkState.Offline("test"), h.source.link.value)
+    }
 
     @Test
     fun `subscribes to discovery and overrides first`() = runTest {

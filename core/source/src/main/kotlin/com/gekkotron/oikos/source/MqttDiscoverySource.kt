@@ -23,6 +23,7 @@ import com.gekkotron.oikos.state.StateStore
 import com.gekkotron.oikos.state.kinds.Encoded
 import com.gekkotron.oikos.state.kinds.KindMappers
 import com.gekkotron.oikos.state.mqtt.MqttBindings
+import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.MqttMessage
 import com.gekkotron.oikos.transport.MqttTransport
 import com.gekkotron.oikos.transport.PublishFailed
@@ -67,6 +68,7 @@ class MqttDiscoverySource(
     private val _areas = MutableStateFlow<List<Area>>(emptyList())
     override val areas: StateFlow<List<Area>> = _areas.asStateFlow()
     override val commandFailures: SharedFlow<CommandFailure> = tracker.failures
+    override val link: StateFlow<LinkState> = transport.link
 
     private val baseFilters = setOf("$prefix/#", "$UI_PREFIX#")
     private val stateTopics = MutableStateFlow<Set<String>>(emptySet())

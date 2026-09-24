@@ -8,12 +8,16 @@ import com.gekkotron.oikos.model.Device
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.transport.LinkState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** Where entities come from. v1: MQTT discovery; later: Home Assistant WebSocket (spec §4.3). */
 interface EntitySource {
+    /** Broker connection, for the status pill. */
+    val link: StateFlow<LinkState>
+
     /** After overrides are applied (name, area id, ui). */
     val entities: StateFlow<Map<String, Entity>>
     val devices: StateFlow<Map<String, Device>>
