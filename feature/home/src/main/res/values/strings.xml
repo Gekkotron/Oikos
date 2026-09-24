@@ -70,6 +70,11 @@
     <string name="link_connecting">Connecting to your broker…</string>
     <string name="link_reconnecting">Connection lost. Reconnecting (attempt %1$d)…</string>
     <string name="link_rejected">The broker rejected the username or password.</string>
-    <string name="link_offline">Offline: %1$s</string>
+    <string name="link_offline">Offline.</string>
+    <string name="link_offline_closed">The connection was closed.</string>
+    <string name="link_offline_paused">Paused while Oikos is in the background.</string>
+    <string name="link_offline_not_configured">No connection is set up.</string>
+    <string name="link_offline_not_started">Not connected yet.</string>
+    <string name="link_offline_failed">Couldn\'t start the connection.</string>
     <string name="link_set_up_again">Set up connection again</string>
 </resources>

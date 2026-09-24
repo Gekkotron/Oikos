@@ -9,12 +9,15 @@ sealed interface LinkState {
     data object Connecting : LinkState
     data class Connected(val mode: TransportMode) : LinkState
     data class Reconnecting(val attempt: Int) : LinkState
+    /** [reason] is one of the constants below; the UI maps each to its own text (never shows it raw). */
     data class Offline(val reason: String) : LinkState {
         companion object {
             const val NOT_CONFIGURED = "not configured"
             const val PAUSED = "paused"
             const val REJECTED = "broker rejected credentials"
             const val CLOSED = "closed"
+            const val NOT_STARTED = "not started"
+            const val FAILED = "failed to start"
         }
     }
 }

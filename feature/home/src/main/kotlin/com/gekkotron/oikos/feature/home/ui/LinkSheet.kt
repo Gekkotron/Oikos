@@ -46,6 +46,16 @@ private fun linkDescription(link: LinkState): String = when (link) {
         },
     )
     is LinkState.Reconnecting -> stringResource(R.string.link_reconnecting, link.attempt)
-    is LinkState.Offline ->
-        if (link.reason == LinkState.Offline.REJECTED) stringResource(R.string.link_rejected) else stringResource(R.string.link_offline, link.reason)
+    is LinkState.Offline -> stringResource(
+        when (link.reason) {
+            LinkState.Offline.REJECTED -> R.string.link_rejected
+            LinkState.Offline.CLOSED -> R.string.link_offline_closed
+            LinkState.Offline.PAUSED -> R.string.link_offline_paused
+            LinkState.Offline.NOT_CONFIGURED -> R.string.link_offline_not_configured
+            LinkState.Offline.NOT_STARTED -> R.string.link_offline_not_started
+            LinkState.Offline.FAILED -> R.string.link_offline_failed
+            // The reason constants are English; an unknown one is never shown raw.
+            else -> R.string.link_offline
+        },
+    )
 }

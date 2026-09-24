@@ -40,7 +40,7 @@ class DirectMqttTransport(
     reconnectMax: Duration = 30.seconds,
     private val publishTimeout: Duration = 10.seconds,
 ) : ManagedTransport {
-    private val _link = MutableStateFlow<LinkState>(LinkState.Offline(NOT_STARTED))
+    private val _link = MutableStateFlow<LinkState>(LinkState.Offline(LinkState.Offline.NOT_STARTED))
     override val link: StateFlow<LinkState> = _link.asStateFlow()
 
     private val _failure = MutableStateFlow<DirectFailure?>(null)
@@ -196,7 +196,6 @@ class DirectMqttTransport(
 
     private companion object {
         const val WS_PATH = "mqtt"
-        const val NOT_STARTED = "not started"
     }
 }
 

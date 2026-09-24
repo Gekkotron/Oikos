@@ -175,7 +175,7 @@ class ActiveTransportTest {
         )
         runCurrent()
         assertTrue(created[0].started)
-        assertEquals(LinkState.Offline(LinkState.Offline.CLOSED), t.link.value)
+        assertEquals(LinkState.Offline(LinkState.Offline.FAILED), t.link.value)
 
         specs.value = direct
         runCurrent()

@@ -129,7 +129,7 @@ class ActiveTransport(
         } catch (e: Exception) {
             // start() failed: surface it as offline but keep the pipeline alive so the next spec
             // change (or a later retry) can still run.
-            _link.value = LinkState.Offline(LinkState.Offline.CLOSED)
+            _link.value = LinkState.Offline(LinkState.Offline.FAILED)
             return
         }
         if (filters.isNotEmpty()) transport.setSubscriptions(filters)

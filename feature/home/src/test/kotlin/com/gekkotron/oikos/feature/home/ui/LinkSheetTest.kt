@@ -1,5 +1,8 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -42,6 +45,32 @@ class LinkSheetTest {
         show(LinkState.Offline(LinkState.Offline.REJECTED))
         compose.onNodeWithText("Offline").performClick()
         compose.onNodeWithText("The broker rejected the username or password.").assertExists()
+    }
+
+    @Test
+    fun `offline reasons are described in words, not as raw constants`() {
+        var link by mutableStateOf<LinkState>(LinkState.Offline(LinkState.Offline.CLOSED))
+        compose.setContent {
+            OikosTheme { HomeScreen(HomeUiState(loading = false, link = link), {}, {}, { _, _ -> }, onSetUpAgain = {}) }
+        }
+        compose.onNodeWithText("Offline").performClick()
+        compose.onNodeWithText("The connection was closed.").assertExists()
+        link = LinkState.Offline(LinkState.Offline.FAILED)
+        compose.onNodeWithText("Couldn't start the connection.").assertExists()
+        link = LinkState.Offline(LinkState.Offline.PAUSED)
+        compose.onNodeWithText("Paused while Oikos is in the background.").assertExists()
+        link = LinkState.Offline("something new")
+        compose.onNodeWithText("Offline.").assertExists()
+        compose.onNodeWithText("something new", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "fr-w411dp-h914dp")
+    fun `offline reasons are translated`() {
+        show(LinkState.Offline(LinkState.Offline.CLOSED))
+        compose.onNodeWithText("Hors ligne").performClick()
+        compose.onNodeWithText("La connexion a été fermée.").assertExists()
+        compose.onNodeWithText("closed", substring = true).assertDoesNotExist()
     }
 
     @Test
