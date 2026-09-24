@@ -1,0 +1,14 @@
+package com.gekkotron.oikos.model
+
+import java.time.Instant
+
+data class EntityState(
+    val uniqueId: String,
+    val value: StateValue,
+    val attributes: Map<String, Any?> = emptyMap(),
+    val available: Boolean = true,
+    /** Time of the last confirmed state; null until the first message. */
+    val lastUpdate: Instant? = null,
+    /** True while an optimistic command waits for confirmation. */
+    val pending: Boolean = false,
+)
