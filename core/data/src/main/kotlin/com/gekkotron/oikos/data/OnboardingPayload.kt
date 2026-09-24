@@ -1,0 +1,69 @@
+package com.gekkotron.oikos.data
+
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
+
+sealed interface PayloadError {
+    data object NotOikosCode : PayloadError
+    data class UnsupportedVersion(val version: Int) : PayloadError
+    data class InvalidField(val field: String) : PayloadError
+}
+
+sealed interface ParseResult {
+    data class Ok(val profile: ConnectionProfile.Direct) : ParseResult
+    data class Error(val error: PayloadError) : ParseResult
+}
+
+/** The setup QR code, format `v:1` (parent spec §5.2, this spec §4.4). */
+object OnboardingPayload {
+    fun parse(text: String): ParseResult {
+        val root = try {
+            Json.parseToJsonElement(text.trim()) as? JsonObject
+        } catch (e: IllegalArgumentException) {
+            null
+        } ?: return error(PayloadError.NotOikosCode)
+        val version = root.int("v") ?: return error(PayloadError.NotOikosCode)
+        if (version != 1) return error(PayloadError.UnsupportedVersion(version))
+
+        val local = root["local"] as? JsonObject ?: return invalid("local")
+        val host = local.string("host")?.trim()?.takeIf { it.isNotEmpty() } ?: return invalid("local.host")
+        val port = if ("port" in local) local.int("port")?.takeIf { it in 1..65535 } ?: return invalid("local.port") else 1883
+        val broker = LocalBroker(
+            host = host,
+            port = port,
+            tls = local.flag("tls") ?: return invalid("local.tls"),
+            ws = local.flag("ws") ?: return invalid("local.ws"),
+            username = local.string("user")?.takeIf { it.isNotEmpty() },
+            password = local.string("pass")?.takeIf { it.isNotEmpty() },
+        )
+
+        val gateway = (root["gateway"] as? JsonObject)?.let { g ->
+            val url = g.string("url")?.takeIf { it.startsWith("https://") && it.length > "https://".length }
+                ?: return invalid("gateway.url")
+            val key = g.string("key")?.let(::hexToBytes)?.takeIf { it.size == GatewayConfig.KEY_BYTES }
+                ?: return invalid("gateway.key")
+            GatewayConfig(url, key, g.string("broker_host")?.takeIf { it.isNotEmpty() })
+        }
+        val prefix = if ("prefix" in root) root.string("prefix")?.trim()?.takeIf { it.isNotEmpty() } ?: return invalid("prefix") else DEFAULT_PREFIX
+        val tokenTopic = (root["push"] as? JsonObject)?.string("token_topic")?.takeIf { it.isNotEmpty() }
+        return ParseResult.Ok(ConnectionProfile.Direct(broker, prefix, gateway, tokenTopic))
+    }
+
+    private fun error(e: PayloadError) = ParseResult.Error(e)
+    private fun invalid(field: String) = ParseResult.Error(PayloadError.InvalidField(field))
+
+    private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+    private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
+
+    /** Absent means false; present but not a JSON boolean means invalid (null). */
+    private fun JsonObject.flag(key: String): Boolean? =
+        if (key !in this) false else (this[key] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+
+    private fun hexToBytes(hex: String): ByteArray? {
+        if (hex.length % 2 != 0 || hex.any { it.digitToIntOrNull(16) == null }) return null
+        return ByteArray(hex.length / 2) { i -> ((hex[2 * i].digitToInt(16) shl 4) or hex[2 * i + 1].digitToInt(16)).toByte() }
+    }
+}
