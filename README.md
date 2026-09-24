@@ -8,7 +8,7 @@ A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack 
 
 Oikos talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Athena-HttpMqttGateway](https://github.com/Gekkotron/Athena-HttpMqttGateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
-> **Status:** foundation in progress. The pure-Kotlin core (discovery, templates, state, crypto) is built and tested; transports and UI come next. See the [design spec](docs/superpowers/specs/2026-09-24-oikos-design.md) and [mockups](docs/design/mockups/).
+> **Status:** foundation and demo Home screen. The core and the Home screen run against a built-in demo house; real broker transports come next. See the [design spec](docs/superpowers/specs/2026-09-24-oikos-design.md) and [mockups](docs/design/mockups/).
 
 ## Modules
 
@@ -19,6 +19,21 @@ Oikos talks **MQTT** directly. It connects to your local broker at home and goes
 | `:core:transport` | `MqttTransport` contract and topic matching (+ a test fake) |
 | `:core:state` | Jinja-subset templates, one mapper per kind, `StateStore`, optimistic `CommandTracker` |
 | `:core:source` | HA MQTT Discovery parser and `MqttDiscoverySource` |
+| `:core:demo` | In-process demo broker with a fake house (discovery, state, echoed commands, live power) |
+| `:core:designsystem` | Night Glass / Warm Minimal tokens, bundled Inter + Fraunces, cards, pill, chips |
+| `:feature:home` | Home screen: rooms, cards, control sheet |
+| `:app` | Hilt graph, Navigation 3, demo-mode wiring |
+
+## Try the demo
+
+With a phone connected over USB (developer mode on):
+
+```bash
+./gradlew :app:installDebug
+adb shell am start -n com.gekkotron.oikos.debug/com.gekkotron.oikos.MainActivity
+```
+
+The debug build talks to a built-in demo house, so no broker is needed.
 
 Build and test: `./gradlew check koverXmlReport`.
 

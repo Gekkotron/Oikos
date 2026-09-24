@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -48,7 +49,6 @@ import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
-import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,6 +122,7 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     val max = caps.maxTemp ?: 35.0
     val step = caps.tempStep ?: 1.0
     val target = climate?.target ?: climate?.current ?: ((min + max) / 2)
+    val locale = LocalConfiguration.current.locales[0]
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
     Text(stringResource(R.string.sheet_target))
@@ -131,7 +132,7 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             enabled = target > min,
             modifier = Modifier.semantics { contentDescription = decrease },
         ) { Text("−", fontSize = 22.sp) }
-        Text(CardFormatter.number(target, Locale.getDefault()) + "°", style = OikosTheme.type.display)
+        Text(CardFormatter.number(target, locale) + "°", style = OikosTheme.type.display)
         FilledTonalIconButton(
             onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, step, min, max))) },
             enabled = target < max,
@@ -154,8 +155,9 @@ private fun NumberControls(card: CardUi, onSend: (Command) -> Unit) {
     val current = (card.state as? StateValue.Numeric)?.value ?: min
     var value by remember(current) { mutableFloatStateOf(current.toFloat()) }
     val steps = ((max - min) / step).roundToInt() - 1
+    val locale = LocalConfiguration.current.locales[0]
     Text(
-        listOfNotNull(CardFormatter.number(StepMath.snap(value.toDouble(), min, step), Locale.getDefault()), card.unit).joinToString(" "),
+        listOfNotNull(CardFormatter.number(StepMath.snap(value.toDouble(), min, step), locale), card.unit).joinToString(" "),
         style = OikosTheme.type.display,
     )
     Slider(
