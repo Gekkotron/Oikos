@@ -1,0 +1,1 @@
+{"name":"Relay","~":"tasmota_ABC123/","stat_t":"~stat/RESULT","cmd_t":"~cmnd/POWER","val_tpl":"{{value_json.POWER}}","pl_on":"ON","pl_off":"OFF","avty_t":"~tele/LWT","pl_avail":"Online","pl_not_avail":"Offline","uniq_id":"ABC123_RL_1","dev":{"ids":["ABC123"],"name":"Tasmota","mdl":"Sonoff Basic","mf":"ITEAD","sw":"13.0","sa":"Garage"}}
