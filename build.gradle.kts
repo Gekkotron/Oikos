@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     kover(project(":core:model"))
+    kover(project(":core:crypto"))
 }
