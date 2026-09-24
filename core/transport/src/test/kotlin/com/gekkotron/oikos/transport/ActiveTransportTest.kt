@@ -144,4 +144,40 @@ class ActiveTransportTest {
         }
         assertFalse(created.single().closed)
     }
+
+    @Test
+    fun `a transport whose close throws does not block the next transport`() = runTest {
+        val specs = MutableStateFlow<TransportSpec?>(TransportSpec.Demo)
+        val t = ActiveTransport(
+            specs,
+            { spec -> FakeManagedTransport(spec, failClose = created.isEmpty()).also(created::add) },
+            backgroundScope,
+        )
+        runCurrent()
+        specs.value = direct
+        runCurrent()
+        assertTrue(created[0].closed)
+        assertEquals(direct, created[1].spec)
+        assertTrue(created[1].started)
+        assertEquals(t.link.value, created[1].fake.link.value)
+    }
+
+    @Test
+    fun `a transport whose start throws surfaces offline and a later spec still starts`() = runTest {
+        val specs = MutableStateFlow<TransportSpec?>(TransportSpec.Demo)
+        val t = ActiveTransport(
+            specs,
+            { spec -> FakeManagedTransport(spec, failStart = created.isEmpty()).also(created::add) },
+            backgroundScope,
+        )
+        runCurrent()
+        assertTrue(created[0].started)
+        assertEquals(LinkState.Offline(LinkState.Offline.CLOSED), t.link.value)
+
+        specs.value = direct
+        runCurrent()
+        assertEquals(direct, created[1].spec)
+        assertTrue(created[1].started)
+        assertEquals(t.link.value, created[1].fake.link.value)
+    }
 }

@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.transport
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -90,7 +91,14 @@ class ActiveTransport(
         val old = mutex.withLock { current.also { current = null } }
         if (old != null) {
             old.jobs.forEach { it.cancel() }
-            old.transport.close()
+            try {
+                old.transport.close()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // close() is contractually quiet (spec §3.2); a failure here must not stop the
+                // pipeline from reacting to the next spec change.
+            }
         }
         when (target) {
             Target.Paused -> _link.value = LinkState.Offline(LinkState.Offline.PAUSED)
@@ -110,7 +118,16 @@ class ActiveTransport(
             current = Running(transport, jobs)
             subscriptions
         }
-        transport.start()
+        try {
+            transport.start()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // start() failed: surface it as offline but keep the pipeline alive so the next spec
+            // change (or a later retry) can still run.
+            _link.value = LinkState.Offline(LinkState.Offline.CLOSED)
+            return
+        }
         if (filters.isNotEmpty()) transport.setSubscriptions(filters)
     }
 }
