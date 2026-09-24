@@ -6,7 +6,6 @@ import com.gekkotron.oikos.connection.EntitySourceSession
 import com.gekkotron.oikos.connection.clientIdFor
 import com.gekkotron.oikos.connection.setupClientIdFor
 import com.gekkotron.oikos.connection.toSpec
-import com.gekkotron.oikos.data.DEFAULT_PREFIX
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.demo.DemoBroker
@@ -66,10 +65,10 @@ object AppModule {
     fun entitySourceSession(transport: MqttTransport, @ApplicationScope scope: CoroutineScope): EntitySourceSession =
         EntitySourceSession(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") })
 
-    /** Unscoped: each new Home gets the source for the current prefix (spec §2). Home only exists while Ready. */
+    /** Unscoped: each new Home gets the source for the current profile (spec §2). Home only exists while Ready. */
     @Provides
     fun entitySource(session: EntitySourceSession, profiles: ProfileRepository): EntitySource =
-        session.current((profiles.state.value as? ProfileState.Ready)?.profile?.prefix ?: DEFAULT_PREFIX)
+        session.current((profiles.state.value as? ProfileState.Ready)?.profile)
 
     @Provides
     @Singleton
