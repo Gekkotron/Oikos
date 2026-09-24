@@ -1,5 +1,7 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -13,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h914dp")
@@ -46,5 +49,13 @@ class LinkSheetTest {
         show(LinkState.Reconnecting(3))
         compose.onNodeWithText("Reconnecting…").performClick()
         compose.onNodeWithText("Reconnecting (attempt 3)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `status description is announced with polite live region`() {
+        show(LinkState.Connected(TransportMode.DIRECT))
+        compose.onNodeWithText("Wi-Fi direct").performClick()
+        val statusNode = compose.onNodeWithText("Connected directly to your broker.")
+        assertEquals(LiveRegionMode.Polite, statusNode.fetchSemanticsNode().config[SemanticsProperties.LiveRegion])
     }
 }

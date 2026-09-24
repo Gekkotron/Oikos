@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -12,6 +14,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
@@ -23,8 +28,8 @@ import com.gekkotron.oikos.transport.TransportMode
 @Composable
 internal fun LinkSheet(link: LinkState, onSetUpAgain: () -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(linkDescription(link), style = OikosTheme.type.body)
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(linkDescription(link), style = OikosTheme.type.body, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             OutlinedButton(onClick = onSetUpAgain, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_set_up_again)) }
         }
     }
