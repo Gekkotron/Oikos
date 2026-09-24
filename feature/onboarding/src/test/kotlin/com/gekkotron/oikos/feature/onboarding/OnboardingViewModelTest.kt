@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -27,6 +28,7 @@ import org.junit.rules.TemporaryFolder
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
@@ -158,6 +160,23 @@ class OnboardingViewModelTest {
         vm.finish()
         assertEquals(ProfileState.Ready(qrProfile), profiles.state.first { it is ProfileState.Ready })
         assertEquals(0, tester.active)
+    }
+
+    @Test
+    fun `a failed save shows an error instead of crashing, and continue can be tried again`() = runBlocking {
+        secrets.failEncrypt = true
+        vm.openScan()
+        vm.onQrScanned(qr)
+        tester.result.value = TestState.Connected(listOf("Kettle"))
+        vm.finish()
+        val failed = withTimeout(10.seconds) { vm.state.first { it.saveFailed && !it.saving } }
+        assertEquals(Step.CONNECT, failed.step)
+        assertEquals(ProfileState.None, profiles.state.first { it !is ProfileState.Loading })
+
+        secrets.failEncrypt = false
+        vm.finish()
+        assertEquals(ProfileState.Ready(qrProfile), withTimeout(10.seconds) { profiles.state.first { it is ProfileState.Ready } })
+        assertFalse(vm.state.value.saveFailed)
     }
 
     @Test

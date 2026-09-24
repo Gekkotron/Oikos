@@ -45,6 +45,25 @@ class OnboardingScreensTest {
         compose.onNodeWithText("Try the demo").performClick()
         assertEquals(listOf("scan", "manual", "demo"), calls)
         compose.onNodeWithText("couldn't be unlocked", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Couldn't save the connection", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a failed save is shown on welcome and connect`() {
+        var connect by mutableStateOf(false)
+        compose.setContent {
+            OikosTheme {
+                if (connect) {
+                    ConnectScreen(TestState.Connected(listOf("Kettle")), saving = false, {}, {}, {}, saveFailed = true)
+                } else {
+                    WelcomeScreen(locked = false, busy = false, {}, {}, {}, saveFailed = true)
+                }
+            }
+        }
+        compose.onNodeWithText("Couldn't save the connection", substring = true).assertExists()
+        connect = true
+        compose.onNodeWithText("Couldn't save the connection", substring = true).assertExists()
+        compose.onNodeWithText("Continue").assertIsEnabled()
     }
 
     @Test

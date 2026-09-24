@@ -9,6 +9,7 @@ import com.gekkotron.oikos.data.PayloadError
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +31,8 @@ data class OnboardingUiState(
     val showFormErrors: Boolean = false,
     val test: TestState = TestState.Connecting,
     val saving: Boolean = false,
+    /** The profile couldn't be saved (a Keystore or disk failure); the user can try again. */
+    val saveFailed: Boolean = false,
 ) {
     val formErrors: Set<FormField> get() = if (showFormErrors) form.errors() else emptySet()
 }
@@ -57,10 +60,7 @@ class OnboardingViewModel @Inject constructor(
     fun openManual() = go(Step.MANUAL)
 
     fun tryDemo() {
-        viewModelScope.launch {
-            _state.update { it.copy(saving = true) }
-            profiles.save(ConnectionProfile.Demo)
-        }
+        viewModelScope.launch { save(ConnectionProfile.Demo) }
     }
 
     /** Called for every decoded QR frame; the camera keeps reporting the same code, so repeats are ignored. */
@@ -97,10 +97,10 @@ class OnboardingViewModel @Inject constructor(
         val profile = draft ?: return
         if (_state.value.test !is TestState.Connected) return
         viewModelScope.launch {
-            _state.update { it.copy(saving = true) }
+            _state.update { it.copy(saving = true, saveFailed = false) }
             // Close the test connection first: it must not overlap the app's own connection.
             testJob?.cancelAndJoin()
-            profiles.save(profile)
+            save(profile)
         }
     }
 
@@ -122,13 +122,28 @@ class OnboardingViewModel @Inject constructor(
 
     private fun go(step: Step) {
         if (step == Step.SCAN) lastRejectedScan = null
-        _state.update { it.copy(step = step, scanError = null) }
+        _state.update { it.copy(step = step, scanError = null, saveFailed = false) }
+    }
+
+    /**
+     * Saving encrypts the secrets (Keystore) and writes the file; either can fail. A failure shows an
+     * error and re-enables the buttons instead of crashing. On success the app switches to Home.
+     */
+    private suspend fun save(profile: ConnectionProfile) {
+        _state.update { it.copy(saving = true, saveFailed = false) }
+        try {
+            profiles.save(profile)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _state.update { it.copy(saving = false, saveFailed = true) }
+        }
     }
 
     private fun connect(profile: ConnectionProfile.Direct, from: Step) {
         origin = from
         draft = profile
-        _state.update { it.copy(step = Step.CONNECT, scanError = null) }
+        _state.update { it.copy(step = Step.CONNECT, scanError = null, saveFailed = false) }
         startTest(profile)
     }
 

@@ -22,7 +22,14 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.onboarding.R
 
 @Composable
-internal fun WelcomeScreen(locked: Boolean, busy: Boolean, onScan: () -> Unit, onManual: () -> Unit, onDemo: () -> Unit) {
+internal fun WelcomeScreen(
+    locked: Boolean,
+    busy: Boolean,
+    onScan: () -> Unit,
+    onManual: () -> Unit,
+    onDemo: () -> Unit,
+    saveFailed: Boolean = false,
+) {
     OnboardingColumn {
         Spacer(Modifier.height(48.dp))
         Text(stringResource(R.string.welcome_title), style = OikosTheme.type.display)
@@ -44,5 +51,6 @@ internal fun WelcomeScreen(locked: Boolean, busy: Boolean, onScan: () -> Unit, o
         Button(onClick = onScan, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.welcome_scan)) }
         OutlinedButton(onClick = onManual, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.welcome_manual)) }
         TextButton(onClick = onDemo, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.welcome_demo)) }
+        if (saveFailed) SaveFailedText()
     }
 }

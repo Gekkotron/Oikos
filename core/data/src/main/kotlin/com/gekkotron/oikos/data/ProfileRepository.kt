@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,10 +78,21 @@ class ProfileRepository internal constructor(
 
     private fun seal(plain: ByteArray): String = Base64.getEncoder().encodeToString(secrets.encrypt(plain))
 
+    /**
+     * Any failure to open a secret means Locked. [toState] runs inside [state]'s `stateIn` on the app
+     * scope, so an exception escaping here (a Keystore ProviderException, say) would crash the process
+     * at every launch.
+     */
     private fun open(sealed: String): ByteArray = try {
         secrets.decrypt(Base64.getDecoder().decode(sealed))
+    } catch (e: SecretUnavailable) {
+        throw e
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: IllegalArgumentException) {
         throw SecretUnavailable("not base64", e)
+    } catch (e: Exception) {
+        throw SecretUnavailable("secret store failed", e)
     }
 
     companion object {

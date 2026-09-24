@@ -2,7 +2,6 @@ package com.gekkotron.oikos.data
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import java.security.GeneralSecurityException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -19,14 +18,19 @@ class KeystoreSecretStore(private val alias: String = "oikos.secrets.v1") : Secr
 
     override fun decrypt(cipher: ByteArray): ByteArray {
         if (cipher.size < IV_BYTES + TAG_BITS / 8) throw SecretUnavailable("ciphertext too short")
-        // Never create a key here: a missing key means the data is unrecoverable (ProfileState.Locked).
-        val key = existingKey() ?: throw SecretUnavailable("keystore key missing")
+        // The whole body, key lookup included: KeyStore.getKey throws UnrecoverableKeyException or
+        // KeyStoreException, and doFinal can throw ProviderException (a RuntimeException). All of them
+        // mean the data can't be opened (ProfileState.Locked), never a crash.
         return try {
+            // Never create a key here: a missing key means the data is unrecoverable.
+            val key = existingKey() ?: throw SecretUnavailable("keystore key missing")
             Cipher.getInstance(TRANSFORMATION).run {
                 init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, cipher, 0, IV_BYTES))
                 doFinal(cipher, IV_BYTES, cipher.size - IV_BYTES)
             }
-        } catch (e: GeneralSecurityException) {
+        } catch (e: SecretUnavailable) {
+            throw e
+        } catch (e: Exception) {
             throw SecretUnavailable("cannot decrypt", e)
         }
     }

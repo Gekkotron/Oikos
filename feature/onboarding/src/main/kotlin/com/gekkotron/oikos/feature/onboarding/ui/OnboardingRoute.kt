@@ -14,9 +14,9 @@ fun OnboardingRoute(viewModel: OnboardingViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     BackHandler(enabled = state.step != Step.WELCOME) { viewModel.back() }
     when (state.step) {
-        Step.WELCOME -> WelcomeScreen(state.locked, state.saving, viewModel::openScan, viewModel::openManual, viewModel::tryDemo)
+        Step.WELCOME -> WelcomeScreen(state.locked, state.saving, viewModel::openScan, viewModel::openManual, viewModel::tryDemo, state.saveFailed)
         Step.SCAN -> ScanScreen(state.scanError, viewModel::onQrScanned, viewModel::openManual, onBack = { viewModel.back() })
         Step.MANUAL -> ManualScreen(state.form, state.formErrors, viewModel::updateForm, viewModel::submitManual, onBack = { viewModel.back() })
-        Step.CONNECT -> ConnectScreen(state.test, state.saving, viewModel::retry, onBack = { viewModel.back() }, onContinue = viewModel::finish)
+        Step.CONNECT -> ConnectScreen(state.test, state.saving, viewModel::retry, onBack = { viewModel.back() }, onContinue = viewModel::finish, saveFailed = state.saveFailed)
     }
 }

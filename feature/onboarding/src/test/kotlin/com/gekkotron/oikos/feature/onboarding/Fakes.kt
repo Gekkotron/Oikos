@@ -25,9 +25,11 @@ class FakeConnectionTester : ConnectionTester {
     }
 }
 
-/** Test-only store; flip [fail] to simulate a lost key. */
+/** Test-only store; flip [fail] to simulate a lost key, [failEncrypt] to simulate a Keystore that can't encrypt. */
 class PassThroughSecretStore : SecretStore {
     var fail = false
-    override fun encrypt(plain: ByteArray) = byteArrayOf(1) + plain
+    var failEncrypt = false
+    override fun encrypt(plain: ByteArray) =
+        if (failEncrypt) throw java.security.ProviderException("keystore unavailable") else byteArrayOf(1) + plain
     override fun decrypt(cipher: ByteArray): ByteArray = if (fail) throw SecretUnavailable("lost") else cipher.copyOfRange(1, cipher.size)
 }

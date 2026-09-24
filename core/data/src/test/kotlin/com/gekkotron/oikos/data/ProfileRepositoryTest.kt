@@ -82,6 +82,17 @@ class ProfileRepositoryTest {
     }
 
     @Test
+    fun `an unexpected keystore exception on decrypt makes the profile Locked, not a crash`() = runTest {
+        val f = file()
+        val r = repo(f)
+        r.save(direct)
+        r.state.first { it is ProfileState.Ready }
+        val copy = file("copy.json").also { f.copyTo(it) }
+        secrets.decryptCrash = java.security.ProviderException("keystore daemon died")
+        assertEquals(ProfileState.Locked, repo(copy).settled())
+    }
+
+    @Test
     fun `a profile without secrets needs no key`() = runTest {
         val f = file()
         val plain = ConnectionProfile.Direct(LocalBroker("broker.local"))

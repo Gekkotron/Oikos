@@ -40,4 +40,5 @@
     </plurals>
     <string name="connect_no_devices">No devices announced yet — check that discovery is enabled.</string>
     <string name="connect_continue">Continue</string>
+    <string name="save_failed">Couldn\'t save the connection on this phone. Try again.</string>
 </resources>

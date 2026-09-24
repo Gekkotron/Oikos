@@ -18,7 +18,14 @@ import com.gekkotron.oikos.feature.onboarding.R
 import com.gekkotron.oikos.feature.onboarding.TestState
 
 @Composable
-internal fun ConnectScreen(test: TestState, saving: Boolean, onRetry: () -> Unit, onBack: () -> Unit, onContinue: () -> Unit) {
+internal fun ConnectScreen(
+    test: TestState,
+    saving: Boolean,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+    onContinue: () -> Unit,
+    saveFailed: Boolean = false,
+) {
     val announce = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
     OnboardingColumn {
         when (test) {
@@ -40,6 +47,7 @@ internal fun ConnectScreen(test: TestState, saving: Boolean, onRetry: () -> Unit
                     Text(stringResource(R.string.connect_no_devices), style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
                 }
                 test.devices.forEach { Text(it, style = OikosTheme.type.body) }
+                if (saveFailed) SaveFailedText()
                 Button(onClick = onContinue, enabled = !saving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.connect_continue)) }
                 TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.common_back)) }
             }
