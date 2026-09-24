@@ -48,7 +48,8 @@ class HomeViewModel @Inject constructor(
 
     fun tap(card: CardUi) {
         when (card.tap) {
-            TapAction.TOGGLE -> send(card.id, Command.Toggle)
+            // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
+            TapAction.TOGGLE -> send(card.id, if (card.on) Command.TurnOff else Command.TurnOn())
             TapAction.PRESS -> send(card.id, Command.Press)
             TapAction.OPEN_SHEET, TapAction.NONE -> Unit
         }

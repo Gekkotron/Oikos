@@ -1,5 +1,7 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -11,8 +13,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.ThemeChoice
@@ -70,7 +75,7 @@ class HomeScreenTest {
     private fun state(): HomeUiState =
         HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
 
-    private fun show(fontScale: () -> Float = { 1f }) = compose.setContent {
+    private fun show(insets: WindowInsets? = null, fontScale: () -> Float = { 1f }) = compose.setContent {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale())) {
             OikosTheme(ThemeChoice.NIGHT_GLASS) {
@@ -80,6 +85,7 @@ class HomeScreenTest {
                     onTap = { taps += it.id },
                     onSend = { id, c -> sends += id to c },
                     now = LocalTime.NOON,
+                    windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
             }
         }
@@ -136,6 +142,23 @@ class HomeScreenTest {
         show()
         compose.onNodeWithText("Kitchen").performClick()
         assertEquals(listOf<RoomFilter>(RoomFilter.Area("kitchen")), selects)
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h500dp")
+    fun `control sheet scrolls to its last controls at 2x font scale`() {
+        show { 2f }
+        compose.onNodeWithTag("card-ac").performClick()
+        compose.onNodeWithText("Heat").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetHvacMode("heat")), sends)
+    }
+
+    @Test
+    fun `status bar gets a scrim and side insets pad the grid`() {
+        show(insets = WindowInsets(left = 40.dp, top = 30.dp))
+        val scrim = compose.onNodeWithTag("status-scrim").getBoundsInRoot()
+        assertEquals(30.dp, scrim.bottom - scrim.top)
+        assertTrue(compose.onNodeWithTag("card-ac").getBoundsInRoot().left >= 56.dp)
     }
 
     @Test

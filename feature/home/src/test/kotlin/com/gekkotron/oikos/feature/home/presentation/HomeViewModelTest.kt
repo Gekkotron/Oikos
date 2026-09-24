@@ -60,13 +60,15 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `tapping toggles lights and ignores sheet cards`() = runTest(dispatcher) {
+    fun `tapping sends an absolute on-off so Retry repeats the intent, and ignores sheet cards`() = runTest(dispatcher) {
+        source.entities.value += "off" to testEntity("off", Kind.SWITCH, area = "kitchen")
         val vm = HomeViewModel(source, SavedStateHandle())
         backgroundScope.launch { vm.state.collect {} }
         val cards = vm.state.value.cards.associateBy { it.id }
         vm.tap(cards.getValue("lamp"))
+        vm.tap(cards.getValue("off"))
         vm.tap(cards.getValue("shutter"))
-        assertEquals(listOf<Pair<String, Command>>("lamp" to Command.Toggle), source.sent)
+        assertEquals(listOf("lamp" to Command.TurnOff, "off" to Command.TurnOn()), source.sent)
     }
 
     @Test
