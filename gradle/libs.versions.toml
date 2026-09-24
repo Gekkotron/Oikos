@@ -19,6 +19,8 @@ hivemq = "1.4.0"
 moquette = "0.17"
 datastore = "1.2.1"
 androidxTestRunner = "1.7.0"
+camerax = "1.6.2"
+mlkitBarcode = "17.3.0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -58,3 +60,7 @@ hivemq-mqtt-client = { module = "com.hivemq:hivemq-mqtt-client", version.ref = "
 moquette-broker = { module = "io.moquette:moquette-broker", version.ref = "moquette" }
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+androidx-camera-compose = { module = "androidx.camera:camera-compose", version.ref = "camerax" }
+mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }

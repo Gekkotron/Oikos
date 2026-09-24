@@ -1,0 +1,43 @@
+<resources>
+    <string name="common_back">Retour</string>
+    <string name="welcome_title">Bienvenue dans Oikos</string>
+    <string name="welcome_tagline">Votre maison, en direct. Connectez-vous à votre broker MQTT pour commencer.</string>
+    <string name="welcome_scan">Scanner le code de configuration</string>
+    <string name="welcome_manual">Saisir manuellement</string>
+    <string name="welcome_demo">Essayer la démo</string>
+    <string name="welcome_locked">Votre connexion enregistrée n\'a pas pu être déverrouillée — scannez à nouveau.</string>
+    <string name="scan_title">Scannez le code de configuration</string>
+    <string name="scan_waiting">En attente de l\'autorisation caméra…</string>
+    <string name="scan_denied">Oikos a besoin de la caméra pour lire le code. Autorisez-la dans les paramètres, ou saisissez la configuration manuellement.</string>
+    <string name="scan_open_settings">Ouvrir les paramètres</string>
+    <string name="scan_error_not_oikos">Ce QR code n\'est pas un code de configuration Oikos.</string>
+    <string name="scan_error_version">Ce code nécessite une version plus récente d\'Oikos (format %1$d).</string>
+    <string name="scan_error_field">Ce code contient une valeur invalide : %1$s.</string>
+    <string name="manual_title">Paramètres du broker</string>
+    <string name="manual_host">Hôte</string>
+    <string name="manual_host_error">Nom d\'hôte ou adresse IP uniquement, sans mqtt:// ni port</string>
+    <string name="manual_port">Port</string>
+    <string name="manual_port_error">Le port doit être compris entre 1 et 65535</string>
+    <string name="manual_tls">TLS</string>
+    <string name="manual_ws">WebSocket</string>
+    <string name="manual_plain_warning">TLS est désactivé et cet hôte ne semble pas local. Votre mot de passe circulerait en clair.</string>
+    <string name="manual_username">Nom d\'utilisateur (facultatif)</string>
+    <string name="manual_password">Mot de passe (facultatif)</string>
+    <string name="manual_advanced">Avancé</string>
+    <string name="manual_prefix">Préfixe de découverte</string>
+    <string name="manual_prefix_error">Saisissez un préfixe de découverte</string>
+    <string name="manual_connect">Se connecter</string>
+    <string name="connect_connecting">Connexion…</string>
+    <string name="connect_failed">Connexion impossible</string>
+    <string name="connect_error_unreachable">Broker injoignable. Vérifiez l\'hôte, le port, et que vous êtes sur le réseau de la maison.</string>
+    <string name="connect_error_rejected">Nom d\'utilisateur ou mot de passe refusé.</string>
+    <string name="connect_error_tls">La connexion sécurisée a échoué. Vérifiez le port et le réglage TLS.</string>
+    <string name="connect_error_other">Échec de la connexion : %1$s</string>
+    <string name="connect_retry">Réessayer</string>
+    <plurals name="connect_discovering">
+        <item quantity="one">Découverte… %d appareil</item>
+        <item quantity="other">Découverte… %d appareils</item>
+    </plurals>
+    <string name="connect_no_devices">Aucun appareil annoncé pour l\'instant — vérifiez que la découverte est activée.</string>
+    <string name="connect_continue">Continuer</string>
+</resources>

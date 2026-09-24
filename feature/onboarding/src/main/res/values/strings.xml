@@ -1,0 +1,43 @@
+<resources>
+    <string name="common_back">Back</string>
+    <string name="welcome_title">Welcome to Oikos</string>
+    <string name="welcome_tagline">Your home, live. Connect to your MQTT broker to get started.</string>
+    <string name="welcome_scan">Scan setup code</string>
+    <string name="welcome_manual">Enter manually</string>
+    <string name="welcome_demo">Try the demo</string>
+    <string name="welcome_locked">Your saved connection couldn\'t be unlocked — scan again.</string>
+    <string name="scan_title">Scan the setup code</string>
+    <string name="scan_waiting">Waiting for camera permission…</string>
+    <string name="scan_denied">Oikos needs the camera to read the setup code. Allow it in Settings, or enter the settings manually.</string>
+    <string name="scan_open_settings">Open settings</string>
+    <string name="scan_error_not_oikos">This QR code isn\'t an Oikos setup code.</string>
+    <string name="scan_error_version">This setup code needs a newer version of Oikos (format %1$d).</string>
+    <string name="scan_error_field">This setup code has an invalid value: %1$s.</string>
+    <string name="manual_title">Broker settings</string>
+    <string name="manual_host">Host</string>
+    <string name="manual_host_error">Host name or IP address only, without mqtt:// or a port</string>
+    <string name="manual_port">Port</string>
+    <string name="manual_port_error">Port must be between 1 and 65535</string>
+    <string name="manual_tls">TLS</string>
+    <string name="manual_ws">WebSocket</string>
+    <string name="manual_plain_warning">TLS is off and this host doesn\'t look local. Your password would travel unencrypted.</string>
+    <string name="manual_username">Username (optional)</string>
+    <string name="manual_password">Password (optional)</string>
+    <string name="manual_advanced">Advanced</string>
+    <string name="manual_prefix">Discovery prefix</string>
+    <string name="manual_prefix_error">Enter a discovery prefix</string>
+    <string name="manual_connect">Connect</string>
+    <string name="connect_connecting">Connecting…</string>
+    <string name="connect_failed">Couldn\'t connect</string>
+    <string name="connect_error_unreachable">Can\'t reach the broker. Check the host and port, and that you\'re on the home network.</string>
+    <string name="connect_error_rejected">Username or password rejected.</string>
+    <string name="connect_error_tls">Secure connection failed. Check the port and the TLS setting.</string>
+    <string name="connect_error_other">Connection failed: %1$s</string>
+    <string name="connect_retry">Retry</string>
+    <plurals name="connect_discovering">
+        <item quantity="one">Discovering… %d device</item>
+        <item quantity="other">Discovering… %d devices</item>
+    </plurals>
+    <string name="connect_no_devices">No devices announced yet — check that discovery is enabled.</string>
+    <string name="connect_continue">Continue</string>
+</resources>
