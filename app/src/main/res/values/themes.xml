@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.Oikos" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/oikos_window</item>
+    </style>
+</resources>

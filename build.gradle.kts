@@ -8,4 +8,5 @@ dependencies {
     kover(project(":core:transport"))
     kover(project(":core:state"))
     kover(project(":core:source"))
+    kover(project(":app"))
 }

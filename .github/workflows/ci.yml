@@ -14,11 +14,16 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v5
       - name: Build, test, coverage
-        run: ./gradlew check koverXmlReport --stacktrace
+        run: ./gradlew check koverXmlReport :app:assembleDebug --stacktrace
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/kover/report.xml
           fail_ci_if_error: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oikos-debug-apk
+          path: app/build/outputs/apk/debug/*.apk

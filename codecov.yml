@@ -10,3 +10,5 @@ coverage:
 
 ignore:
   - "**/build/generated/**"
+  - "app/src/main/kotlin/com/gekkotron/oikos/OikosApplication.kt"
+  - "app/src/main/kotlin/com/gekkotron/oikos/di/**"
