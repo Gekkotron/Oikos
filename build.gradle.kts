@@ -9,5 +9,6 @@ dependencies {
     kover(project(":core:state"))
     kover(project(":core:source"))
     kover(project(":core:demo"))
+    kover(project(":core:designsystem"))
     kover(project(":app"))
 }
