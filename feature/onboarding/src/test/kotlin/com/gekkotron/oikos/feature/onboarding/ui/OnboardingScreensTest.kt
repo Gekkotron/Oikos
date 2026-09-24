@@ -124,6 +124,27 @@ class OnboardingScreensTest {
     }
 
     @Test
+    fun `connect caps the device list at 5 and shows a plus-more line`() {
+        val devices = listOf("A", "B", "C", "D", "E", "F", "G", "H")
+        compose.setContent { OikosTheme { ConnectScreen(TestState.Connected(devices), false, {}, {}, {}) } }
+        compose.onNodeWithText("A").assertExists()
+        compose.onNodeWithText("E").assertExists()
+        compose.onNodeWithText("F").assertDoesNotExist()
+        compose.onNodeWithText("+3 more").assertExists()
+        compose.onNodeWithText("Continue").assertExists()
+    }
+
+    @Test
+    fun `connect shows all devices with no more line when under the cap`() {
+        val devices = listOf("A", "B", "C")
+        compose.setContent { OikosTheme { ConnectScreen(TestState.Connected(devices), false, {}, {}, {}) } }
+        compose.onNodeWithText("A").assertExists()
+        compose.onNodeWithText("B").assertExists()
+        compose.onNodeWithText("C").assertExists()
+        compose.onNodeWithText("more", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `continue is disabled while saving`() {
         compose.setContent { OikosTheme { ConnectScreen(TestState.Connected(listOf("Kettle")), saving = true, {}, {}, {}) } }
         compose.onNodeWithText("Continue").assertIsNotEnabled()

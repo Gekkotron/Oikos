@@ -39,6 +39,10 @@
         <item quantity="other">Découverte… %d appareils</item>
     </plurals>
     <string name="connect_no_devices">Aucun appareil annoncé pour l\'instant — vérifiez que la découverte est activée.</string>
+    <plurals name="connect_more_devices">
+        <item quantity="one">+%d autre</item>
+        <item quantity="other">+%d autres</item>
+    </plurals>
     <string name="connect_continue">Continuer</string>
     <string name="save_failed">Impossible d\'enregistrer la connexion sur ce téléphone. Réessayez.</string>
 </resources>

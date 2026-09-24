@@ -39,6 +39,10 @@
         <item quantity="other">Discovering… %d devices</item>
     </plurals>
     <string name="connect_no_devices">No devices announced yet — check that discovery is enabled.</string>
+    <plurals name="connect_more_devices">
+        <item quantity="one">+%d more</item>
+        <item quantity="other">+%d more</item>
+    </plurals>
     <string name="connect_continue">Continue</string>
     <string name="save_failed">Couldn\'t save the connection on this phone. Try again.</string>
 </resources>

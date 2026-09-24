@@ -17,6 +17,8 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.onboarding.R
 import com.gekkotron.oikos.feature.onboarding.TestState
 
+private const val MAX_DEVICES_SHOWN = 5
+
 @Composable
 internal fun ConnectScreen(
     test: TestState,
@@ -46,7 +48,15 @@ internal fun ConnectScreen(
                 if (count == 0) {
                     Text(stringResource(R.string.connect_no_devices), style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
                 }
-                test.devices.forEach { Text(it, style = OikosTheme.type.body) }
+                test.devices.take(MAX_DEVICES_SHOWN).forEach { Text(it, style = OikosTheme.type.body) }
+                val more = count - MAX_DEVICES_SHOWN
+                if (more > 0) {
+                    Text(
+                        pluralStringResource(R.plurals.connect_more_devices, more, more),
+                        style = OikosTheme.type.body,
+                        color = OikosTheme.colors.contentMuted,
+                    )
+                }
                 if (saveFailed) SaveFailedText()
                 Button(onClick = onContinue, enabled = !saving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.connect_continue)) }
                 TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.common_back)) }
