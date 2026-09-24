@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.feature.onboarding.OnboardingViewModel
 import com.gekkotron.oikos.feature.onboarding.Step
@@ -12,6 +13,12 @@ import com.gekkotron.oikos.feature.onboarding.Step
 @Composable
 fun OnboardingRoute(viewModel: OnboardingViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // The connection test runs only while the app is visible: unlike the app's own connection it has
+    // no background pause, so without this it would stay open for the process lifetime.
+    LifecycleStartEffect(viewModel) {
+        viewModel.onForeground()
+        onStopOrDispose { viewModel.onBackground() }
+    }
     BackHandler(enabled = state.step != Step.WELCOME) { viewModel.back() }
     when (state.step) {
         Step.WELCOME -> WelcomeScreen(state.locked, state.saving, viewModel::openScan, viewModel::openManual, viewModel::tryDemo, state.saveFailed)

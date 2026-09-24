@@ -104,6 +104,23 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The screen left the foreground (ON_STOP). The test connection is outside ActiveTransport's
+     * background pause, so it is closed here rather than kept open for the process lifetime.
+     */
+    fun onBackground() {
+        testJob?.cancel()
+        testJob = null
+    }
+
+    /** The screen is visible again (ON_START): a Connect screen whose test was stopped starts it again. */
+    fun onForeground() {
+        val profile = draft ?: return
+        val s = _state.value
+        if (s.step != Step.CONNECT || s.saving || testJob?.isActive == true) return
+        startTest(profile)
+    }
+
     /** @return false when there is nothing to go back to, so the system handles Back. */
     fun back(): Boolean = when (_state.value.step) {
         Step.WELCOME -> false

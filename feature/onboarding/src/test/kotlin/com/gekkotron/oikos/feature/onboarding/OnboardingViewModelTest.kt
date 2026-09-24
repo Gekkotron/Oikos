@@ -190,6 +190,38 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `leaving the app stops the connection test and coming back restarts it`() {
+        vm.openScan()
+        vm.onQrScanned(qr)
+        assertEquals(1, tester.active)
+        vm.onBackground()
+        assertEquals(0, tester.active)
+        assertEquals(Step.CONNECT, vm.state.value.step)
+        vm.onForeground()
+        assertEquals(1, tester.active)
+        assertEquals(listOf(qrProfile, qrProfile), tester.drafts)
+    }
+
+    @Test
+    fun `coming back to the app outside Connect starts no test`() {
+        vm.onBackground()
+        vm.onForeground()
+        vm.openManual()
+        vm.onBackground()
+        vm.onForeground()
+        assertTrue(tester.drafts.isEmpty())
+    }
+
+    @Test
+    fun `coming back while the test is running does not start a second one`() {
+        vm.openScan()
+        vm.onQrScanned(qr)
+        vm.onForeground()
+        assertEquals(1, tester.drafts.size)
+        assertEquals(1, tester.active)
+    }
+
+    @Test
     fun `back on Welcome is not handled`() = assertFalse(vm.back())
 
     @Test
