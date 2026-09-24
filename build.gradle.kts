@@ -12,5 +12,6 @@ dependencies {
     kover(project(":core:demo"))
     kover(project(":core:designsystem"))
     kover(project(":feature:home"))
+    kover(project(":feature:onboarding"))
     kover(project(":app"))
 }
