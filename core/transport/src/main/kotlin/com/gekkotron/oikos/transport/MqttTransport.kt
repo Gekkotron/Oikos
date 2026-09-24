@@ -9,7 +9,14 @@ sealed interface LinkState {
     data object Connecting : LinkState
     data class Connected(val mode: TransportMode) : LinkState
     data class Reconnecting(val attempt: Int) : LinkState
-    data class Offline(val reason: String) : LinkState
+    data class Offline(val reason: String) : LinkState {
+        companion object {
+            const val NOT_CONFIGURED = "not configured"
+            const val PAUSED = "paused"
+            const val REJECTED = "broker rejected credentials"
+            const val CLOSED = "closed"
+        }
+    }
 }
 
 class MqttMessage(val topic: String, val payload: ByteArray, val retained: Boolean) {

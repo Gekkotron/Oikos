@@ -52,6 +52,11 @@ class FakeMqttTransport : MqttTransport {
         _link.value = state
     }
 
+    /** Seeds a retained message without delivering it, as if it was published before anyone connected. */
+    fun retain(topic: String, payload: String) {
+        retainedStore[topic] = payload.encodeToByteArray()
+    }
+
     fun publishedStrings(): List<Pair<String, String>> = published.map { it.topic to it.payloadString() }
 
     private suspend fun brokerReceive(topic: String, payload: ByteArray, retain: Boolean) {

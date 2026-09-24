@@ -1,13 +1,14 @@
 package com.gekkotron.oikos.demo
 
 import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.ManagedTransport
 import com.gekkotron.oikos.transport.MqttMessage
-import com.gekkotron.oikos.transport.MqttTransport
 import com.gekkotron.oikos.transport.PublishFailed
 import com.gekkotron.oikos.transport.TransportMode
 import com.gekkotron.oikos.transport.isValidPublishTopic
 import com.gekkotron.oikos.transport.topicMatches
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,13 +30,14 @@ class DemoBroker(
     private val scope: CoroutineScope,
     private val house: DemoHouse = DemoHouse(),
     private val echoDelay: Duration = 300.milliseconds,
-) : MqttTransport {
+) : ManagedTransport {
     override val link: StateFlow<LinkState> = MutableStateFlow(LinkState.Connected(TransportMode.DEMO)).asStateFlow()
 
     private val messages = MutableSharedFlow<MqttMessage>(extraBufferCapacity = 4096)
     private val mutex = Mutex()
     private val retained = linkedMapOf<String, ByteArray>()
     private var subscriptions: Set<String> = emptySet()
+    private var ticking: Job? = null
 
     init {
         for (m in house.retainedMessages()) retained[m.topic] = m.payload.encodeToByteArray()
@@ -62,13 +64,20 @@ class DemoBroker(
         }
     }
 
-    /** Publishes live sensor updates every [interval] until the scope is cancelled. */
-    fun startTicking(interval: Duration = 3.seconds) {
-        scope.launch {
-            while (true) {
-                delay(interval)
-                for (m in house.tick()) receive(m.topic, m.payload.encodeToByteArray(), retain = true)
-            }
+    override fun start() {
+        if (ticking == null) ticking = startTicking()
+    }
+
+    override suspend fun close() {
+        ticking?.cancel()
+        ticking = null
+    }
+
+    /** Publishes live sensor updates every [interval] until cancelled. */
+    fun startTicking(interval: Duration = 3.seconds): Job = scope.launch {
+        while (true) {
+            delay(interval)
+            for (m in house.tick()) receive(m.topic, m.payload.encodeToByteArray(), retain = true)
         }
     }
 
