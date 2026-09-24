@@ -38,6 +38,7 @@ class StateStore(
     private var topicIndex: Map<String, List<String>> = emptyMap()
     private val confirmed = mutableMapOf<String, StateValue>()
     private val lastPayload = mutableMapOf<String, String>()
+    private val confirmTopics = mutableMapOf<String, Set<String>>()
     private val reported = mutableSetOf<String>()
 
     private val _states = MutableStateFlow<Map<String, EntityState>>(emptyMap())
@@ -59,7 +60,7 @@ class StateStore(
         }
         confirmed.keys.retainAll(tracked.keys - fresh)
         reported.removeAll { it.substringBeforeLast(':') !in tracked.keys - fresh }
-        lastPayload.keys.retainAll(topicIndex.keys)
+        confirmTopics.keys.retainAll(tracked.keys - fresh)
 
         val current = _states.value
         val next = tracked.mapValuesTo(mutableMapOf()) { (id, t) ->
@@ -75,6 +76,14 @@ class StateStore(
 
     fun subscriptionTopics(): Set<String> = synchronized(lock) { topicIndex.keys.toSet() }
 
+    /**
+     * Drops cached payloads for topics that are no longer subscribed. Call after a subscription set is applied:
+     * until then, a removed-and-re-added entity must still get its last payload (no broker replay happens).
+     */
+    fun retainPayloads(subscribed: Set<String>): Unit = synchronized(lock) {
+        lastPayload.keys.retainAll(subscribed)
+    }
+
     /** Returns the ids whose value was confirmed by this message. */
     fun onMessage(topic: String, payload: String): Set<String> = synchronized(lock) {
         val ids = topicIndex[topic] ?: return emptySet()
@@ -85,15 +94,22 @@ class StateStore(
         confirmedIds
     }
 
-    fun markPending(uniqueId: String, predicted: StateValue): Unit = update(uniqueId) {
-        it.copy(value = predicted, pending = true)
+    /**
+     * Shows [predicted] until confirmed. With [confirmBy], only state messages on those topics confirm;
+     * null means any state message of the entity does.
+     */
+    fun markPending(uniqueId: String, predicted: StateValue, confirmBy: Set<String>? = null): Unit = synchronized(lock) {
+        if (confirmBy == null) confirmTopics.remove(uniqueId) else confirmTopics[uniqueId] = confirmBy
+        update(uniqueId) { it.copy(value = predicted, pending = true) }
     }
 
-    /** For entities without state feedback: the prediction becomes the confirmed value. */
-    fun confirmPending(uniqueId: String): Unit = synchronized(lock) {
+    /** For optimistic commands: the prediction (or [final]) becomes the confirmed value. */
+    fun confirmPending(uniqueId: String, final: StateValue? = null): Unit = synchronized(lock) {
         val s = _states.value[uniqueId]?.takeIf { it.pending } ?: return
-        confirmed[uniqueId] = s.value
-        _states.value = _states.value + (uniqueId to s.copy(pending = false, lastUpdate = now()))
+        val value = final ?: s.value
+        confirmed[uniqueId] = value
+        confirmTopics.remove(uniqueId)
+        _states.value = _states.value + (uniqueId to s.copy(value = value, pending = false, lastUpdate = now()))
     }
 
     /** Restores the last confirmed value. Returns true if the entity was pending. */
@@ -119,8 +135,12 @@ class StateStore(
             when (val d = t.mapper.decode(t.bindings, topic, payload, confirmed[id] ?: StateValue.Unknown)) {
                 is Decoded.State -> {
                     confirmed[id] = d.value
-                    s = s.copy(value = d.value, pending = false, lastUpdate = now())
-                    confirmedNow = true
+                    val confirmsCommand = !s.pending || confirmTopics[id]?.contains(topic) != false
+                    if (confirmsCommand) {
+                        confirmTopics.remove(id)
+                        s = s.copy(value = d.value, pending = false, lastUpdate = now())
+                        confirmedNow = true
+                    }
                 }
                 is Decoded.Unsupported -> {
                     reportOnce(id, "unsupported", "template unsupported on $topic: ${d.reason}")

@@ -65,6 +65,12 @@ object ClimateMapper : KindMapper {
         else -> Encoded.NotSupported("climate cannot $command")
     }
 
+    override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = when (command) {
+        is Command.SetTemperature -> setOfNotNull(b.str("temperature_state_topic"))
+        is Command.SetHvacMode, Command.TurnOff -> setOfNotNull(b.str("mode_state_topic"))
+        else -> stateTopics(b)
+    }
+
     override fun predict(command: Command, previous: StateValue): StateValue? {
         val prev = previous as? StateValue.Climate ?: StateValue.Climate(null, null, null)
         return when (command) {

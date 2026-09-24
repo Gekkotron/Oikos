@@ -74,6 +74,17 @@ object CoverMapper : KindMapper {
         else -> Encoded.NotSupported("cover cannot $command")
     }
 
+    override fun settle(command: Command, predicted: StateValue): StateValue {
+        val cover = predicted as? StateValue.Cover ?: return predicted
+        return when {
+            command is Command.SetPosition ->
+                StateValue.Cover(if (command.position == 0) CoverState.CLOSED else CoverState.OPEN, command.position)
+            cover.state == CoverState.OPENING -> StateValue.Cover(CoverState.OPEN, 100)
+            cover.state == CoverState.CLOSING -> StateValue.Cover(CoverState.CLOSED, 0)
+            else -> cover
+        }
+    }
+
     override fun predict(command: Command, previous: StateValue): StateValue? {
         val prev = previous as? StateValue.Cover ?: StateValue.Cover(CoverState.UNKNOWN)
         return when (command) {

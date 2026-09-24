@@ -26,11 +26,14 @@ class CommandTracker(
 
     private val timers = ConcurrentHashMap<String, Job>()
 
-    /** Call before publishing. Without feedback, the caller confirms with [StateStore.confirmPending]. */
-    fun track(uniqueId: String, command: Command, predicted: StateValue?, hasFeedback: Boolean) {
+    /**
+     * Call before publishing. Without feedback, the caller confirms with [StateStore.confirmPending].
+     * [confirmBy] restricts which state topics confirm (null = any state topic of the entity).
+     */
+    fun track(uniqueId: String, command: Command, predicted: StateValue?, hasFeedback: Boolean, confirmBy: Set<String>? = null) {
         timers.remove(uniqueId)?.cancel()
         if (predicted == null) return
-        store.markPending(uniqueId, predicted)
+        store.markPending(uniqueId, predicted, confirmBy)
         if (!hasFeedback) return
         timers[uniqueId] = scope.launch {
             delay(timeout)

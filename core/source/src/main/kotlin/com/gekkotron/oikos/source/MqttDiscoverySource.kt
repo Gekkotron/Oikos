@@ -83,6 +83,7 @@ class MqttDiscoverySource(
                 if (topics != applied) {
                     applied = topics
                     transport.setSubscriptions(baseFilters + topics)
+                    store.retainPayloads(topics)
                 }
             }
         }
@@ -101,15 +102,17 @@ class MqttDiscoverySource(
             is Encoded.NotSupported -> return CommandResult.Rejected(encoded.reason)
             is Encoded.Publish -> encoded
         }
-        val hasFeedback = mapper.stateTopics(bindings).isNotEmpty() && !bindings.bool("optimistic", false)
-        tracker.track(uniqueId, command, mapper.predict(command, previous), hasFeedback)
+        val confirmBy = if (bindings.bool("optimistic", false)) emptySet() else mapper.feedbackTopics(bindings, command)
+        val hasFeedback = confirmBy.isNotEmpty()
+        val predicted = mapper.predict(command, previous)
+        tracker.track(uniqueId, command, predicted, hasFeedback, confirmBy)
         try {
             for (m in publish.messages) transport.publish(m.topic, m.payload.encodeToByteArray(), m.qos, m.retain)
         } catch (e: PublishFailed) {
             tracker.abort(uniqueId)
             return CommandResult.Rejected(e.message ?: "publish failed")
         }
-        if (!hasFeedback) store.confirmPending(uniqueId)
+        if (!hasFeedback) store.confirmPending(uniqueId, predicted?.let { mapper.settle(command, it) })
         return CommandResult.Accepted
     }
 
@@ -140,10 +143,8 @@ class MqttDiscoverySource(
                 else -> when (val r = DiscoveryParser.parse(prefix, topic, payload)) {
                     DiscoveryResult.NotDiscovery -> store.onMessage(topic, payload)
                     DiscoveryResult.Removed -> replaceDiscovered(topic, null)
-                    is DiscoveryResult.Skipped -> {
-                        report("$topic: ${r.reason}")
-                        replaceDiscovered(topic, null)
-                    }
+                    // Like HA: an invalid update is logged and the previously discovered entities are kept.
+                    is DiscoveryResult.Skipped -> report("$topic: ${r.reason}")
                     is DiscoveryResult.Entities -> {
                         r.skipped.forEach { report("$topic: $it") }
                         replaceDiscovered(topic, r.items)
@@ -183,8 +184,9 @@ class MqttDiscoverySource(
         publishEntities()
     }
 
-    private fun publishEntities() {
-        val snapshot = synchronized(lock) {
+    /** Rebuilds and publishes everything under [lock], so a stale snapshot can never be written last. */
+    private fun publishEntities(): Unit = synchronized(lock) {
+        val snapshot = run {
             val all = discovered.values.flatten()
             val declared = areasDocument.areas
             val entities = all.associate { d ->
@@ -194,6 +196,7 @@ class MqttDiscoverySource(
             }
             Snapshot(entities, all.mapNotNull { it.device }.associateBy { it.id }, computeAreas(declared, entities.values))
         }
+        // Lock order is always source -> store; the store never calls back into the source.
         store.setEntities(snapshot.entities.values)
         _entities.value = snapshot.entities
         _devices.value = snapshot.devices

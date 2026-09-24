@@ -32,6 +32,12 @@ interface KindMapper {
 
     /** Optimistic value shown while waiting for confirmation; null = nothing to predict. */
     fun predict(command: Command, previous: StateValue): StateValue? = null
+
+    /** Topics whose state messages confirm [command]. Empty = the command is optimistic. */
+    fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = stateTopics(b)
+
+    /** Final value of an optimistic [command] once published (e.g. a cover ends open, not opening). */
+    fun settle(command: Command, predicted: StateValue): StateValue = predicted
 }
 
 object KindMappers {
