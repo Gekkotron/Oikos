@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
@@ -19,9 +21,12 @@ class ProfileRepository internal constructor(
     private val store: DataStore<StoredProfile>,
     private val secrets: SecretStore,
     scope: CoroutineScope,
+    /** Dispatcher [toState] (and its [SecretStore.decrypt] calls) run on; tests may substitute a deterministic test dispatcher. */
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) {
-    val state: StateFlow<ProfileState> = store.data.map(::toState).stateIn(scope, SharingStarted.Eagerly, ProfileState.Loading)
+    val state: StateFlow<ProfileState> =
+        store.data.map(::toState).flowOn(ioDispatcher).stateIn(scope, SharingStarted.Eagerly, ProfileState.Loading)
 
     suspend fun save(profile: ConnectionProfile) {
         val id = installId()
@@ -91,7 +96,7 @@ class ProfileRepository internal constructor(
                 scope = CoroutineScope(scope.coroutineContext + Dispatchers.IO),
                 produceFile = { file },
             )
-            return ProfileRepository(store, secrets, scope)
+            return ProfileRepository(store, secrets, scope, ioDispatcher = Dispatchers.IO)
         }
     }
 }
