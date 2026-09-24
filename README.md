@@ -8,7 +8,19 @@ A beautiful, self-discovering home-automation app for Android (Kotlin + Jetpack 
 
 Oikos talks **MQTT** directly. It connects to your local broker at home and goes through an end-to-end encrypted [Athena-HttpMqttGateway](https://github.com/Gekkotron/Athena-HttpMqttGateway) when you're away. It builds its dashboard from **Home Assistant MQTT Discovery** messages, so devices appear on their own, with no hard-coded device list.
 
-> **Status:** design phase. See the [design spec](docs/superpowers/specs/2026-09-24-oikos-design.md) and [mockups](docs/design/mockups/).
+> **Status:** foundation in progress. The pure-Kotlin core (discovery, templates, state, crypto) is built and tested; transports and UI come next. See the [design spec](docs/superpowers/specs/2026-09-24-oikos-design.md) and [mockups](docs/design/mockups/).
+
+## Modules
+
+| Module | Role |
+|---|---|
+| `:core:model` | Domain types: `Entity`, `StateValue`, `Command`, `UiOverride`, `Area` |
+| `:core:crypto` | AES-256-GCM envelope for Athena-HttpMqttGateway |
+| `:core:transport` | `MqttTransport` contract and topic matching (+ a test fake) |
+| `:core:state` | Jinja-subset templates, one mapper per kind, `StateStore`, optimistic `CommandTracker` |
+| `:core:source` | HA MQTT Discovery parser and `MqttDiscoverySource` |
+
+Build and test: `./gradlew check koverXmlReport`.
 
 ## Highlights (v1)
 
