@@ -40,6 +40,7 @@ object KindMappers {
         Kind.BINARY_SENSOR -> BinarySensorMapper
         Kind.SENSOR -> SensorMapper
         Kind.BUTTON -> ButtonMapper
+        Kind.LIGHT -> LightMapper
         else -> UnmappedKind // replaced by real mappers in Tasks 6–8
     }
 }
