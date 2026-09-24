@@ -6,6 +6,7 @@ import com.hivemq.client.mqtt.datatypes.MqttQos
 import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedContext
 import com.hivemq.client.mqtt.lifecycle.MqttDisconnectSource
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
+import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -123,9 +124,7 @@ class DirectMqttTransport(
         // `publishes()` -- on session end, because `resubscribeIfSessionExpired` is false (see
         // onDisconnected). So the global consumer must be re-registered on every reconnect, not
         // just once in start(), or messages after a reconnect are silently dropped.
-        client.publishes(MqttGlobalPublishFilter.ALL) { p ->
-            inbox.trySend(MqttMessage(p.topic.toString(), p.payloadAsBytes, p.isRetain))
-        }
+        client.publishes(MqttGlobalPublishFilter.ALL) { p -> inbox.trySend(p.toMqttMessage()) }
         attempts.set(0)
         _failure.value = null
         _link.value = LinkState.Connected(TransportMode.DIRECT)
@@ -200,3 +199,6 @@ class DirectMqttTransport(
         const val NOT_STARTED = "not started"
     }
 }
+
+/** Maps a HiveMQ publish to our own message type. Extracted so the retain-flag mapping is unit-testable without a broker. */
+internal fun Mqtt3Publish.toMqttMessage(): MqttMessage = MqttMessage(topic.toString(), payloadAsBytes, isRetain)
