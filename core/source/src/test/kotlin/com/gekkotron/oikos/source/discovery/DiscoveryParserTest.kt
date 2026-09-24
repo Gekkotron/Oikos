@@ -21,6 +21,9 @@ class DiscoveryParserTest {
         return r.items.single()
     }
 
+    private fun reason(topic: String, payload: String) =
+        (DiscoveryParser.parse(prefix, topic, payload) as DiscoveryResult.Skipped).reason
+
     private val DiscoveredEntity.b get() = entity.bindings as MqttBindings
 
     @Test
@@ -204,5 +207,58 @@ class DiscoveryParserTest {
         val basicLight = single("homeassistant/light/l/config", """{"cmd_t":"c","bri_cmd_t":"b","rgb_cmd_t":"r"}""").entity.capabilities
         assertTrue(basicLight.brightness)
         assertEquals(setOf("rgb"), basicLight.colorModes)
+    }
+
+    @Test
+    fun `diagnostic entities are hidden like Home Assistant`() {
+        val r = reason("homeassistant/sensor/x/config", """{"stat_t":"s","entity_category":"diagnostic"}""")
+        assertTrue("diagnostic" in r)
+    }
+
+    @Test
+    fun `config entities are hidden like Home Assistant`() {
+        val r = reason("homeassistant/number/x/config", """{"cmd_t":"c","entity_category":"config"}""")
+        assertTrue("config" in r)
+    }
+
+    @Test
+    fun `entities disabled by default are hidden`() {
+        val r = reason("homeassistant/sensor/x/config", """{"stat_t":"s","enabled_by_default":false}""")
+        assertTrue("disabled by default" in r)
+    }
+
+    @Test
+    fun `abbreviated entity_category is expanded before hiding`() {
+        val r = reason("homeassistant/sensor/x/config", """{"stat_t":"s","ent_cat":"diagnostic"}""")
+        assertTrue("diagnostic" in r)
+    }
+
+    @Test
+    fun `a normal z2m light is unaffected`() {
+        val d = single("homeassistant/light/0x00178801086a1b2c/light/config", fixture("z2m_light.json"))
+        assertEquals(Kind.LIGHT, d.entity.kind)
+    }
+
+    @Test
+    fun `real z2m diagnostic linkquality sensor is hidden`() {
+        val r = DiscoveryParser.parse(
+            prefix,
+            "homeassistant/sensor/0x403802fffeaffd2a/linkquality/config",
+            fixture("z2m_linkquality_diagnostic.json"),
+        )
+        assertIs<DiscoveryResult.Skipped>(r)
+        assertTrue("diagnostic" in r.reason)
+    }
+
+    @Test
+    fun `device-based discovery hides diagnostic components but keeps sensors`() {
+        val r = DiscoveryParser.parse(
+            prefix, "homeassistant/device/d2/config",
+            """{"dev":{"ids":"d2","name":"D"},"cmps":{"a":{"p":"sensor","stat_t":"s","uniq_id":"a1"},"b":{"p":"sensor","stat_t":"s","uniq_id":"b1","entity_category":"diagnostic"}}}""",
+        )
+        assertIs<DiscoveryResult.Entities>(r)
+        assertEquals(listOf("a1"), r.items.map { it.entity.uniqueId })
+        assertEquals(1, r.skipped.size)
+        assertTrue("hidden" in r.skipped.single() && "diagnostic" in r.skipped.single())
     }
 }

@@ -101,6 +101,11 @@ object DiscoveryParser {
     private fun build(component: String, config: JsonObject, nodeId: String?, objectId: String): Built {
         val kind = KINDS[component] ?: return Built.Bad("unsupported component '$component'")
         val b = MqttBindings(component, config)
+        val entityCategory = b.str("entity_category")
+        if (entityCategory == "diagnostic" || entityCategory == "config") {
+            return Built.Bad("hidden: entity_category '$entityCategory'")
+        }
+        if (!b.bool("enabled_by_default", true)) return Built.Bad("hidden: disabled by default")
         if (kind == Kind.LIGHT) {
             val schema = b.str("schema") ?: "default"
             if (schema !in LIGHT_SCHEMAS) return Built.Bad("light schema '$schema' unsupported")
