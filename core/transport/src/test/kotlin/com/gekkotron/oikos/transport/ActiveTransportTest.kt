@@ -3,7 +3,10 @@ package com.gekkotron.oikos.transport
 import com.gekkotron.oikos.transport.testing.FakeManagedTransport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -179,5 +182,34 @@ class ActiveTransportTest {
         assertEquals(direct, created[1].spec)
         assertTrue(created[1].started)
         assertEquals(t.link.value, created[1].fake.link.value)
+    }
+
+    /** Records how many collectors are still attached to it when [close] runs. */
+    private class ProbeTransport : ManagedTransport {
+        private val messageFlow = MutableSharedFlow<MqttMessage>()
+        private val linkFlow = MutableStateFlow<LinkState>(LinkState.Connecting)
+        override val link: StateFlow<LinkState> = linkFlow
+        var collectorsAtClose = -1
+            private set
+
+        override fun messages(): SharedFlow<MqttMessage> = messageFlow
+        override fun start() = Unit
+        override suspend fun setSubscriptions(filters: Set<String>) = Unit
+        override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) = Unit
+        override suspend fun close() {
+            collectorsAtClose = messageFlow.subscriptionCount.value + linkFlow.subscriptionCount.value
+        }
+    }
+
+    @Test
+    fun `the old transport's collectors have finished before it is closed`() = runTest {
+        val specs = MutableStateFlow<TransportSpec?>(TransportSpec.Demo)
+        val probes = mutableListOf<ProbeTransport>()
+        ActiveTransport(specs, { ProbeTransport().also(probes::add) }, backgroundScope)
+        runCurrent()
+        specs.value = direct
+        runCurrent()
+        assertEquals(2, probes.size)
+        assertEquals(0, probes[0].collectorsAtClose)
     }
 }

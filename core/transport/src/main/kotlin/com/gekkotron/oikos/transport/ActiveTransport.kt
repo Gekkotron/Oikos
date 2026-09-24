@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -90,7 +91,10 @@ class ActiveTransport(
     private suspend fun apply(target: Target) {
         val old = mutex.withLock { current.also { current = null } }
         if (old != null) {
+            // Join, not just cancel: a collector mid-emit must not push a straggler message (or link
+            // state) from the old transport after the new one has started.
             old.jobs.forEach { it.cancel() }
+            old.jobs.joinAll()
             try {
                 old.transport.close()
             } catch (e: CancellationException) {
