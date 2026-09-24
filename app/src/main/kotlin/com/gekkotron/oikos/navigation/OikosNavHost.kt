@@ -1,8 +1,8 @@
 package com.gekkotron.oikos.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -32,20 +32,27 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
         is ProfileState.Ready -> HomeKey
         ProfileState.None, ProfileState.Locked -> OnboardingKey
     }
-    // A new root (onboarding finished, or "set up again") starts a fresh back stack.
-    key(root) {
-        val backStack = rememberNavBackStack(root)
-        NavDisplay(
-            backStack = backStack,
-            onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
-            entryDecorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-            entryProvider = entryProvider {
-                entry<OnboardingKey> { OnboardingRoute() }
-                entry<HomeKey> { HomeRoute(onSetUpAgain = viewModel::setUpAgain) }
-            },
-        )
+    // One back stack for the app's lifetime. A new root (onboarding finished, or "set up again")
+    // replaces the entries inside it, so NavDisplay pops the old ones and clears their ViewModel
+    // stores. Disposing the whole NavDisplay instead (key(root)) never pops anything, and the stale
+    // ViewModels come back the next time the same root is shown.
+    val backStack = rememberNavBackStack(root)
+    LaunchedEffect(root) {
+        if (backStack.toList() != listOf(root)) {
+            backStack.add(root)
+            backStack.removeAll { it != root }
+        }
     }
+    NavDisplay(
+        backStack = backStack,
+        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
+        entryProvider = entryProvider {
+            entry<OnboardingKey> { OnboardingRoute() }
+            entry<HomeKey> { HomeRoute(onSetUpAgain = viewModel::setUpAgain) }
+        },
+    )
 }

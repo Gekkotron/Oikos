@@ -1,6 +1,7 @@
 package com.gekkotron.oikos
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -46,5 +47,18 @@ class MainActivityTest {
         compose.onNodeWithText("Demo").performClick()
         compose.onNodeWithText("Set up connection again").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
+    }
+
+    @Test
+    fun `after set up again onboarding starts fresh and the demo opens again`() {
+        openDemo()
+        compose.onNodeWithText("Demo").performClick()
+        compose.onNodeWithText("Set up connection again").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Try the demo").assertIsEnabled()
+        compose.onNodeWithText("Scan setup code").assertIsEnabled()
+        compose.onNodeWithText("Enter manually").assertIsEnabled()
+        openDemo()
+        compose.onNodeWithText("Demo").assertExists()
     }
 }
