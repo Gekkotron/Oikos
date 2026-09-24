@@ -1,0 +1,120 @@
+package com.gekkotron.oikos.state.template
+
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
+import java.math.BigDecimal
+import java.math.RoundingMode
+
+sealed interface TemplateResult {
+    /** String, Long, Double, Boolean, JsonObject/JsonArray, or null (undefined / none). */
+    data class Value(val value: Any?) : TemplateResult
+    data class Unsupported(val reason: String) : TemplateResult
+    data class Error(val reason: String) : TemplateResult
+}
+
+object Templates {
+    /** Evaluates [template] with `value` = [payload] and `value_json` = the parsed payload. */
+    fun renderValue(template: String, payload: String): TemplateResult =
+        render(template, mapOf("value" to payload, "value_json" to parseJsonOrFailure(payload)))
+
+    fun render(template: String, variables: Map<String, Any?>): TemplateResult {
+        val segments = try {
+            TemplateParser.parse(template)
+        } catch (e: UnsupportedTemplate) {
+            return TemplateResult.Unsupported(e.message ?: "unsupported template")
+        }
+        return try {
+            TemplateResult.Value(evaluate(segments, variables))
+        } catch (e: TemplateEvalError) {
+            TemplateResult.Error(e.message ?: "template error")
+        }
+    }
+}
+
+private fun parseJsonOrFailure(payload: String): Any = try {
+    val element = Json.parseToJsonElement(payload)
+    // kotlinx accepts bare words ("online") as unquoted primitives; JSON does not.
+    val bareWord = element is JsonPrimitive && element !is JsonNull && !element.isString &&
+        element.booleanOrNull == null && element.doubleOrNull == null
+    if (bareWord) JsonFailure else element
+} catch (e: SerializationException) {
+    JsonFailure
+}
+
+private fun evaluate(segments: List<Segment>, vars: Map<String, Any?>): Any? {
+    val expressions = segments.filterIsInstance<Segment.Expr>()
+    if (expressions.isEmpty()) return segments.joinToString("") { (it as Segment.Text).text }
+    val onlyWhitespaceAround = segments.all { it is Segment.Expr || (it as Segment.Text).text.isBlank() }
+    if (expressions.size == 1 && onlyWhitespaceAround) {
+        return eval(expressions.single().expression, vars).let { if (it === Undefined) null else it }
+    }
+    return segments.joinToString("") { segment ->
+        when (segment) {
+            is Segment.Text -> segment.text
+            is Segment.Expr -> eval(segment.expression, vars).let { if (it === Undefined) "" else it.asPayloadString() ?: "None" }
+        }
+    }
+}
+
+/** JSON primitives become Kotlin values; objects and arrays are kept for further access. */
+internal fun normalize(v: Any?): Any? = when (v) {
+    is JsonNull -> null
+    is JsonPrimitive -> if (v.isString) v.content else v.booleanOrNull ?: v.longOrNull ?: v.doubleOrNull ?: v.content
+    else -> v
+}
+
+private fun eval(e: Expression, vars: Map<String, Any?>): Any? = when (e) {
+    is Expression.Literal -> e.value
+    is Expression.Variable -> {
+        if (e.name !in vars) {
+            Undefined
+        } else {
+            val value = normalize(vars[e.name])
+            if (value === JsonFailure) throw TemplateEvalError("payload is not valid JSON")
+            value
+        }
+    }
+    is Expression.Access -> access(eval(e.target, vars), e.key)
+    is Expression.Filtered -> applyFilter(e.name, eval(e.target, vars), e.args)
+}
+
+private fun access(target: Any?, key: Any): Any? = when {
+    target is JsonObject && key is String -> if (key in target) normalize(target[key]) else Undefined
+    target is JsonArray && key is Long -> if (key >= 0 && key < target.size) normalize(target[key.toInt()]) else Undefined
+    target is Map<*, *> && target.containsKey(key) -> normalize(target[key])
+    else -> Undefined
+}
+
+private fun looseNumber(v: Any?): Number? = when (v) {
+    is Long -> v
+    is Int -> v.toLong()
+    is Double -> v
+    is Boolean -> if (v) 1L else 0L
+    is String -> v.trim().let { it.toLongOrNull() ?: it.toDoubleOrNull() }
+    else -> null
+}
+
+private fun applyFilter(name: String, v: Any?, args: List<Any?>): Any? = when (name) {
+    "default" -> if (v === Undefined) args.firstOrNull() else v
+    "int" -> looseNumber(v)?.toLong() ?: 0L
+    "float" -> looseNumber(v)?.toDouble() ?: 0.0
+    "round" -> {
+        val precision = (args.firstOrNull() as? Long)?.toInt() ?: 0
+        val d = when (v) {
+            is Long -> v.toDouble()
+            is Double -> v
+            else -> throw TemplateEvalError("round expects a number")
+        }
+        if (d.isNaN() || d.isInfinite()) d else BigDecimal.valueOf(d).setScale(precision, RoundingMode.HALF_UP).toDouble()
+    }
+    "lower" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").lowercase()
+    "upper" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").uppercase()
+    else -> throw TemplateEvalError("unknown filter '$name'")
+}

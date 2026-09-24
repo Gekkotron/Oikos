@@ -20,3 +20,4 @@ rootProject.name = "Oikos"
 include(":core:model")
 include(":core:crypto")
 include(":core:transport")
+include(":core:state")
