@@ -10,7 +10,7 @@ kover {
                 classes(
                     "*Hilt_*", "*_Factory", "*_Factory\$*", "*_MembersInjector", "*_HiltModules*",
                     "*_GeneratedInjector", "*_ComponentTreeDeps", "hilt_aggregated_deps.*", "dagger.hilt.internal.*",
-                    "*.BuildConfig", "*.R", "*.R\$*", "*ComposableSingletons*",
+                    "*.BuildConfig", "*.R", "*.R\$*", "*ComposableSingletons*", "*KeystoreSecretStore*",
                 )
             }
         }
