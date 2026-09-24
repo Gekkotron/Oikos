@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.onboarding
 
+import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.data.PayloadError
@@ -8,9 +9,12 @@ import com.gekkotron.oikos.data.ProfileState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -47,8 +51,19 @@ class OnboardingViewModelTest {
 
     @After
     fun tearDown() {
+        // vm is never cleared by a ViewModelStore in this direct-construction test, so its
+        // viewModelScope (and its collection of profiles.state) would otherwise leak past this
+        // test method and race the next test's Dispatchers.setMain()/resetMain() swap. Joining
+        // (not just requesting cancellation) is required: profiles.state is backed by a real
+        // Dispatchers.IO DataStore write that can emit at any wall-clock moment, so the
+        // StateFlow subscriber slot must be fully unregistered before Main is reset.
+        closeViewModel(vm)
         Dispatchers.resetMain()
         io.cancel()
+    }
+
+    private fun closeViewModel(viewModel: OnboardingViewModel) = runBlocking {
+        viewModel.viewModelScope.coroutineContext[Job]?.cancelAndJoin()
     }
 
     @Test
@@ -173,6 +188,8 @@ class OnboardingViewModelTest {
         val locked = ProfileRepository.create(copy, secrets, io)
         val lockedVm = OnboardingViewModel(locked, tester)
         locked.state.first { it == ProfileState.Locked }
-        assertTrue(lockedVm.state.value.locked)
+        assertTrue(lockedVm.state.first { it.locked }.locked)
+        // A second, locally-scoped ViewModel in this test; release it the same way tearDown() does for vm.
+        closeViewModel(lockedVm)
     }
 }
