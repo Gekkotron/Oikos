@@ -1,0 +1,92 @@
+package com.gekkotron.oikos.connection
+
+import com.gekkotron.oikos.data.ConnectionProfile
+import com.gekkotron.oikos.data.LocalBroker
+import com.gekkotron.oikos.feature.onboarding.TestFailure
+import com.gekkotron.oikos.feature.onboarding.TestState
+import com.gekkotron.oikos.model.Bindings
+import com.gekkotron.oikos.model.Capabilities
+import com.gekkotron.oikos.model.Entity
+import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.UNASSIGNED_AREA
+import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.transport.testing.EmbeddedBroker
+import com.gekkotron.oikos.transport.testing.freePort
+import com.hivemq.client.mqtt.datatypes.MqttQos
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
+import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.time.Duration.Companion.seconds
+
+class DirectConnectionTesterTest {
+    private val brokers = mutableListOf<EmbeddedBroker>()
+    private val tester = DirectConnectionTester(clientId = { "oikos-test-setup" }, connectTimeout = 2.seconds)
+
+    @After
+    fun tearDown() = brokers.forEach { it.close() }
+
+    private fun broker(credentials: Pair<String, String>? = null) = EmbeddedBroker(credentials).also { it.start(); brokers += it }
+
+    private fun draft(port: Int, user: String? = null, pass: String? = null) =
+        ConnectionProfile.Direct(LocalBroker("127.0.0.1", port, username = user, password = pass))
+
+    @Test
+    fun `reachable broker reports discovered devices`() = runBlocking {
+        val b = broker()
+        val peer = b.peer()
+        val config = """{"name":"Kettle","unique_id":"kettle","command_topic":"k/set","state_topic":"k/state",
+            "device":{"identifiers":["kettle"],"name":"Kitchen kettle"}}"""
+        peer.publishWith().topic("homeassistant/switch/kettle/config").payload(config.encodeToByteArray())
+            .qos(MqttQos.AT_LEAST_ONCE).retain(true).send()
+        val connected = withTimeout(10.seconds) {
+            tester.test(draft(b.port)).first { it is TestState.Connected && it.devices.isNotEmpty() }
+        }
+        assertEquals(TestState.Connected(listOf("Kitchen kettle")), connected)
+        peer.disconnect()
+    }
+
+    @Test
+    fun `unreachable broker fails with Unreachable after the timeout`() = runBlocking {
+        val result = withTimeout(10.seconds) { tester.test(draft(freePort())).first { it is TestState.Failed } }
+        assertEquals(TestState.Failed(TestFailure.Unreachable), result)
+    }
+
+    @Test
+    fun `rejected credentials fail with Rejected`() = runBlocking {
+        val b = broker(credentials = "oikos" to "secret")
+        val result = withTimeout(10.seconds) { tester.test(draft(b.port, "oikos", "wrong")).first { it is TestState.Failed } }
+        assertEquals(TestState.Failed(TestFailure.Rejected), result)
+    }
+
+    @Test
+    fun `devices without a device block are listed by entity name, sorted`() {
+        val names = deviceNames(
+            devices = mapOf("d1" to device("d1", "Zeta hub")),
+            entities = mapOf("a" to entity("a", "d1", "Ignored"), "b" to entity("b", null, "alpha plug")),
+        )
+        assertEquals(listOf("alpha plug", "Zeta hub"), names)
+    }
+
+    private fun device(id: String, name: String) = com.gekkotron.oikos.model.Device(id, name, null, null, null)
+
+    // Entity's constructor also requires `bindings` (9th param, no default); NoBindings mirrors
+    // feature/home's TestEntities.kt helper.
+    private object NoBindings : Bindings
+
+    private fun entity(id: String, deviceId: String?, name: String) = Entity(
+        uniqueId = id,
+        deviceId = deviceId,
+        name = name,
+        kind = Kind.SWITCH,
+        deviceClass = null,
+        unit = null,
+        icon = null,
+        capabilities = Capabilities(),
+        bindings = NoBindings,
+        area = UNASSIGNED_AREA,
+        ui = UiOverride(),
+    )
+}

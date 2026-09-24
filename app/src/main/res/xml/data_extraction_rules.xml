@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The profile is useless without its Keystore key, which never leaves the phone (spec §4.3). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/profile.json" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/profile.json" />
+    </device-transfer>
+</data-extraction-rules>

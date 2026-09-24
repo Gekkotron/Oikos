@@ -1,10 +1,21 @@
 package com.gekkotron.oikos.di
 
 import android.util.Log
+import com.gekkotron.oikos.connection.DirectConnectionTester
+import com.gekkotron.oikos.connection.EntitySourceSession
+import com.gekkotron.oikos.connection.clientIdFor
+import com.gekkotron.oikos.connection.setupClientIdFor
+import com.gekkotron.oikos.connection.toSpec
+import com.gekkotron.oikos.data.DEFAULT_PREFIX
+import com.gekkotron.oikos.data.ProfileRepository
+import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.demo.DemoBroker
+import com.gekkotron.oikos.feature.onboarding.ConnectionTester
 import com.gekkotron.oikos.source.EntitySource
-import com.gekkotron.oikos.source.MqttDiscoverySource
+import com.gekkotron.oikos.transport.ActiveTransport
+import com.gekkotron.oikos.transport.DirectMqttTransport
 import com.gekkotron.oikos.transport.MqttTransport
+import com.gekkotron.oikos.transport.TransportSpec
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -12,6 +23,9 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -27,14 +41,38 @@ object AppModule {
     @ApplicationScope
     fun applicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** Demo mode is the only transport until the Direct/Gateway plan lands. */
     @Provides
     @Singleton
-    fun transport(@ApplicationScope scope: CoroutineScope): MqttTransport =
-        DemoBroker(scope).also { it.startTicking() }
+    fun activeTransport(profiles: ProfileRepository, @ApplicationScope scope: CoroutineScope): ActiveTransport = ActiveTransport(
+        // installId() is a suspend DataStore write; resolved once rather than re-run on every emission.
+        specs = flow {
+            val id = profiles.installId()
+            emitAll(profiles.state.map { it.toSpec(clientIdFor(id)) })
+        },
+        factory = { spec ->
+            when (spec) {
+                TransportSpec.Demo -> DemoBroker(scope)
+                is TransportSpec.Direct -> DirectMqttTransport(spec, scope)
+            }
+        },
+        scope = scope,
+    )
+
+    @Provides
+    fun transport(active: ActiveTransport): MqttTransport = active
 
     @Provides
     @Singleton
-    fun entitySource(transport: MqttTransport, @ApplicationScope scope: CoroutineScope): EntitySource =
-        MqttDiscoverySource(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") })
+    fun entitySourceSession(transport: MqttTransport, @ApplicationScope scope: CoroutineScope): EntitySourceSession =
+        EntitySourceSession(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") })
+
+    /** Unscoped: each new Home gets the source for the current prefix (spec §2). Home only exists while Ready. */
+    @Provides
+    fun entitySource(session: EntitySourceSession, profiles: ProfileRepository): EntitySource =
+        session.current((profiles.state.value as? ProfileState.Ready)?.profile?.prefix ?: DEFAULT_PREFIX)
+
+    @Provides
+    @Singleton
+    fun connectionTester(profiles: ProfileRepository): ConnectionTester =
+        DirectConnectionTester(clientId = { setupClientIdFor(profiles.installId()) })
 }
