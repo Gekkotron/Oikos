@@ -1,0 +1,46 @@
+<style>
+  .arch{font-family:-apple-system,Inter,Roboto,sans-serif;display:grid;gap:14px;max-width:980px;margin:16px auto}
+  .lane{border-radius:16px;padding:12px 14px;border:1px solid rgba(127,127,127,.3)}
+  .lane h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
+  .boxes{display:flex;gap:10px;flex-wrap:wrap}
+  .bx{flex:1;min-width:150px;border-radius:12px;padding:10px;font-size:12px;background:rgba(127,127,127,.1)}
+  .bx b{display:block;font-size:13px;margin-bottom:3px}
+  .new{outline:2px solid #6ff0bf}.chg{outline:2px dashed #ffc457}
+  .arrow{text-align:center;font-size:12px;opacity:.7}
+  .legend{font-size:12px;opacity:.8;text-align:center}
+</style>
+<h2>Oikos: architecture</h2>
+<p class="subtitle">Green = new · dashed amber = small change to existing · plain = unchanged</p>
+<div class="arch">
+  <div class="lane"><h4>Oikos app (new private repo)</h4>
+    <div class="boxes">
+      <div class="bx new"><b>:feature:home</b>Rooms + live cards</div>
+      <div class="bx new"><b>:feature:energy</b>Live power flow</div>
+      <div class="bx new"><b>:feature:security</b>Alarm, sensors, camera alerts</div>
+      <div class="bx new"><b>:core:designsystem</b>Night Glass / Warm Minimal tokens, cards</div>
+    </div>
+    <div class="arrow">↑ Flow&lt;EntityState&gt; · EntityRegistry ↑ · commands ↓</div>
+    <div class="boxes">
+      <div class="bx new"><b>:core:discovery</b>homeassistant/+/…/config → Entity; merges oikos/ui/* overrides</div>
+      <div class="bx new"><b>:core:state</b>State topics → values (value_json.key templates), optimistic commands</div>
+    </div>
+    <div class="arrow">↑ subscribe(filters) / publish ↓</div>
+    <div class="boxes">
+      <div class="bx new"><b>:core:transport</b>MqttTransport interface + auto selector (home Wi-Fi ↔ gateway)</div>
+      <div class="bx new"><b>DirectMqtt</b>HiveMQ client, TCP 192.168.1.91:1883</div>
+      <div class="bx new"><b>GatewayTransport</b>OkHttp SSE /mqtt/subscribe + POST /mqtt/publish</div>
+      <div class="bx new"><b>:core:crypto</b>AES-256-GCM envelope (nonce‖ct‖tag, base64)</div>
+    </div>
+  </div>
+  <div class="arrow">Wi-Fi at home: direct TCP ── away: HTTPS via Tailscale Funnel ──</div>
+  <div class="lane"><h4>Home server</h4>
+    <div class="boxes">
+      <div class="bx chg"><b>HttpMqttEnd2EndEncryption</b>+ multi-topic subscribe, + replay check on subscribe</div>
+      <div class="bx"><b>Mosquitto</b>192.168.1.91:1883</div>
+      <div class="bx chg"><b>zigbee2mqtt</b>enable homeassistant discovery (config flag)</div>
+      <div class="bx new"><b>oikos-bridge</b>Python: publishes discovery for Jeedom + custom services from one YAML</div>
+      <div class="bx"><b>Jeedom</b>jeedom/data/… + …/set (kept for now)</div>
+      <div class="bx"><b>Telegraf → InfluxDB 2</b>unchanged; history phase later</div>
+    </div>
+  </div>
+</div>

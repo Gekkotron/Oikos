@@ -1,0 +1,111 @@
+<style>
+  .phones{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+  .ph{width:300px;height:620px;border-radius:38px;padding:14px;box-sizing:border-box;position:relative;overflow:hidden;font-family:-apple-system,"Inter",Roboto,sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+  .ph .sb{display:flex;justify-content:space-between;font-size:11px;opacity:.7;padding:2px 10px 10px}
+  .ph h1{margin:4px 6px 0;font-size:26px;font-weight:700;letter-spacing:-.5px}
+  .ph .sub{margin:2px 6px 12px;font-size:12px;opacity:.65}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;padding:4px 9px;border-radius:99px}
+  .dot{width:6px;height:6px;border-radius:50%}
+  .rooms{display:flex;gap:6px;margin:0 6px 12px;overflow:hidden}
+  .rooms span{font-size:11px;padding:6px 11px;border-radius:99px;white-space:nowrap}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 4px}
+  .c{border-radius:20px;padding:12px;min-height:84px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}
+  .c .ic{font-size:18px}
+  .c .n{font-size:11px;opacity:.7}
+  .c .v{font-size:17px;font-weight:650}
+  .wide{grid-column:span 2}
+  .bar{height:6px;border-radius:9px;margin-top:6px;overflow:hidden}
+  .bar i{display:block;height:100%}
+  .nav{position:absolute;left:14px;right:14px;bottom:14px;height:54px;border-radius:24px;display:flex;justify-content:space-around;align-items:center;font-size:17px}
+
+  /* A: Night Glass */
+  .a{background:radial-gradient(120% 60% at 20% 0%,#1d2b55 0%,#0b1020 60%);color:#e8ecff}
+  .a .c{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(10px)}
+  .a .c.on{background:linear-gradient(145deg,rgba(255,196,87,.28),rgba(255,196,87,.06));border-color:rgba(255,196,87,.35)}
+  .a .rooms span{background:rgba(255,255,255,.07)} .a .rooms span.s{background:#e8ecff;color:#0b1020}
+  .a .pill{background:rgba(80,230,170,.15);color:#6ff0bf} .a .dot{background:#6ff0bf;box-shadow:0 0 8px #6ff0bf}
+  .a .bar{background:rgba(255,255,255,.1)} .a .bar i{background:linear-gradient(90deg,#58e1ff,#8f7bff)}
+  .a .nav{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08)}
+
+  /* B: Warm Minimal */
+  .b{background:#f5f1ea;color:#1f1b16}
+  .b h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;font-size:28px}
+  .b .c{background:#fffdf9;box-shadow:0 1px 2px rgba(60,40,10,.06),0 6px 16px rgba(60,40,10,.05)}
+  .b .c.on{background:#1f1b16;color:#f5f1ea}
+  .b .rooms span{background:transparent;border:1px solid #d9d0c2} .b .rooms span.s{background:#1f1b16;color:#f5f1ea;border-color:#1f1b16}
+  .b .pill{background:#e6efe3;color:#3f6b3a} .b .dot{background:#4f8a48}
+  .b .bar{background:#ece5da} .b .bar i{background:#d98b3a}
+  .b .nav{background:#fffdf9;box-shadow:0 6px 18px rgba(60,40,10,.1)}
+
+  /* C: Expressive tiles */
+  .cc{background:#fbf7ff;color:#1d1530}
+  .cc .c{border-radius:26px}
+  .cc .t1{background:#ffd76a} .cc .t2{background:#c8e6ff} .cc .t3{background:#ffc2d4} .cc .t4{background:#d4f5c9} .cc .t5{background:#e6dcff}
+  .cc .rooms span{background:#ece4ff} .cc .rooms span.s{background:#5b3fd6;color:#fff}
+  .cc .pill{background:#5b3fd6;color:#fff} .cc .dot{background:#9dffcf}
+  .cc .bar{background:rgba(0,0,0,.08)} .cc .bar i{background:#1d1530}
+  .cc .nav{background:#1d1530;color:#fff;border-radius:30px}
+  .cc h1{font-size:30px;font-weight:800}
+  .lab{text-align:center;margin-top:10px}
+</style>
+
+<h2>Which visual direction feels like Oikos?</h2>
+<p class="subtitle">Same home dashboard (live MQTT data) in three styles. Click the one you like; comments in the terminal welcome, e.g. "B but dark mode".</p>
+
+<div class="phones">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph a">
+      <div class="sb"><span>21:42</span><span>●●● 5G</span></div>
+      <h1>Bonsoir</h1>
+      <div class="sub">Dehors 14.2° · <span class="pill"><span class="dot"></span>Wi-Fi direct</span></div>
+      <div class="rooms"><span class="s">Tout</span><span>Salon</span><span>Cuisine</span><span>Chambre</span></div>
+      <div class="grid">
+        <div class="c on"><div class="ic">💡</div><div><div class="n">Salon · Plafond</div><div class="v">On · 70%</div></div></div>
+        <div class="c"><div class="ic">❄️</div><div><div class="n">Clim salon</div><div class="v">22.0°</div></div></div>
+        <div class="c"><div class="ic">🪟</div><div><div class="n">Volets</div><div class="v">60% ouvert</div></div></div>
+        <div class="c"><div class="ic">🛡️</div><div><div class="n">Alarme</div><div class="v">Armée</div></div></div>
+        <div class="c wide"><div class="n">☀️ Production solaire</div><div class="v">3.2 kW <span style="font-size:11px;opacity:.6">→ maison 1.1 kW</span></div><div class="bar"><i style="width:72%"></i></div></div>
+      </div>
+      <div class="nav"><span>🏠</span><span>⚡</span><span>🛡️</span><span>⚙️</span></div>
+    </div>
+    <div class="lab"><b>A · Night Glass</b><br><span style="font-size:12px;opacity:.7">Dark, translucent cards, glowing accents. Premium, great at night.</span></div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph b">
+      <div class="sb"><span>21:42</span><span>●●● 5G</span></div>
+      <h1>Bonsoir</h1>
+      <div class="sub">Dehors 14.2° · <span class="pill"><span class="dot"></span>Wi-Fi direct</span></div>
+      <div class="rooms"><span class="s">Tout</span><span>Salon</span><span>Cuisine</span><span>Chambre</span></div>
+      <div class="grid">
+        <div class="c on"><div class="ic">💡</div><div><div class="n">Salon · Plafond</div><div class="v">On · 70%</div></div></div>
+        <div class="c"><div class="ic">❄️</div><div><div class="n">Clim salon</div><div class="v">22.0°</div></div></div>
+        <div class="c"><div class="ic">🪟</div><div><div class="n">Volets</div><div class="v">60% ouvert</div></div></div>
+        <div class="c"><div class="ic">🛡️</div><div><div class="n">Alarme</div><div class="v">Armée</div></div></div>
+        <div class="c wide"><div class="n">☀️ Production solaire</div><div class="v">3.2 kW <span style="font-size:11px;opacity:.6">→ maison 1.1 kW</span></div><div class="bar"><i style="width:72%"></i></div></div>
+      </div>
+      <div class="nav"><span>🏠</span><span>⚡</span><span>🛡️</span><span>⚙️</span></div>
+    </div>
+    <div class="lab"><b>B · Warm Minimal</b><br><span style="font-size:12px;opacity:.7">Paper tones, serif title, calm. Feels like a well-designed object.</span></div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph cc">
+      <div class="sb"><span>21:42</span><span>●●● 5G</span></div>
+      <h1>Bonsoir</h1>
+      <div class="sub">Dehors 14.2° · <span class="pill"><span class="dot"></span>Wi-Fi direct</span></div>
+      <div class="rooms"><span class="s">Tout</span><span>Salon</span><span>Cuisine</span><span>Chambre</span></div>
+      <div class="grid">
+        <div class="c t1"><div class="ic">💡</div><div><div class="n">Salon · Plafond</div><div class="v">On · 70%</div></div></div>
+        <div class="c t2"><div class="ic">❄️</div><div><div class="n">Clim salon</div><div class="v">22.0°</div></div></div>
+        <div class="c t5"><div class="ic">🪟</div><div><div class="n">Volets</div><div class="v">60% ouvert</div></div></div>
+        <div class="c t3"><div class="ic">🛡️</div><div><div class="n">Alarme</div><div class="v">Armée</div></div></div>
+        <div class="c wide t4"><div class="n">☀️ Production solaire</div><div class="v">3.2 kW <span style="font-size:11px;opacity:.6">→ maison 1.1 kW</span></div><div class="bar"><i style="width:72%"></i></div></div>
+      </div>
+      <div class="nav"><span>🏠</span><span>⚡</span><span>🛡️</span><span>⚙️</span></div>
+    </div>
+    <div class="lab"><b>C · Expressive Tiles</b><br><span style="font-size:12px;opacity:.7">Material 3 Expressive: bold colour per device type, playful, very Android.</span></div>
+  </div>
+
+</div>

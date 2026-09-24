@@ -1,0 +1,91 @@
+<style>
+  .phones{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+  .ph{width:300px;height:620px;border-radius:38px;padding:14px;box-sizing:border-box;position:relative;overflow:hidden;font-family:-apple-system,"Inter",Roboto,sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.25);background:radial-gradient(120% 60% at 20% 0%,#1d2b55 0%,#0b1020 60%);color:#e8ecff}
+  .sb{display:flex;justify-content:space-between;font-size:11px;opacity:.7;padding:2px 10px 10px}
+  h1.t{margin:4px 6px 2px;font-size:24px;font-weight:700}
+  .sub{margin:0 6px 12px;font-size:12px;opacity:.6}
+  .g{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:12px}
+  .n{font-size:11px;opacity:.65}.v{font-size:18px;font-weight:650}
+  .nav{position:absolute;left:14px;right:14px;bottom:14px;height:54px;border-radius:24px;display:flex;justify-content:space-around;align-items:center;font-size:17px;background:rgba(255,255,255,.07)}
+  @keyframes dash{to{stroke-dashoffset:-20}}
+  .flow{stroke-dasharray:4 6;animation:dash 1s linear infinite;fill:none;stroke-width:2.5;stroke-linecap:round}
+  .row{display:flex;gap:8px;margin-top:8px}.row .g{flex:1}
+  .lab{text-align:center;margin-top:10px}
+</style>
+
+<h2>Energy screen: which layout?</h2>
+<p class="subtitle">Live values only (history comes later). Data: solar, grid meter, house, water heater (triacs + temp), water.</p>
+
+<div class="phones">
+
+  <div class="option" data-choice="flow" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph">
+      <div class="sb"><span>13:05</span><span>●●● Wi-Fi</span></div>
+      <h1 class="t">Énergie</h1><div class="sub">En direct · autoconsommation 87%</div>
+      <div class="g" style="padding:6px">
+      <svg viewBox="0 0 260 250" width="100%">
+        <path class="flow" stroke="#ffc457" d="M130 48 V112"/>
+        <path class="flow" stroke="#58e1ff" d="M130 148 Q 90 190 52 205"/>
+        <path class="flow" stroke="#ff7a9a" d="M150 140 Q 190 180 208 205"/>
+        <path class="flow" stroke="#8f7bff" d="M112 130 H 40" style="animation-direction:reverse"/>
+        <circle cx="130" cy="30" r="22" fill="rgba(255,196,87,.18)" stroke="#ffc457"/><text x="130" y="35" text-anchor="middle" font-size="16">☀️</text>
+        <text x="165" y="28" fill="#ffc457" font-size="12" font-weight="700">3.2 kW</text>
+        <circle cx="130" cy="130" r="26" fill="rgba(255,255,255,.08)" stroke="#e8ecff"/><text x="130" y="136" text-anchor="middle" font-size="18">🏠</text>
+        <text x="165" y="126" fill="#e8ecff" font-size="12" font-weight="700">1.1 kW</text>
+        <circle cx="30" cy="130" r="18" fill="rgba(143,123,255,.18)" stroke="#8f7bff"/><text x="30" y="135" text-anchor="middle" font-size="13">🔌</text>
+        <text x="12" y="165" fill="#8f7bff" font-size="11" font-weight="700">↗ 0.4 kW</text>
+        <circle cx="40" cy="215" r="18" fill="rgba(88,225,255,.15)" stroke="#58e1ff"/><text x="40" y="220" text-anchor="middle" font-size="13">💧</text>
+        <text x="20" y="246" fill="#58e1ff" font-size="11">312 L/j</text>
+        <circle cx="215" cy="215" r="18" fill="rgba(255,122,154,.15)" stroke="#ff7a9a"/><text x="215" y="220" text-anchor="middle" font-size="13">♨️</text>
+        <text x="185" y="246" fill="#ff7a9a" font-size="11">1.7 kW · 58°</text>
+      </svg></div>
+      <div class="row"><div class="g"><div class="n">Chauffe-eau</div><div class="v">58° <span style="font-size:11px;opacity:.6">triac 65%</span></div></div><div class="g"><div class="n">Réseau</div><div class="v" style="color:#8f7bff">−0.4 kW</div></div></div>
+      <div class="nav"><span>🏠</span><span style="color:#ffc457">⚡</span><span>🛡️</span><span>⚙️</span></div>
+    </div>
+    <div class="lab"><b>A · Live power flow</b><br><span style="font-size:12px;opacity:.7">Animated diagram: where every watt goes, right now. Most "wow".</span></div>
+  </div>
+
+  <div class="option" data-choice="rings" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph">
+      <div class="sb"><span>13:05</span><span>●●● Wi-Fi</span></div>
+      <h1 class="t">Énergie</h1><div class="sub">En direct</div>
+      <div class="g" style="display:flex;justify-content:center;padding:14px 0">
+        <svg viewBox="0 0 180 180" width="190">
+          <circle cx="90" cy="90" r="76" stroke="rgba(255,255,255,.08)" stroke-width="12" fill="none"/>
+          <circle cx="90" cy="90" r="76" stroke="#ffc457" stroke-width="12" fill="none" stroke-dasharray="340 478" stroke-linecap="round" transform="rotate(-90 90 90)"/>
+          <circle cx="90" cy="90" r="58" stroke="rgba(255,255,255,.08)" stroke-width="12" fill="none"/>
+          <circle cx="90" cy="90" r="58" stroke="#e8ecff" stroke-width="12" fill="none" stroke-dasharray="110 364" stroke-linecap="round" transform="rotate(-90 90 90)"/>
+          <circle cx="90" cy="90" r="40" stroke="rgba(255,255,255,.08)" stroke-width="12" fill="none"/>
+          <circle cx="90" cy="90" r="40" stroke="#ff7a9a" stroke-width="12" fill="none" stroke-dasharray="170 251" stroke-linecap="round" transform="rotate(-90 90 90)"/>
+          <text x="90" y="88" text-anchor="middle" fill="#e8ecff" font-size="20" font-weight="700">87%</text>
+          <text x="90" y="104" text-anchor="middle" fill="#e8ecff" opacity=".6" font-size="9">autoconso</text>
+        </svg>
+      </div>
+      <div class="row"><div class="g"><div class="n" style="color:#ffc457">● Solaire</div><div class="v">3.2 kW</div></div><div class="g"><div class="n">● Maison</div><div class="v">1.1 kW</div></div></div>
+      <div class="row"><div class="g"><div class="n" style="color:#ff7a9a">● Chauffe-eau</div><div class="v">1.7 kW</div></div><div class="g"><div class="n" style="color:#58e1ff">Eau</div><div class="v">312 L</div></div></div>
+      <div class="nav"><span>🏠</span><span style="color:#ffc457">⚡</span><span>🛡️</span><span>⚙️</span></div>
+    </div>
+    <div class="lab"><b>B · Activity rings</b><br><span style="font-size:12px;opacity:.7">Concentric gauges + tiles. Compact, glanceable, Apple-Watch-like.</span></div>
+  </div>
+
+  <div class="option" data-choice="stack" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph">
+      <div class="sb"><span>13:05</span><span>●●● Wi-Fi</span></div>
+      <h1 class="t">Énergie</h1><div class="sub">En direct</div>
+      <div class="g"><div class="n">Production solaire</div><div class="v" style="font-size:34px;color:#ffc457">3.2<span style="font-size:14px"> kW</span></div>
+        <div style="display:flex;height:14px;border-radius:8px;overflow:hidden;margin-top:10px">
+          <i style="width:34%;background:#e8ecff"></i><i style="width:53%;background:#ff7a9a"></i><i style="width:13%;background:#8f7bff"></i></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;opacity:.75;margin-top:5px"><span>Maison 1.1</span><span>Chauffe-eau 1.7</span><span>Réseau 0.4</span></div></div>
+      <div class="g" style="margin-top:8px"><div class="n">Chauffe-eau · 3 triacs</div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <div style="flex:1;height:48px;border-radius:10px;background:rgba(255,255,255,.07);position:relative;overflow:hidden"><i style="position:absolute;bottom:0;left:0;right:0;height:65%;background:#ff7a9a;opacity:.8"></i></div>
+          <div style="flex:1;height:48px;border-radius:10px;background:rgba(255,255,255,.07);position:relative;overflow:hidden"><i style="position:absolute;bottom:0;left:0;right:0;height:40%;background:#ff7a9a;opacity:.8"></i></div>
+          <div style="flex:1;height:48px;border-radius:10px;background:rgba(255,255,255,.07);position:relative;overflow:hidden"><i style="position:absolute;bottom:0;left:0;right:0;height:0%;background:#ff7a9a"></i></div>
+        </div><div class="v" style="margin-top:6px">58° <span style="font-size:11px;opacity:.6">débit 0 L/min</span></div></div>
+      <div class="row"><div class="g"><div class="n">Eau aujourd'hui</div><div class="v" style="color:#58e1ff">312 L</div></div></div>
+      <div class="nav"><span>🏠</span><span style="color:#ffc457">⚡</span><span>🛡️</span><span>⚙️</span></div>
+    </div>
+    <div class="lab"><b>C · Split bars + details</b><br><span style="font-size:12px;opacity:.7">Where solar goes as one bar, then per-device detail. Most informative.</span></div>
+  </div>
+
+</div>
