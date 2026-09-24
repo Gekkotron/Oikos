@@ -29,6 +29,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.gekkotron.oikos.data.PayloadError
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.onboarding.R
@@ -36,11 +38,19 @@ import com.gekkotron.oikos.feature.onboarding.R
 internal enum class CameraPermission { WAITING, GRANTED, DENIED }
 
 @Composable
-internal fun ScanScreen(error: PayloadError?, onText: (String) -> Unit, onManual: () -> Unit, onBack: () -> Unit) {
+internal fun ScanScreen(
+    error: PayloadError?,
+    onText: (String) -> Unit,
+    onManual: () -> Unit,
+    onBack: () -> Unit,
+    camera: @Composable (Modifier, (String) -> Unit) -> Unit = { modifier, callback -> QrCamera(modifier, callback) },
+) {
     val context = LocalContext.current
-    var permission by remember {
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        mutableStateOf(if (granted) CameraPermission.GRANTED else CameraPermission.WAITING)
+    fun granted() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    var permission by remember { mutableStateOf(if (granted()) CameraPermission.GRANTED else CameraPermission.WAITING) }
+    // The user may grant the permission in Settings ("Open settings") and come back.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (permission != CameraPermission.GRANTED && granted()) permission = CameraPermission.GRANTED
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         permission = if (ok) CameraPermission.GRANTED else CameraPermission.DENIED
@@ -60,6 +70,7 @@ internal fun ScanScreen(error: PayloadError?, onText: (String) -> Unit, onManual
             )
         },
         onBack = onBack,
+        camera = camera,
     )
 }
 

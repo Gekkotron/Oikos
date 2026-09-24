@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.onboarding.ui
 
+import android.Manifest
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.data.PayloadError
 import com.gekkotron.oikos.designsystem.OikosTheme
@@ -25,6 +27,7 @@ import com.gekkotron.oikos.feature.onboarding.TestState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -124,6 +127,18 @@ class OnboardingScreensTest {
     fun `continue is disabled while saving`() {
         compose.setContent { OikosTheme { ConnectScreen(TestState.Connected(listOf("Kettle")), saving = true, {}, {}, {}) } }
         compose.onNodeWithText("Continue").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `a camera permission granted in Settings is picked up on return`() {
+        compose.setContent {
+            OikosTheme { ScanScreen(null, {}, {}, {}, camera = { modifier, _ -> Box(modifier.testTag("camera")) }) }
+        }
+        compose.onNodeWithTag("camera").assertDoesNotExist()
+        shadowOf(compose.activity.application).grantPermissions(Manifest.permission.CAMERA)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.onNodeWithTag("camera").assertExists()
     }
 
     @Test
