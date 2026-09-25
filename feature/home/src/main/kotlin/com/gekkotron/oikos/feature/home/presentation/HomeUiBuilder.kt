@@ -27,6 +27,7 @@ object HomeUiBuilder {
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
         val areaNames = areas.associate { it.id to it.name }
         val visible = entities.values.filterNot { it.ui.hidden }
+        val hidden = entities.values.filter { it.ui.hidden }
         val hero = visible.filter { it.ui.cardStyle == HERO_WEATHER }.minByOrNull { it.uniqueId }
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }
 
@@ -37,11 +38,12 @@ object HomeUiBuilder {
             for (area in areas) {
                 if (area.id in used) add(ChipUi(RoomFilter.Area(area.id), area.name.takeUnless { area.id == UNASSIGNED_AREA }))
             }
+            if (hidden.isNotEmpty()) add(ChipUi(RoomFilter.Hidden, null))
         }
         val effective = selected.takeIf { s -> chips.any { it.filter == s } } ?: RoomFilter.All
 
-        val cards = grid
-            .filter { matches(it, effective) }
+        val shown = if (effective == RoomFilter.Hidden) hidden else grid.filter { matches(it, effective) }
+        val cards = shown
             .sortedWith(
                 compareBy<Entity>(
                     { it.ui.order ?: Int.MAX_VALUE },
@@ -59,6 +61,8 @@ object HomeUiBuilder {
             chips = chips,
             selected = effective,
             cards = cards,
+            rooms = areas.filter { it.id != UNASSIGNED_AREA },
+            hiddenCount = hidden.size,
         )
     }
 
@@ -66,6 +70,7 @@ object HomeUiBuilder {
         RoomFilter.All -> true
         RoomFilter.Favorites -> entity.ui.favorite
         is RoomFilter.Area -> entity.area == filter.id
+        RoomFilter.Hidden -> false
     }
 
     private fun card(entity: Entity, state: EntityState?, areaNames: Map<String, String>, locale: Locale): CardUi {
@@ -86,6 +91,9 @@ object HomeUiBuilder {
             pending = state?.pending ?: false,
             tap = tapFor(entity.kind),
             hasSheet = entity.kind in SHEET_KINDS || (entity.kind == Kind.LIGHT && entity.capabilities.brightness),
+            areaId = entity.area,
+            ui = entity.ui,
+            hidden = entity.ui.hidden,
         )
     }
 

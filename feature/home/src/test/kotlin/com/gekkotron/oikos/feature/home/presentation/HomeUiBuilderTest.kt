@@ -151,4 +151,45 @@ class HomeUiBuilderTest {
         }
         assertEquals(RoomFilter.All, RoomFilter.fromKey("garbage"))
     }
+
+    @Test
+    fun `hidden entities get a trailing Hidden chip that lists only them`() {
+        val lamp = testEntity("lamp", Kind.LIGHT, area = "living")
+        val secret = testEntity("secret", Kind.SWITCH, area = "kitchen", ui = UiOverride(hidden = true))
+        val all = build(lamp, secret)
+        assertEquals(RoomFilter.Hidden, all.chips.last().filter)
+        assertEquals(1, all.hiddenCount)
+        assertEquals(listOf("lamp"), all.cards.map { it.id })
+        val hidden = build(lamp, secret, selected = RoomFilter.Hidden)
+        assertEquals(RoomFilter.Hidden, hidden.selected)
+        assertEquals(listOf("secret"), hidden.cards.map { it.id })
+        assertTrue(hidden.cards.single().hidden)
+    }
+
+    @Test
+    fun `Hidden selection falls back to All when nothing is hidden any more`() {
+        val s = build(testEntity("lamp", Kind.LIGHT), selected = RoomFilter.Hidden)
+        assertEquals(RoomFilter.All, s.selected)
+        assertEquals(0, s.hiddenCount)
+        assertFalse(s.chips.any { it.filter == RoomFilter.Hidden })
+    }
+
+    @Test
+    fun `cards carry their area id and override, and rooms exclude Unassigned`() {
+        val s = build(
+            testEntity("lamp", Kind.LIGHT, area = "living", ui = UiOverride(favorite = true)),
+            testEntity("x", Kind.SWITCH),
+            areaList = areas + Area(UNASSIGNED_AREA, UNASSIGNED_AREA),
+        )
+        val lamp = s.card("lamp")!!
+        assertEquals("living", lamp.areaId)
+        assertEquals(UiOverride(favorite = true), lamp.ui)
+        assertEquals(UNASSIGNED_AREA, s.card("x")!!.areaId)
+        assertEquals(areas, s.rooms)
+    }
+
+    @Test
+    fun `hidden filter key round-trips`() {
+        assertEquals(RoomFilter.Hidden, RoomFilter.fromKey(RoomFilter.Hidden.key))
+    }
 }

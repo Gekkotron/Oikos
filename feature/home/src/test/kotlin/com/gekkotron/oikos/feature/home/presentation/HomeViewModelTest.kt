@@ -1,5 +1,7 @@
 package com.gekkotron.oikos.feature.home.presentation
 
+import kotlin.test.assertNull
+import com.gekkotron.oikos.model.UiOverride
 import androidx.lifecycle.SavedStateHandle
 import com.gekkotron.oikos.feature.home.FakeEntitySource
 import com.gekkotron.oikos.feature.home.testEntity
@@ -95,5 +97,30 @@ class HomeViewModelTest {
         }
         val lamp = vm.state.value.cards.first { it.id == "lamp" }
         assertFalse(lamp.on)
+    }
+
+    @Test
+    fun `customize writes the override`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        vm.customize("lamp", UiOverride(name = "Ceiling"))
+        assertEquals(UiOverride(name = "Ceiling"), source.overrides["lamp"])
+    }
+
+    @Test
+    fun `customize failure emits SaveFailed`() = runTest(dispatcher) {
+        source.failWrites = true
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        vm.customize("lamp", UiOverride(hidden = true))
+        assertEquals(HomeEvent.SaveFailed, vm.events.first())
+    }
+
+    @Test
+    fun `createRoom returns an existing room's id without writing, or a new id it writes`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        assertEquals("kitchen", vm.createRoom("KITCHEN"))
+        assertEquals(emptyList(), source.areaWrites)
+        assertEquals("living_room", vm.createRoom("Living room"))
+        assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("living_room", "Living room"))), source.areaWrites)
+        assertNull(vm.createRoom("  "))
     }
 }

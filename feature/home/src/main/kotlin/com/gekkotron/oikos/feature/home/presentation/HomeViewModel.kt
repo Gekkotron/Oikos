@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
+import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -53,6 +54,23 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             source.commandFailures.collect { _events.send(HomeEvent.NotConfirmed(it.uniqueId, it.command)) }
         }
+    }
+
+    private val editor = OverrideEditor(source)
+
+    fun customize(id: String, override: UiOverride) {
+        viewModelScope.launch { if (!editor.save(id, override)) _events.send(HomeEvent.SaveFailed) }
+    }
+
+    /**
+     * @return the id to select for a typed room name: an existing room's (no write), or a new one's,
+     * written in the background. It is returned at once, so the sheet can select it before the source
+     * has echoed it. The source applies the areas locally first, so a second call sees the first room.
+     */
+    fun createRoom(name: String): String? {
+        val resolved = AreaNames.resolve(name, source.areas.value) ?: return null
+        if (resolved.isNew) viewModelScope.launch { if (!editor.addRoom(resolved.area)) _events.send(HomeEvent.SaveFailed) }
+        return resolved.area.id
     }
 
     fun select(filter: RoomFilter) {

@@ -10,6 +10,7 @@ import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.PublishFailed
 import com.gekkotron.oikos.transport.TransportMode
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,13 @@ class FakeEntitySource : EntitySource {
     val sent = mutableListOf<Pair<String, Command>>()
     var result: CommandResult = CommandResult.Accepted
 
+    /** Every override written, last one per id. */
+    val overrides = mutableMapOf<String, UiOverride>()
+    val areaWrites = mutableListOf<List<Area>>()
+
+    /** Makes every override and areas write fail like an offline broker. */
+    var failWrites = false
+
     override fun states() = stateMap
 
     override suspend fun send(uniqueId: String, command: Command): CommandResult {
@@ -31,7 +39,17 @@ class FakeEntitySource : EntitySource {
         return result
     }
 
-    override suspend fun setOverride(uniqueId: String, override: UiOverride) = Unit
+    override suspend fun setOverride(uniqueId: String, override: UiOverride) {
+        if (failWrites) throw PublishFailed("offline")
+        overrides[uniqueId] = override
+        entities.value[uniqueId]?.let { e ->
+            entities.value += uniqueId to e.copy(ui = override, area = override.area ?: e.area, name = override.name ?: e.name)
+        }
+    }
 
-    override suspend fun setAreas(areas: List<Area>) = Unit
+    override suspend fun setAreas(areas: List<Area>) {
+        if (failWrites) throw PublishFailed("offline")
+        areaWrites += areas
+        this.areas.value = areas
+    }
 }

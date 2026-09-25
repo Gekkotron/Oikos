@@ -77,4 +77,6 @@
     <string name="link_offline_not_started">Not connected yet.</string>
     <string name="link_offline_failed">Couldn\'t start the connection.</string>
     <string name="link_set_up_again">Set up connection again</string>
+    <string name="chip_hidden">Hidden (%1$d)</string>
+    <string name="home_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>
 </resources>

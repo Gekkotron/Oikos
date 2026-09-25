@@ -18,4 +18,5 @@ fun testEntity(
     unit: String? = null,
     ui: UiOverride = UiOverride(),
     capabilities: Capabilities = Capabilities(),
-) = Entity(id, null, name, kind, deviceClass, unit, null, capabilities, NoBindings, area, ui)
+    deviceId: String? = null,
+) = Entity(id, deviceId, name, kind, deviceClass, unit, null, capabilities, NoBindings, area, ui)

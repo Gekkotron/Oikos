@@ -1,11 +1,14 @@
 package com.gekkotron.oikos.feature.home.presentation
 
 import com.gekkotron.oikos.model.AlarmState
+import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Capabilities
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.model.UNASSIGNED_AREA
+import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
 
 sealed interface RoomFilter {
@@ -19,6 +22,11 @@ sealed interface RoomFilter {
         override val key = "favorites"
     }
 
+    /** Hidden entities only, so they can be found and unhidden (Settings takes this over later). */
+    data object Hidden : RoomFilter {
+        override val key = "hidden"
+    }
+
     data class Area(val id: String) : RoomFilter {
         override val key get() = AREA_PREFIX + id
     }
@@ -28,6 +36,7 @@ sealed interface RoomFilter {
 
         fun fromKey(key: String): RoomFilter = when {
             key == Favorites.key -> Favorites
+            key == Hidden.key -> Hidden
             key.startsWith(AREA_PREFIX) -> Area(key.removePrefix(AREA_PREFIX))
             else -> All
         }
@@ -69,6 +78,11 @@ data class CardUi(
     val pending: Boolean,
     val tap: TapAction,
     val hasSheet: Boolean,
+    /** Effective area id; [UNASSIGNED_AREA] when the entity has no room. */
+    val areaId: String,
+    /** The override as it is now, for the override sheet. */
+    val ui: UiOverride,
+    val hidden: Boolean,
 )
 
 data class HomeUiState(
@@ -78,6 +92,9 @@ data class HomeUiState(
     val chips: List<ChipUi> = listOf(ChipUi(RoomFilter.All, null)),
     val selected: RoomFilter = RoomFilter.All,
     val cards: List<CardUi> = emptyList(),
+    /** Rooms the override sheet can pick from: every area except Unassigned. */
+    val rooms: List<Area> = emptyList(),
+    val hiddenCount: Int = 0,
 ) {
     fun card(id: String): CardUi? = cards.firstOrNull { it.id == id } ?: hero?.takeIf { it.id == id }
 }
@@ -85,4 +102,5 @@ data class HomeUiState(
 sealed interface HomeEvent {
     data class NotConfirmed(val id: String, val command: Command) : HomeEvent
     data class Rejected(val id: String, val reason: String) : HomeEvent
+    data object SaveFailed : HomeEvent
 }

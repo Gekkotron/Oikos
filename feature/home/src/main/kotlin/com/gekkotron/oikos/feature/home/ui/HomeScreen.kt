@@ -148,10 +148,12 @@ private fun HomeChips(state: HomeUiState, onSelect: (RoomFilter) -> Unit) {
     val all = stringResource(R.string.chip_all)
     val favorites = stringResource(R.string.chip_favorites)
     val unassigned = stringResource(R.string.area_unassigned)
+    val hidden = stringResource(R.string.chip_hidden, state.hiddenCount)
     val items = state.chips.map { chip ->
         val label = chip.label ?: when (chip.filter) {
             RoomFilter.All -> all
             RoomFilter.Favorites -> favorites
+            RoomFilter.Hidden -> hidden
             is RoomFilter.Area -> unassigned
         }
         ChipItem(chip.filter.key, label)

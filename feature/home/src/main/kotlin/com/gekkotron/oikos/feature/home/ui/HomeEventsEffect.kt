@@ -30,6 +30,7 @@ fun HomeEventsEffect(events: Flow<HomeEvent>, snackbar: SnackbarHostState, onRet
                     if (result == SnackbarResult.ActionPerformed) retry(event.id, event.command)
                 }
                 is HomeEvent.Rejected -> snackbar.showSnackbar(resources.getString(R.string.home_rejected, event.reason))
+                HomeEvent.SaveFailed -> snackbar.showSnackbar(resources.getString(R.string.home_save_failed))
             }
         }
     }

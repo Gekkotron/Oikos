@@ -77,4 +77,6 @@
     <string name="link_offline_not_started">Pas encore connecté.</string>
     <string name="link_offline_failed">Impossible de démarrer la connexion.</string>
     <string name="link_set_up_again">Reconfigurer la connexion</string>
+    <string name="chip_hidden">Masqués (%1$d)</string>
+    <string name="home_save_failed">Impossible d\'enregistrer vos modifications. Vérifiez la connexion et réessayez.</string>
 </resources>
