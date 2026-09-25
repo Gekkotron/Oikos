@@ -17,18 +17,24 @@ object AreaNames {
     fun resolve(name: String, existing: List<Area>): Resolved? {
         val clean = name.trim().replace(SPACES, " ")
         if (clean.isEmpty() || clean.equals(UNASSIGNED_AREA, ignoreCase = true)) return null
-        existing.firstOrNull { it.id != UNASSIGNED_AREA && it.name.equals(clean, ignoreCase = true) }
+        val base = slug(clean)
+        // Same name ignoring case, then ignoring accents and punctuation too: typing "Séjour" must reuse the
+        // "Sejour" room that an ASCII device path (rooms/sejour/…) created, not add a second chip.
+        val candidates = existing.filter { it.id != UNASSIGNED_AREA }
+        val key = key(clean)
+        (candidates.firstOrNull { it.name.equals(clean, ignoreCase = true) } ?: candidates.firstOrNull { key.isNotEmpty() && key(it.name) == key })
             ?.let { return Resolved(it, isNew = false) }
         val ids = existing.mapTo(mutableSetOf()) { it.id }
-        val base = slug(clean)
         val id = if (base !in ids) base else generateSequence(2) { it + 1 }.map { "${base}_$it" }.first { it !in ids }
         return Resolved(Area(id, clean), isNew = true)
     }
 
-    fun slug(name: String): String =
+    fun slug(name: String): String = key(name).ifEmpty { "room" }
+
+    /** Lowercase ASCII letters and digits joined by `_`; empty when the name has none (emoji, CJK…). */
+    private fun key(name: String): String =
         Normalizer.normalize(name, Normalizer.Form.NFD).replace(MARKS, "")
             .lowercase(Locale.ROOT).replace(NON_ID, "_").trim('_')
-            .ifEmpty { "room" }
 
     /** The `_areas` document after adding [area]. Implicit areas (from suggested_area) become declared ones. */
     fun withArea(existing: List<Area>, area: Area): List<Area> = existing.filter { it.id != UNASSIGNED_AREA } + area

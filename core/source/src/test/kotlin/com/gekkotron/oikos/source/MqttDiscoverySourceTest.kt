@@ -1,5 +1,8 @@
 package com.gekkotron.oikos.source
 
+import com.gekkotron.oikos.transport.MqttTransport
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandFailure
@@ -362,5 +365,75 @@ class MqttDiscoverySourceTest {
         h.transport.failPublishes = true
         assertFailsWith<PublishFailed> { h.source.setAreas(listOf(Area("salon", "Salon"), Area("kitchen", "Kitchen"))) }
         assertEquals(listOf("salon"), h.source.areas.value.map { it.id })
+    }
+
+
+    /** Publishes wait on a gate while [gated], like a link that died silently and times out later. */
+    private class GatedTransport(val inner: FakeMqttTransport = FakeMqttTransport()) : MqttTransport by inner {
+        var gated = false
+        val pending = ArrayDeque<CompletableDeferred<Unit>>()
+
+        override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) {
+            if (gated) CompletableDeferred<Unit>().also { pending += it }.await()
+            inner.publish(topic, payload, qos, retain)
+        }
+
+        fun failNext() = pending.removeFirst().completeExceptionally(PublishFailed("timed out"))
+    }
+
+    // Final review I1
+    @Test
+    fun `overlapping failed override writes roll back to what the broker has`() = runTest {
+        val t = GatedTransport()
+        val source = MqttDiscoverySource(t, backgroundScope)
+        runCurrent()
+        t.inner.deliver(lightTopic, lightConfig)
+        runCurrent()
+        source.setOverride(lightId, UiOverride(name = "P"))
+        runCurrent()
+        t.gated = true
+        val a = async { runCatching { source.setOverride(lightId, UiOverride(name = "A")) } }
+        val b = async { runCatching { source.setOverride(lightId, UiOverride(name = "B")) } }
+        runCurrent()
+        t.failNext()
+        runCurrent()
+        t.failNext()
+        runCurrent()
+        assertTrue(a.await().isFailure)
+        assertTrue(b.await().isFailure)
+        assertEquals("P", source.entities.value.getValue(lightId).name)
+    }
+
+    // Final review I1
+    @Test
+    fun `overlapping failed areas writes roll back to what the broker has`() = runTest {
+        val t = GatedTransport()
+        val source = MqttDiscoverySource(t, backgroundScope)
+        runCurrent()
+        source.setAreas(listOf(Area("salon", "Salon")))
+        runCurrent()
+        t.gated = true
+        val a = async { runCatching { source.setAreas(listOf(Area("salon", "Salon"), Area("sejour", "Séjour"))) } }
+        val b = async { runCatching { source.setAreas(listOf(Area("salon", "Salon"), Area("sejour", "Séjour"), Area("cuisine", "Cuisine"))) } }
+        runCurrent()
+        t.failNext()
+        runCurrent()
+        t.failNext()
+        runCurrent()
+        assertTrue(a.await().isFailure && b.await().isFailure)
+        assertEquals(listOf("salon"), source.areas.value.map { it.id })
+    }
+
+    // Final review I3
+    @Test
+    fun `raw rooms that differ only in case are one room`() = runTest {
+        val h = start()
+        h.transport.deliver("homeassistant/switch/p/config", z2mSwitch("p", "rooms/salon/prise"))
+        h.transport.deliver("homeassistant/switch/q/config", z2mSwitch("q", "rooms/Salon/lampe"))
+        h.transport.deliver("homeassistant/switch/r/config", z2mSwitch("r", "radio", ""","suggested_area":"SALON""""))
+        runCurrent()
+        val areas = listOf("p", "q", "r").map { h.source.entities.value.getValue(it).area }.toSet()
+        assertEquals(1, areas.size, "got $areas")
+        assertEquals(areas, h.source.areas.value.map { it.id }.toSet())
     }
 }

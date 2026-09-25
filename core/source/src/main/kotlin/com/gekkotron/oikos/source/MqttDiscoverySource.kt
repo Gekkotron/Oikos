@@ -62,6 +62,11 @@ class MqttDiscoverySource(
     private val overrides = mutableMapOf<String, UiOverride>()
     private var areasDocument = AreasDocument()
 
+    // What the broker is known to hold (its retained messages, or a publish it accepted). A failed write
+    // rolls back to this, never to an earlier write that may itself still fail.
+    private val confirmedOverrides = mutableMapOf<String, UiOverride>()
+    private var confirmedAreas = AreasDocument()
+
     private val _entities = MutableStateFlow<Map<String, Entity>>(emptyMap())
     override val entities: StateFlow<Map<String, Entity>> = _entities.asStateFlow()
     private val _devices = MutableStateFlow<Map<String, Device>>(emptyMap())
@@ -130,34 +135,34 @@ class MqttDiscoverySource(
             "unique_id '$uniqueId' cannot be used in an override topic"
         }
         val cleared = override == UiOverride()
-        val previous = synchronized(lock) { if (cleared) overrides.remove(uniqueId) else overrides.put(uniqueId, override) }
+        synchronized(lock) { overrides.putOrRemove(uniqueId, override.takeUnless { cleared }) }
         publishEntities()
         val payload = if (cleared) ByteArray(0) else UiOverrides.encode(override).encodeToByteArray()
         try {
             transport.publish(UI_PREFIX + uniqueId, payload, qos = 1, retain = true)
         } catch (e: PublishFailed) {
             synchronized(lock) {
-                if (overrides[uniqueId] == override.takeUnless { cleared }) {
-                    if (previous == null) overrides.remove(uniqueId) else overrides[uniqueId] = previous
-                }
+                if (overrides[uniqueId] == override.takeUnless { cleared }) overrides.putOrRemove(uniqueId, confirmedOverrides[uniqueId])
             }
             publishEntities()
             throw e
         }
+        synchronized(lock) { confirmedOverrides.putOrRemove(uniqueId, override.takeUnless { cleared }) }
     }
 
     override suspend fun setAreas(areas: List<Area>) {
         val document = AreasDocument(areas)
-        val previous = synchronized(lock) { areasDocument.also { areasDocument = document } }
+        synchronized(lock) { areasDocument = document }
         publishEntities()
         val json = OikosJson.encodeToString(AreasDocument.serializer(), document)
         try {
             transport.publish(AREAS_TOPIC, json.encodeToByteArray(), qos = 1, retain = true)
         } catch (e: PublishFailed) {
-            synchronized(lock) { if (areasDocument == document) areasDocument = previous }
+            synchronized(lock) { if (areasDocument == document) areasDocument = confirmedAreas }
             publishEntities()
             throw e
         }
+        synchronized(lock) { confirmedAreas = document }
     }
 
     private fun handle(message: MqttMessage) {
@@ -190,16 +195,18 @@ class MqttDiscoverySource(
             runCatching { OikosJson.decodeFromString(AreasDocument.serializer(), payload) }.getOrNull()
                 ?: return report("$AREAS_TOPIC: invalid areas document")
         }
-        synchronized(lock) { areasDocument = document }
+        synchronized(lock) {
+            areasDocument = document
+            confirmedAreas = document
+        }
         publishEntities()
     }
 
     private fun onOverride(uniqueId: String, payload: String) {
-        if (payload.isEmpty()) {
-            synchronized(lock) { overrides.remove(uniqueId) }
-        } else {
-            val override = UiOverrides.decode(payload) ?: return report("$UI_PREFIX$uniqueId: invalid override")
-            synchronized(lock) { overrides[uniqueId] = override }
+        val override = if (payload.isEmpty()) null else UiOverrides.decode(payload) ?: return report("$UI_PREFIX$uniqueId: invalid override")
+        synchronized(lock) {
+            overrides.putOrRemove(uniqueId, override)
+            confirmedOverrides.putOrRemove(uniqueId, override)
         }
         publishEntities()
     }
@@ -216,9 +223,17 @@ class MqttDiscoverySource(
         val snapshot = run {
             val all = discovered.values.flatten()
             val declared = areasDocument.areas
-            val entities = all.associate { d ->
+            val raws = all.map { d ->
                 val ui = overrides[d.entity.uniqueId] ?: UiOverride()
-                val area = resolveArea(ui.area ?: d.device?.suggestedArea ?: d.device?.pathArea ?: UNASSIGNED_AREA, declared)
+                Triple(d, ui, resolveArea(ui.area ?: d.device?.suggestedArea ?: d.device?.pathArea ?: UNASSIGNED_AREA, declared))
+            }
+            // Undeclared rooms that differ only in case ("salon" from a path, "Salon" from suggested_area)
+            // are one room, under the first spelling in sort order.
+            val declaredIds = declared.mapTo(mutableSetOf()) { it.id }
+            val canonical = raws.map { it.third }.filter { it !in declaredIds && it != UNASSIGNED_AREA }
+                .groupBy { it.lowercase(Locale.ROOT) }.mapValues { (_, spellings) -> spellings.min() }
+            val entities = raws.associate { (d, ui, raw) ->
+                val area = canonical[raw.lowercase(Locale.ROOT)]?.takeIf { raw !in declaredIds } ?: raw
                 d.entity.uniqueId to d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
             }
             Snapshot(entities, all.mapNotNull { it.device }.associateBy { it.id }, computeAreas(declared, entities.values))
@@ -229,6 +244,10 @@ class MqttDiscoverySource(
         _devices.value = snapshot.devices
         _areas.value = snapshot.areas
         stateTopics.value = store.subscriptionTopics()
+    }
+
+    private fun <V : Any> MutableMap<String, V>.putOrRemove(key: String, value: V?) {
+        if (value == null) remove(key) else this[key] = value
     }
 
     private fun resolveArea(raw: String, declared: List<Area>): String =

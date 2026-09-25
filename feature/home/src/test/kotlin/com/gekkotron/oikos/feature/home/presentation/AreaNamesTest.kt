@@ -47,4 +47,13 @@ class AreaNamesTest {
             AreaNames.withArea(existing, Area("office", "Office")),
         )
     }
+
+
+    // Final review I2
+    @Test
+    fun `a typed name matching a room ignoring accents and punctuation reuses it`() {
+        val fromPath = listOf(Area("sejour", "Sejour"), Area("salle_de_bain", "Salle de bain"))
+        assertEquals(AreaNames.Resolved(Area("sejour", "Sejour"), isNew = false), AreaNames.resolve("Séjour", fromPath))
+        assertEquals(AreaNames.Resolved(Area("salle_de_bain", "Salle de bain"), isNew = false), AreaNames.resolve("salle-de-bain", fromPath))
+    }
 }
