@@ -1,6 +1,5 @@
 package com.gekkotron.oikos.feature.home.presentation
 
-import kotlin.test.assertNull
 import com.gekkotron.oikos.model.UiOverride
 import androidx.lifecycle.SavedStateHandle
 import com.gekkotron.oikos.feature.home.FakeEntitySource
@@ -118,25 +117,35 @@ class HomeViewModelTest {
     @Test
     fun `customize writes the override`() = runTest(dispatcher) {
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
-        vm.customize("lamp", UiOverride(name = "Ceiling"))
+        vm.customize("lamp", emptyList(), UiOverride(name = "Ceiling"))
         assertEquals(UiOverride(name = "Ceiling"), source.overrides["lamp"])
+        assertEquals(listOf("override"), source.calls)
     }
 
     @Test
     fun `customize failure emits SaveFailed`() = runTest(dispatcher) {
         source.failWrites = true
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
-        vm.customize("lamp", UiOverride(hidden = true))
+        vm.customize("lamp", emptyList(), UiOverride(hidden = true))
         assertEquals(HomeEvent.SaveFailed, vm.events.first())
     }
 
     @Test
-    fun `createRoom returns an existing room's id without writing, or a new id it writes`() = runTest(dispatcher) {
+    fun `customize with a new room publishes the areas, then the override, in order`() = runTest(dispatcher) {
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
-        assertEquals("kitchen", vm.createRoom("KITCHEN"))
-        assertEquals(emptyList(), source.areaWrites)
-        assertEquals("living_room", vm.createRoom("Living room"))
-        assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("living_room", "Living room"))), source.areaWrites)
-        assertNull(vm.createRoom("  "))
+        vm.customize("lamp", listOf(Area("office", "Office")), UiOverride(area = "office"))
+        assertEquals(listOf("areas", "override"), source.calls)
+        assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("office", "Office"))), source.areaWrites)
+        assertEquals(UiOverride(area = "office"), source.overrides["lamp"])
+    }
+
+    @Test
+    fun `when publishing the new room fails, the override is never sent`() = runTest(dispatcher) {
+        source.failWrites = true
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        vm.customize("lamp", listOf(Area("office", "Office")), UiOverride(area = "office"))
+        assertEquals(listOf("areas"), source.calls)
+        assertEquals(emptyMap(), source.overrides)
+        assertEquals(HomeEvent.SaveFailed, vm.events.first())
     }
 }

@@ -41,7 +41,7 @@ class CustomizeSheetTest {
 
     private val rooms = listOf(Area("living", "Living room"), Area("kitchen", "Kitchen"))
     private val saved = mutableListOf<UiOverride>()
-    private val created = mutableListOf<String>()
+    private val savedRooms = mutableListOf<List<Area>>()
 
     private fun card(entity: Entity): CardUi =
         HomeUiBuilder.build(mapOf(entity.uniqueId to entity), emptyMap(), rooms, if (entity.ui.hidden) RoomFilter.Hidden else RoomFilter.All, LinkState.Connecting, Locale.US).card(entity.uniqueId)!!
@@ -49,7 +49,7 @@ class CustomizeSheetTest {
     private fun show(card: CardUi, fontScale: Float = 1f) = compose.setContent {
         CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
             OikosTheme(ThemeChoice.NIGHT_GLASS) {
-                CustomizeSheet(card, rooms, onSave = { saved += it }, onCreateRoom = { created += it; "office" }, onDismiss = {})
+                CustomizeSheet(card, rooms, onSave = { r, o -> savedRooms += r; saved += o }, onDismiss = {})
             }
         }
     }
@@ -73,12 +73,15 @@ class CustomizeSheetTest {
     }
 
     @Test
-    fun `a new room is created and selected`() {
+    fun `a new room is selectable in the picker but not published until Save`() {
         show(card(testEntity("lamp", Kind.LIGHT)))
         compose.onNode(hasSetTextAction() and hasText("New room")).performScrollTo().performTextInput("Office")
         compose.onNodeWithText("Add").performScrollTo().performClick()
+        compose.onNodeWithText("Office").assertExists()
+        assertTrue(saved.isEmpty())
+        assertTrue(savedRooms.isEmpty())
         compose.onNodeWithText("Save").performScrollTo().performClick()
-        assertEquals(listOf("Office"), created)
+        assertEquals(listOf(Area("office", "Office")), savedRooms.single())
         assertEquals("office", saved.single().area)
     }
 

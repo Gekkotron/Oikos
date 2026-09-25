@@ -55,6 +55,7 @@ import com.gekkotron.oikos.feature.home.presentation.HomeUiState
 import com.gekkotron.oikos.feature.home.presentation.HomeViewModel
 import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.presentation.TapAction
+import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.UiOverride
 import java.time.LocalTime
@@ -68,7 +69,6 @@ fun HomeRoute(onSetUpAgain: () -> Unit = {}, onAssignRooms: () -> Unit = {}, vie
         state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
         onSetUpAgain = onSetUpAgain,
         onCustomize = viewModel::customize,
-        onCreateRoom = viewModel::createRoom,
         onAssignRooms = onAssignRooms,
     )
 }
@@ -83,8 +83,7 @@ fun HomeScreen(
     now: LocalTime = LocalTime.now(),
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     onSetUpAgain: () -> Unit = {},
-    onCustomize: (String, UiOverride) -> Unit = { _, _ -> },
-    onCreateRoom: (String) -> String? = { null },
+    onCustomize: (String, List<Area>, UiOverride) -> Unit = { _, _, _ -> },
     onAssignRooms: () -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
@@ -153,8 +152,7 @@ fun HomeScreen(
         CustomizeSheet(
             customizeCard,
             state.rooms,
-            onSave = { onCustomize(customizeCard.id, it) },
-            onCreateRoom = onCreateRoom,
+            onSave = { newRooms, override -> onCustomize(customizeCard.id, newRooms, override) },
             onDismiss = { customizeId = null },
         )
     }

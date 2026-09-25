@@ -25,6 +25,11 @@ class OverrideEditor(private val source: EntitySource) {
 
     suspend fun addRoom(area: Area): Boolean = attempt { source.setAreas(AreaNames.withArea(source.areas.value, area)) }
 
+    /** Appends every room in [rooms] that is not already declared, in one publish. */
+    suspend fun addRooms(rooms: List<Area>): Boolean = attempt {
+        source.setAreas(rooms.fold(source.areas.value) { areas, room -> AreaNames.withArea(areas, room) })
+    }
+
     private suspend fun attempt(write: suspend () -> Unit): Boolean = try {
         write()
         true

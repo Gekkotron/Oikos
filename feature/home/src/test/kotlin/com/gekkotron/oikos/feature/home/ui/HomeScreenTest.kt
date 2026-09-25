@@ -95,7 +95,7 @@ class HomeScreenTest {
                     onSelect = { selects += it },
                     onTap = { taps += it.id },
                     onSend = { id, c -> sends += id to c },
-                    onCustomize = { id, o -> customized += id to o },
+                    onCustomize = { id, _, o -> customized += id to o },
                     now = LocalTime.NOON,
                     windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
@@ -240,7 +240,7 @@ class HomeScreenTest {
                 HomeScreen(
                     state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
                     onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
-                    onCustomize = { id, o -> customizedHere += id to o },
+                    onCustomize = { id, _, o -> customizedHere += id to o },
                 )
             }
         }

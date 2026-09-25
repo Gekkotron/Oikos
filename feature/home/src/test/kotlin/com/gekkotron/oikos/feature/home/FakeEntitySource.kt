@@ -29,6 +29,9 @@ class FakeEntitySource : EntitySource {
     val overrides = mutableMapOf<String, UiOverride>()
     val areaWrites = mutableListOf<List<Area>>()
 
+    /** "areas" or "override", in call order, whether or not the write succeeded. */
+    val calls = mutableListOf<String>()
+
     /** Makes every override and areas write fail like an offline broker. */
     var failWrites = false
 
@@ -40,6 +43,7 @@ class FakeEntitySource : EntitySource {
     }
 
     override suspend fun setOverride(uniqueId: String, override: UiOverride) {
+        calls += "override"
         if (failWrites) throw PublishFailed("offline")
         overrides[uniqueId] = override
         entities.value[uniqueId]?.let { e ->
@@ -48,6 +52,7 @@ class FakeEntitySource : EntitySource {
     }
 
     override suspend fun setAreas(areas: List<Area>) {
+        calls += "areas"
         if (failWrites) throw PublishFailed("offline")
         areaWrites += areas
         this.areas.value = areas

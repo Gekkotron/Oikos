@@ -23,6 +23,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
+import com.gekkotron.oikos.feature.home.presentation.AreaNames
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.oikos.feature.home.presentation.OverrideDraft
@@ -49,8 +51,7 @@ import com.gekkotron.oikos.model.UiOverride
 internal fun CustomizeSheet(
     card: CardUi,
     rooms: List<Area>,
-    onSave: (UiOverride) -> Unit,
-    onCreateRoom: (String) -> String?,
+    onSave: (List<Area>, UiOverride) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val start = OverrideDraft.from(card)
@@ -61,6 +62,9 @@ internal fun CustomizeSheet(
     var order by rememberSaveable(card.id) { mutableStateOf(start.order) }
     var cardStyle by rememberSaveable(card.id) { mutableStateOf(start.cardStyle) }
     var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
+    // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
+    // saving never declares a room nobody asked to keep.
+    var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
     val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -78,7 +82,16 @@ internal fun CustomizeSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(stringResource(R.string.customize_room), style = OikosTheme.type.label)
-            RoomPicker(rooms, areaId, onSelect = { areaId = it }, onCreate = onCreateRoom)
+            val allRooms = rooms + newRooms
+            RoomPicker(
+                allRooms, areaId,
+                onSelect = { areaId = it },
+                onCreate = { typed ->
+                    val resolved = AreaNames.resolve(typed, allRooms) ?: return@RoomPicker null
+                    if (resolved.isNew) newRooms = newRooms + resolved.area
+                    resolved.area.id
+                },
+            )
             SwitchRow(stringResource(R.string.customize_favorite), favorite) { favorite = it }
             SwitchRow(stringResource(R.string.customize_hidden), hidden) { hidden = it }
             OutlinedTextField(
@@ -108,11 +121,11 @@ internal fun CustomizeSheet(
                 }
             }
             Button(
-                onClick = { onSave(draft.applyTo(card)); onDismiss() },
+                onClick = { onSave(newRooms, draft.applyTo(card)); onDismiss() },
                 enabled = draft.orderValid,
                 modifier = Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch),
             ) { Text(stringResource(R.string.customize_save)) }
-            TextButton(onClick = { onSave(UiOverride()); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = { onSave(emptyList(), UiOverride()); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.customize_reset))
             }
         }

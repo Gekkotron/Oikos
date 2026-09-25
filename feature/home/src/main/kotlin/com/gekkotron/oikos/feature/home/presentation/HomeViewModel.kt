@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.home.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.model.UiOverride
@@ -64,19 +65,19 @@ class HomeViewModel @Inject constructor(
 
     private val editor = OverrideEditor(source)
 
-    fun customize(id: String, override: UiOverride) {
-        viewModelScope.launch { if (!editor.save(id, override)) _events.send(HomeEvent.SaveFailed) }
-    }
-
     /**
-     * @return the id to select for a typed room name: an existing room's (no write), or a new one's,
-     * written in the background. It is returned at once, so the sheet can select it before the source
-     * has echoed it. The source applies the areas locally first, so a second call sees the first room.
+     * [newRooms] are rooms the override sheet's picker created but never published (spec §5.2): they
+     * are published first, so the override's area id resolves to a declared room, and only once that
+     * publish succeeds is the override itself sent. A failed areas publish leaves the override unsent.
      */
-    fun createRoom(name: String): String? {
-        val resolved = AreaNames.resolve(name, source.areas.value) ?: return null
-        if (resolved.isNew) viewModelScope.launch { if (!editor.addRoom(resolved.area)) _events.send(HomeEvent.SaveFailed) }
-        return resolved.area.id
+    fun customize(id: String, newRooms: List<Area>, override: UiOverride) {
+        viewModelScope.launch {
+            if (newRooms.isNotEmpty() && !editor.addRooms(newRooms)) {
+                _events.send(HomeEvent.SaveFailed)
+                return@launch
+            }
+            if (!editor.save(id, override)) _events.send(HomeEvent.SaveFailed)
+        }
     }
 
     fun select(filter: RoomFilter) {
