@@ -32,13 +32,22 @@ class RoomsViewModel @Inject constructor(
 ) : ViewModel() {
     private val editor = OverrideEditor(source)
 
+    // Captured from the first build, so assigning a row doesn't move it (spec §5.2 step 5); rows that
+    // appear later (a fresh device announcement) are simply not in it yet and sort after the rest.
+    @Volatile
+    private var rowOrder: List<String> = emptyList()
+
     val state: StateFlow<RoomsUiState> = combine(
         source.entities,
         source.devices,
         source.areas,
         savedState.getStateFlow(KEY_CHANGED, false),
     ) { entities, devices, areas, changed ->
-        RoomsUiBuilder.build(entities, devices, areas, Locale.getDefault()).copy(changed = changed)
+        val built = RoomsUiBuilder.build(entities, devices, areas, Locale.getDefault())
+        if (rowOrder.isEmpty()) rowOrder = built.rows.map { it.id }
+        val rank = rowOrder.withIndex().associate { (i, id) -> id to i }
+        val ordered = built.rows.sortedBy { rank[it.id] ?: Int.MAX_VALUE }
+        built.copy(rows = ordered, changed = changed)
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RoomsUiState())
 
     private val _events = Channel<RoomsEvent>(Channel.BUFFERED)

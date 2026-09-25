@@ -65,6 +65,25 @@ class RoomsViewModelTest {
     }
 
     @Test
+    fun `assigning a row does not change the row order`() = runTest(dispatcher) {
+        source.entities.value = listOf(
+            testEntity("z", Kind.SWITCH, name = "Zeta", deviceId = "zdev"),
+            testEntity("a", Kind.SWITCH, name = "Alpha", deviceId = "adev"),
+            testEntity("m", Kind.SWITCH, name = "Mid", deviceId = "mdev", area = "kitchen"),
+        ).associateBy { it.uniqueId }
+        source.devices.value = mapOf(
+            "zdev" to Device("zdev", "Zeta", null, null, null),
+            "adev" to Device("adev", "Alpha", null, null, null),
+            "mdev" to Device("mdev", "Mid", null, null, null),
+        )
+        val vm = RoomsViewModel(source, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val before = vm.state.value.rows.map { it.id }
+        vm.assign(before.first(), "kitchen")
+        assertEquals(before, vm.state.value.rows.map { it.id })
+    }
+
+    @Test
     fun `createRoom reuses or writes like Home`() = runTest(dispatcher) {
         val vm = RoomsViewModel(source, SavedStateHandle(), dispatcher)
         assertEquals("kitchen", vm.createRoom("Kitchen"))
