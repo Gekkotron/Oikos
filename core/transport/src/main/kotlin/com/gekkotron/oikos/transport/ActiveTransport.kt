@@ -26,7 +26,8 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * The one [MqttTransport] the rest of the app sees (spec §3.3). It runs the transport for the current
  * [TransportSpec], replays subscriptions onto each new one, and pauses [backgroundGrace] after the app
- * leaves the foreground. Switching is break-before-make; Plan 2's selector adds make-before-break.
+ * leaves the foreground. A spec change is break-before-make; moving between the routes of one profile is
+ * [TransportSelector]'s job, make-before-break.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ActiveTransport(
