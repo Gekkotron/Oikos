@@ -148,4 +148,11 @@ class HomeViewModelTest {
         assertEquals(emptyMap(), source.overrides)
         assertEquals(HomeEvent.SaveFailed, vm.events.first())
     }
+
+    @Test
+    fun `a room typed and then left for another is not published`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        vm.customize("lamp", listOf(Area("office", "Office"), Area("attic", "Attic")), UiOverride(area = "attic"))
+        assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("attic", "Attic"))), source.areaWrites)
+    }
 }

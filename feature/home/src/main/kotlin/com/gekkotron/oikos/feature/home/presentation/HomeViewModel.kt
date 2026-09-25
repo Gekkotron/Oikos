@@ -71,8 +71,10 @@ class HomeViewModel @Inject constructor(
      * publish succeeds is the override itself sent. A failed areas publish leaves the override unsent.
      */
     fun customize(id: String, newRooms: List<Area>, override: UiOverride) {
+        // A room typed and then left for another one is dropped: only the room the override uses is declared.
+        val used = newRooms.filter { it.id == override.area }
         viewModelScope.launch {
-            if (newRooms.isNotEmpty() && !editor.addRooms(newRooms)) {
+            if (used.isNotEmpty() && !editor.addRooms(used)) {
                 _events.send(HomeEvent.SaveFailed)
                 return@launch
             }
