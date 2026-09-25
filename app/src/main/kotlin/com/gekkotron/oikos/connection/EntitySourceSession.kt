@@ -9,11 +9,11 @@ import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.source.MqttDiscoverySource
 import com.gekkotron.oikos.transport.MqttTransport
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.time.Duration
@@ -60,19 +60,28 @@ class EntitySourceSession(
         }
     }
 
-    @OptIn(FlowPreview::class)
+    /**
+     * Restores, then saves once the source has settled (before that its journal is partial, or just the
+     * cache itself), and afterwards at most every [SAVE_INTERVAL]: a busy house never goes quiet, so a
+     * debounce would never save. An unchanged journal is not rewritten.
+     */
     private fun attach(source: EntitySource, cache: EntityCache, key: String, scope: CoroutineScope) {
         scope.launch {
             source.restore(cache.load(key))
             val journaled = source as? MqttDiscoverySource ?: return@launch
-            journaled.journalVersion.debounce(SAVE_DEBOUNCE).collect {
+            journaled.hasSettled.first { it }
+            var saved: Map<String, String>? = null
+            journaled.journalVersion.collect {
                 val messages = journaled.journal()
-                if (messages.isEmpty()) return@collect
-                try {
-                    cache.save(key, messages)
-                } catch (e: IOException) {
-                    diagnostics.report(Diagnostic("cache", "save failed: $e"))
+                if (messages.isNotEmpty() && messages != saved) {
+                    try {
+                        cache.save(key, messages)
+                        saved = messages
+                    } catch (e: IOException) {
+                        diagnostics.report(Diagnostic("cache", "save failed: $e"))
+                    }
                 }
+                delay(SAVE_INTERVAL) // journalVersion is a StateFlow: the next value is the latest one
             }
         }
     }
@@ -98,7 +107,7 @@ class EntitySourceSession(
     }
 
     companion object {
-        val SAVE_DEBOUNCE: Duration = 2.seconds
+        val SAVE_INTERVAL: Duration = 10.seconds
 
         fun defaultBuild(transport: MqttTransport, scope: CoroutineScope, prefix: String, diagnostics: DiagnosticSink): EntitySource =
             MqttDiscoverySource(transport, scope, prefix = prefix, diagnostics = diagnostics)

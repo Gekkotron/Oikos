@@ -38,9 +38,12 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 import java.util.Locale
 import kotlin.time.Duration
@@ -77,7 +80,15 @@ class MqttDiscoverySource(
     private val restoredOnly = mutableSetOf<String>()
     private val _journalVersion = MutableStateFlow(0L)
     @Volatile private var settled = false
-    @Volatile private var liveCount = 0L
+    private val _hasSettled = MutableStateFlow(false)
+
+    /** True once the broker's replay went quiet and restored ghosts were pruned: [journal] is then complete. */
+    val hasSettled: StateFlow<Boolean> = _hasSettled.asStateFlow()
+
+    // Live messages (any), and topics received live for the first time (the broker's retained replay, not
+    // steady updates): the first shows the replay started, the second when it went quiet.
+    private val liveMessages = MutableStateFlow(0L)
+    private val newLiveTopics = MutableStateFlow(0L)
 
     /** Increments whenever [journal] may have changed. */
     val journalVersion: StateFlow<Long> = _journalVersion.asStateFlow()
@@ -111,15 +122,14 @@ class MqttDiscoverySource(
             }
         }
         scope.launch {
-            // Settle once the broker's retained replay has gone quiet after the first connection.
-            link.first { it is LinkState.Connected }
-            val maxRounds = SETTLE_MAX.inWholeMilliseconds / SETTLE_QUIET.inWholeMilliseconds
-            var rounds = 0L
-            do {
-                val seen = liveCount
-                delay(SETTLE_QUIET)
-                rounds++
-            } while (liveCount != seen && rounds < maxRounds)
+            // Settle once the broker's retained replay has started and then gone quiet, on a link that stayed
+            // up. Without live traffic nothing is settled: a stalled link must not prune the cached house.
+            while (true) {
+                link.first { it is LinkState.Connected }
+                val before = liveMessages.value
+                combine(link, liveMessages) { l, n -> l !is LinkState.Connected || n != before }.first { it }
+                if (link.value is LinkState.Connected && replayWentQuiet()) break
+            }
             settle()
         }
     }
@@ -216,10 +226,33 @@ class MqttDiscoverySource(
             if (areasDocument.areas.isNotEmpty()) add(AREAS_TOPIC)
             addAll(store.subscriptionTopics())
         }
-        payloads.filterKeys { it in keep }
+        payloads.filterKeys { it in keep }.mapNotNull { (topic, payload) -> redact(topic, payload)?.let { topic to it } }.toMap()
     }
 
-    /** A [restored] message comes from the entity cache and never replaces one received live. */
+    /** An alarm panel's `code` is its PIN: it never goes to the cache (entity cache spec §1.5). */
+    private fun redact(topic: String, payload: String): String? {
+        if (!topic.startsWith("$prefix/alarm_control_panel/")) return payload
+        val config = try {
+            OikosJson.parseToJsonElement(payload) as? JsonObject
+        } catch (e: SerializationException) {
+            null
+        } ?: return null
+        return if ("code" in config) JsonObject(config - "code").toString() else payload
+    }
+
+    /** True once no new topic arrived for [SETTLE_QUIET] (or [SETTLE_MAX] passed); false if the link dropped. */
+    private suspend fun replayWentQuiet(): Boolean {
+        val maxRounds = SETTLE_MAX.inWholeMilliseconds / SETTLE_QUIET.inWholeMilliseconds
+        var rounds = 0L
+        do {
+            val seen = newLiveTopics.value
+            delay(SETTLE_QUIET)
+            rounds++
+            if (link.value !is LinkState.Connected) return false
+        } while (newLiveTopics.value != seen && rounds < maxRounds)
+        return true
+    }
+
     /** The broker has replayed what it holds: restored configs and overrides it did not re-send are gone. */
     private fun settle() {
         synchronized(lock) {
@@ -243,23 +276,27 @@ class MqttDiscoverySource(
         publishEntities()
         store.settle()
         _journalVersion.value++
+        _hasSettled.value = true
     }
 
-    private fun handle(message: MqttMessage, restored: Boolean = false) {
+    /**
+     * The whole message is applied under [lock], so a restored message can never interleave with a live one
+     * (or with [settle]) between its check and its effect. [publishEntities] and the store re-enter or nest
+     * inside it in the usual source -> store order.
+     */
+    private fun handle(message: MqttMessage, restored: Boolean = false): Unit = synchronized(lock) {
         val topic = message.topic
         try {
             val payload = message.payloadString()
-            synchronized(lock) {
-                if (restored) {
-                    if (settled || topic in liveTopics) return
-                    restoredOnly += topic
-                } else {
-                    liveTopics += topic
-                    restoredOnly -= topic
-                    liveCount++
-                }
-                if (payload.isEmpty()) payloads.remove(topic) else payloads[topic] = payload
+            if (restored) {
+                if (settled || topic in liveTopics) return
+                restoredOnly += topic
+            } else {
+                liveMessages.value++
+                if (liveTopics.add(topic)) newLiveTopics.value++
+                restoredOnly -= topic
             }
+            if (payload.isEmpty()) payloads.remove(topic) else payloads[topic] = payload
             when {
                 topic == AREAS_TOPIC -> onAreas(payload)
                 topic.startsWith(UI_PREFIX) -> onOverride(topic.removePrefix(UI_PREFIX), payload)

@@ -177,9 +177,13 @@ class StateStoreTest {
         store.setEntities(listOf(temperature, lamp))
         store.onMessage("z/capteur", """{"temperature":21.5}""", restored = true)
         store.onMessage("s", "ON", restored = true)
+        store.onMessage("s", "OFF") // live: confirmed
         store.settle()
         assertFalse(stale("t"))
         assertFalse(stale("l"))
+        // The broker never re-sent the temperature: the cached value is not shown as current.
+        assertEquals(StateValue.Unknown, value("t"))
+        assertEquals(StateValue.OnOff(false), value("l"))
     }
 
     @Test

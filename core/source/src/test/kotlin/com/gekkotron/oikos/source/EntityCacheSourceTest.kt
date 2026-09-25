@@ -98,6 +98,66 @@ class EntityCacheSourceTest {
 
     private val quiet = MqttDiscoverySource.SETTLE_QUIET.inWholeMilliseconds
     private val connected = LinkState.Connected(TransportMode.DIRECT)
+    private val otherTopic = "homeassistant/switch/sw1/switch/config"
+    private val otherConfig = """{"command_topic":"sw/sw1/set","state_topic":"sw/sw1","unique_id":"sw1"}"""
+
+    @Test
+    fun `connected without any live traffic never prunes`() = runTest {
+        val (transport, source) = start()
+        source.restore(cached)
+        transport.setLink(connected)
+        runCurrent()
+        advanceTimeBy(MqttDiscoverySource.SETTLE_MAX.inWholeMilliseconds * 2)
+        runCurrent()
+        assertTrue(lightId in source.entities.value)
+        assertTrue(source.states().first().getValue(lightId).stale)
+    }
+
+    @Test
+    fun `a link that drops before the replay does not prune, and the next connection settles`() = runTest {
+        val (transport, source) = start()
+        source.restore(cached)
+        transport.setLink(connected)
+        transport.deliver(otherTopic, otherConfig, retain = true)
+        runCurrent()
+        transport.setLink(LinkState.Reconnecting(1))
+        advanceTimeBy(MqttDiscoverySource.SETTLE_MAX.inWholeMilliseconds * 2)
+        runCurrent()
+        assertTrue(lightId in source.entities.value)
+
+        transport.setLink(connected)
+        transport.deliver(otherTopic, otherConfig, retain = true)
+        runCurrent()
+        advanceTimeBy(quiet + 1)
+        runCurrent()
+        assertFalse(lightId in source.entities.value)
+    }
+
+    @Test
+    fun `steady updates on known topics do not delay settling`() = runTest {
+        val (transport, source) = start()
+        source.restore(cached)
+        transport.setLink(connected)
+        transport.deliver(otherTopic, otherConfig, retain = true)
+        runCurrent()
+        repeat(6) {
+            advanceTimeBy(500)
+            transport.deliver(otherTopic, otherConfig, retain = true)
+            runCurrent()
+        }
+        assertFalse(lightId in source.entities.value)
+    }
+
+    @Test
+    fun `the alarm code never reaches the journal`() = runTest {
+        val (transport, source) = start(FakeMqttTransport())
+        val alarmTopic = "homeassistant/alarm_control_panel/a1/config"
+        transport.deliver(alarmTopic, """{"command_topic":"al/set","state_topic":"al","unique_id":"a1","code":"4321"}""", retain = true)
+        runCurrent()
+        val cachedAlarm = source.journal().getValue(alarmTopic)
+        assertFalse("4321" in cachedAlarm)
+        assertTrue("\"unique_id\":\"a1\"" in cachedAlarm)
+    }
 
     @Test
     fun `after connecting, restored configs the broker no longer holds are pruned with their override`() = runTest {
@@ -105,13 +165,14 @@ class EntityCacheSourceTest {
         source.restore(cached)
         runCurrent()
         transport.setLink(connected)
+        transport.deliver(otherTopic, otherConfig, retain = true) // the broker's replay holds another device only
         runCurrent()
         assertTrue(lightId in source.entities.value)
 
         advanceTimeBy(quiet + 1)
         runCurrent()
         assertFalse(lightId in source.entities.value)
-        assertEquals(emptySet(), source.journal().keys)
+        assertEquals(setOf(otherTopic), source.journal().keys)
     }
 
     @Test
@@ -129,7 +190,10 @@ class EntityCacheSourceTest {
         assertEquals("Salon", light.area)
         // The override was only restored, never re-sent: it is gone, so the name falls back.
         assertEquals("Lampe", light.name)
-        assertFalse(source.states().first().getValue(lightId).stale)
+        // Its state was only restored, never re-sent: back to unknown, not shown as current.
+        val state = source.states().first().getValue(lightId)
+        assertFalse(state.stale)
+        assertEquals(StateValue.Unknown, state.value)
     }
 
     @Test
@@ -149,12 +213,14 @@ class EntityCacheSourceTest {
 
     @Test
     fun `a restore that arrives after settle is ignored`() = runTest {
-        val (_, source) = start(FakeMqttTransport())
+        val (transport, source) = start(FakeMqttTransport())
+        transport.deliver(otherTopic, otherConfig, retain = true)
+        runCurrent()
         advanceTimeBy(quiet + 1)
         runCurrent()
         source.restore(cached)
         runCurrent()
         assertFalse(lightId in source.entities.value)
-        assertTrue(source.journal().isEmpty())
+        assertEquals(setOf(otherTopic), source.journal().keys)
     }
 }

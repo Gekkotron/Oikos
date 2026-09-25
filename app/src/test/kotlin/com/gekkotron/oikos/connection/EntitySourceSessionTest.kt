@@ -109,6 +109,29 @@ class EntitySourceSessionTest {
     }
 
     @Test
+    fun `a busy house is saved soon after it settles`() = runBlocking {
+        val cache = FakeEntityCache()
+        EntitySourceSession(transport, parent, cache = cache).current(direct)
+        transport.deliver(lightTopic, lightConfig, retain = true)
+        withTimeout(5_000) {
+            while (cache.stored == null) {
+                transport.deliver("z2m/lampe", """{"state":"ON"}""") // more than one message every 2 s
+                delay(300)
+            }
+        }
+        assertTrue(lightTopic in cache.stored!!.second)
+    }
+
+    @Test
+    fun `nothing is saved before the source settles`() = runBlocking {
+        val cache = FakeEntityCache(direct.cacheKey() to mapOf(lightTopic to lightConfig))
+        transport.setLink(LinkState.Offline("test"))
+        EntitySourceSession(transport, parent, cache = cache).current(direct)
+        delay(2_500)
+        assertEquals(0, cache.saves)
+    }
+
+    @Test
     fun `the demo and reset clear the cache`() = runBlocking {
         val cache = FakeEntityCache(direct.cacheKey() to mapOf(lightTopic to lightConfig))
         val session = EntitySourceSession(transport, parent, cache = cache)
@@ -122,10 +145,12 @@ class EntitySourceSessionTest {
 
 private class FakeEntityCache(var stored: Pair<String, Map<String, String>>? = null) : EntityCache {
     var clears = 0
+    var saves = 0
 
     override suspend fun load(key: String) = stored?.takeIf { it.first == key }?.second.orEmpty()
 
     override suspend fun save(key: String, messages: Map<String, String>) {
+        saves++
         stored = key to messages
     }
 

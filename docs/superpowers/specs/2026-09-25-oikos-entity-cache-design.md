@@ -30,7 +30,7 @@ The alternatives were rejected. A structured snapshot of `Entity` and `EntitySta
   - Discovery config topics it accepted (`discovered` keys). A `Removed` result or an empty payload drops the topic.
   - `oikos/ui/<id>` overrides and `oikos/ui/_areas`. An empty payload drops the topic.
   - State, availability and `json_attributes` topics that are in `store.subscriptionTopics()` at the time of the change.
-- `val journal: StateFlow<Map<String, String>>` exposes it. It is updated inside `publishEntities()` and after state messages, then filtered to the current topics, so topics of removed entities never linger.
+- `journal(): Map<String, String>` exposes it, and `journalVersion: StateFlow<Long>` says when it changed. An alarm panel's `code` (its PIN) is removed from the cached config. It is updated inside `publishEntities()` and after state messages, then filtered to the current topics, so topics of removed entities never linger.
 - `suspend fun restore(messages: Map<String, String>)` handles each message as if it had arrived retained, marked as *restored*.
   - It skips any topic already received live by this source. A restore that finishes after the first live messages therefore never overwrites fresher data.
   - Config topics are replayed before state topics, so state messages find their entity.
@@ -56,17 +56,17 @@ The alternatives were rejected. A structured snapshot of `Entity` and `EntitySta
 
 ### 3.4 Prune and settle (in the source)
 
-On the source's first `LinkState.Connected`, it waits until incoming messages have been quiet for **2 s**, capped at **10 s** after connecting. Then:
+Once the source is `Connected` **and** a first live message has arrived (the broker's replay has started), it waits until no *new* topic has arrived for **2 s**, capped at **10 s**. Steady updates on known topics do not count. If the link leaves `Connected` during the wait, it starts over at the next connection. Without any live traffic nothing is settled, because a stalled link must not prune the cached house. Then:
 
-1. Every restored discovery config or override topic that was not received live since connecting is removed, as if an empty retained message had arrived. Devices deleted while the app was closed disappear.
-2. `store.settle()` runs. Anything still stale is what the broker holds (it sent nothing newer), so it is shown normally.
+1. Every restored discovery config or override topic that was not received live is removed, as if an empty retained message had arrived. Devices deleted while the app was closed disappear.
+2. `store.settle()`: a value still stale was never re-sent by the broker, so it goes back to **Unknown** ("—", as before any cache existed). It is not shown as current.
 
-This runs once per source. Later reconnects do not prune.
+This runs once per source. Messages are applied under the source lock, so a restored message can never interleave with a live one or with settle.
 
 ### 3.5 `:app` — `EntitySourceSession`
 
 - The session gets an `EntityCache`.
-- `current(profile)` for a `Direct` profile launches, in the source's child scope, `source.restore(cache.load(key))`. It then collects `source.journal`, debounced by **2 s**, and calls `cache.save(key, it)`, skipping the save while the journal is empty.
+- `current(profile)` for a `Direct` profile launches, in the source's child scope, `source.restore(cache.load(key))`. It then, once the source has settled (its journal is complete), saves the journal right away and afterwards at most every **10 s**. It skips empty or unchanged journals. A debounce would never fire on a busy house.
 - A `Demo` profile, `null` and `reset()` ("Set up connection again") all call `cache.clear()`.
 - A different broker has a different key, so its first save overwrites the old document.
 

@@ -97,10 +97,18 @@ class StateStore(
         confirmedIds
     }
 
-    /** The broker has replayed what it holds: nothing is stale any more. */
+    /**
+     * The broker has replayed what it holds. A value still stale was never re-sent, so it is not shown as
+     * current: it goes back to unknown, as before any cache existed.
+     */
     fun settle(): Unit = synchronized(lock) {
+        val unconfirmed = _states.value.filterValues { it.stale }.keys
+        restoredTopics.forEach { lastPayload.remove(it) }
         restoredTopics.clear()
-        _states.value = _states.value.mapValues { (_, s) -> if (s.stale) s.copy(stale = false) else s }
+        confirmed.keys.removeAll(unconfirmed)
+        _states.value = _states.value.mapValues { (id, s) ->
+            if (id in unconfirmed) s.copy(value = StateValue.Unknown, attributes = emptyMap(), stale = false) else s
+        }
     }
 
     /**
