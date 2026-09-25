@@ -11,4 +11,5 @@ dependencies {
     implementation(libs.hilt.gradle.plugin)
     implementation(libs.ksp.gradle.plugin)
     implementation(libs.google.services.gradle.plugin)
+    implementation(libs.firebase.crashlytics.gradle.plugin)
 }

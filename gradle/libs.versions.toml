@@ -22,6 +22,10 @@ androidxTestRunner = "1.7.0"
 camerax = "1.6.2"
 mlkitBarcode = "17.3.0"
 googleServices = "4.5.0"
+firebaseBom = "34.19.0"
+firebaseCrashlyticsPlugin = "3.0.8"
+# Not in the Firebase BoM.
+firebaseAppDistribution = "16.0.0-beta20"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -38,6 +42,10 @@ compose-compiler-gradle-plugin = { module = "org.jetbrains.kotlin:compose-compil
 hilt-gradle-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
 ksp-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
 google-services-gradle-plugin = { module = "com.google.gms:google-services", version.ref = "googleServices" }
+firebase-crashlytics-gradle-plugin = { module = "com.google.firebase:firebase-crashlytics-gradle", version.ref = "firebaseCrashlyticsPlugin" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-appdistribution = { module = "com.google.firebase:firebase-appdistribution", version.ref = "firebaseAppDistribution" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }

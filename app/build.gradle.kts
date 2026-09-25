@@ -7,6 +7,7 @@ plugins {
     id("oikos.hilt")
     id("oikos.serialization")
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 val versionPropsFile = file("version.properties")
@@ -42,7 +43,7 @@ android {
     defaultConfig {
         applicationId = "com.gekkotron.oikos"
         versionCode = appVersionCode
-        versionName = "0.1.0.$appVersionCode"
+        versionName = "0.$appVersionCode"
     }
     buildTypes {
         debug {
@@ -79,7 +80,20 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.process)
+    // Firebase ships in release (tester) builds only; debug builds carry none of it.
+    releaseImplementation(platform(libs.firebase.bom))
+    releaseImplementation(libs.firebase.crashlytics)
+    releaseImplementation(libs.firebase.appdistribution)
     testImplementation(libs.hilt.android.testing)
     testImplementation(testFixtures(project(":core:transport")))
     kspTest(libs.hilt.compiler)
+}
+
+// google-services.json only lists the release package, and only the distribute workflow writes it:
+// debug builds skip it entirely, and a release built without it (CI unit tests) only warns.
+googleServices {
+    missingGoogleServicesStrategy = com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
+}
+tasks.configureEach {
+    if (name == "processDebugGoogleServices") enabled = false
 }
