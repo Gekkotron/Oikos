@@ -35,4 +35,7 @@ interface EntitySource {
     suspend fun setOverride(uniqueId: String, override: UiOverride)
 
     suspend fun setAreas(areas: List<Area>)
+
+    /** Replays cached messages (topic → payload) as if they had arrived retained; live data wins (entity cache spec §3.1). */
+    suspend fun restore(messages: Map<String, String>) {}
 }

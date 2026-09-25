@@ -68,6 +68,16 @@ class MqttDiscoverySource(
     private val confirmedOverrides = mutableMapOf<String, UiOverride>()
     private var confirmedAreas = AreasDocument()
 
+    // Entity cache (spec 2026-09-25): the last payload of every handled topic, the topics received live,
+    // and restored topics not yet received live (pruned when the source settles).
+    private val payloads = mutableMapOf<String, String>()
+    private val liveTopics = mutableSetOf<String>()
+    private val restoredOnly = mutableSetOf<String>()
+    private val _journalVersion = MutableStateFlow(0L)
+
+    /** Increments whenever [journal] may have changed. */
+    val journalVersion: StateFlow<Long> = _journalVersion.asStateFlow()
+
     private val _entities = MutableStateFlow<Map<String, Entity>>(emptyMap())
     override val entities: StateFlow<Map<String, Entity>> = _entities.asStateFlow()
     private val _devices = MutableStateFlow<Map<String, Device>>(emptyMap())
@@ -169,15 +179,49 @@ class MqttDiscoverySource(
         synchronized(lock) { confirmedAreas = document }
     }
 
-    private fun handle(message: MqttMessage) {
+    override suspend fun restore(messages: Map<String, String>) {
+        // Configs first so state messages find their entity, then overrides, then states.
+        val ordered = messages.entries.sortedBy { (topic, _) ->
+            when {
+                topic.startsWith("$prefix/") && topic.endsWith("/config") -> 0
+                topic.startsWith(UI_PREFIX) -> 1
+                else -> 2
+            }
+        }
+        for ((topic, payload) in ordered) handle(MqttMessage(topic, payload.encodeToByteArray(), retained = true), restored = true)
+    }
+
+    /** What the cache should hold now: the topics that currently build [entities], [areas] and [states]. */
+    fun journal(): Map<String, String> = synchronized(lock) {
+        val keep = buildSet {
+            addAll(discovered.keys)
+            overrides.keys.forEach { add(UI_PREFIX + it) }
+            if (areasDocument.areas.isNotEmpty()) add(AREAS_TOPIC)
+            addAll(store.subscriptionTopics())
+        }
+        payloads.filterKeys { it in keep }
+    }
+
+    /** A [restored] message comes from the entity cache and never replaces one received live. */
+    private fun handle(message: MqttMessage, restored: Boolean = false) {
         val topic = message.topic
         try {
             val payload = message.payloadString()
+            synchronized(lock) {
+                if (restored) {
+                    if (topic in liveTopics) return
+                    restoredOnly += topic
+                } else {
+                    liveTopics += topic
+                    restoredOnly -= topic
+                }
+                if (payload.isEmpty()) payloads.remove(topic) else payloads[topic] = payload
+            }
             when {
                 topic == AREAS_TOPIC -> onAreas(payload)
                 topic.startsWith(UI_PREFIX) -> onOverride(topic.removePrefix(UI_PREFIX), payload)
                 else -> when (val r = DiscoveryParser.parse(prefix, topic, payload)) {
-                    DiscoveryResult.NotDiscovery -> store.onMessage(topic, payload)
+                    DiscoveryResult.NotDiscovery -> store.onMessage(topic, payload, restored)
                     DiscoveryResult.Removed -> replaceDiscovered(topic, null)
                     // Like HA: an invalid update is logged and the previously discovered entities are kept.
                     is DiscoveryResult.Skipped -> report("$topic: ${r.reason}")
@@ -187,6 +231,7 @@ class MqttDiscoverySource(
                     }
                 }
             }
+            _journalVersion.value++
         } catch (e: Exception) {
             report("unexpected error handling $topic: $e")
         }
