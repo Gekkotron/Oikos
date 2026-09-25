@@ -23,3 +23,7 @@ secret_key*.txt
 # Tooling
 .superpowers/
 .DS_Store
+
+
+oikos-setup.json
+oikos-setup.png
