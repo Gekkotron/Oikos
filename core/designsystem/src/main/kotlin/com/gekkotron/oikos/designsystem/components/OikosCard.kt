@@ -3,6 +3,7 @@ package com.gekkotron.oikos.designsystem.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,12 +13,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
@@ -33,15 +41,30 @@ fun OikosCard(
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    /** Read by TalkBack as the long-press action ("Customize", "Controls"). */
+    onLongClickLabel: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = OikosTheme.colors
     val shape = RoundedCornerShape(OikosDimens.cardRadius)
     val background = if (on) Brush.linearGradient(listOf(c.cardOnStart, c.cardOnEnd)) else SolidColor(c.card)
-    val clicks = if (onClick != null || onLongClick != null) {
-        Modifier.combinedClickable(enabled = enabled, onClick = onClick ?: {}, onLongClick = onLongClick)
-    } else {
-        Modifier
+    val haptics = LocalHapticFeedback.current
+    val longClick by rememberUpdatedState(onLongClick)
+    // `enabled` gates the tap only: an unavailable device must still be long-pressable, to hide or rename it.
+    val clicks = when {
+        onClick != null && enabled ->
+            Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = onLongClickLabel)
+        onLongClick != null -> Modifier
+            .pointerInput(Unit) {
+                detectTapGestures(onLongPress = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    longClick?.invoke()
+                })
+            }
+            // `this.` picks the semantics action, not the nullable `onLongClick` parameter of the same name.
+            .semantics { this.onLongClick(label = onLongClickLabel) { longClick?.invoke(); true } }
+        onClick != null -> Modifier.combinedClickable(enabled = false, onClick = onClick)
+        else -> Modifier
     }
     CompositionLocalProvider(LocalContentColor provides if (on) c.contentOnCardOn else c.content) {
         Column(
