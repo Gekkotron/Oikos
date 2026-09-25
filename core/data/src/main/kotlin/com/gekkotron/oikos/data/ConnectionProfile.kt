@@ -1,5 +1,7 @@
 package com.gekkotron.oikos.data
 
+import kotlinx.serialization.Serializable
+
 const val DEFAULT_PREFIX = "homeassistant"
 
 /** The local broker. [password] is a secret; [toString] masks it. */
@@ -15,7 +17,7 @@ data class LocalBroker(
         "LocalBroker($host:$port, tls=$tls, ws=$ws, user=$username, password=${if (password == null) "none" else "***"})"
 }
 
-/** Remote gateway settings from the QR code. Stored now, used by Plan 2. [key] is a secret. */
+/** Remote gateway settings from the QR code. [key] is a secret. */
 class GatewayConfig(val url: String, key: ByteArray, val brokerHost: String?) {
     private val keyBytes = key.copyOf()
     val key: ByteArray get() = keyBytes.copyOf()
@@ -60,3 +62,10 @@ sealed interface ProfileState {
     /** [roomsPending]: show the Rooms step before Home (a direct profile that was just set up). */
     data class Ready(val profile: ConnectionProfile, val roomsPending: Boolean = false) : ProfileState
 }
+
+/**
+ * How to reach a profile that has a gateway (gateway spec §4). Kept out of [ConnectionProfile]: changing
+ * it rebuilds the transport but never the discovery source, so the house on screen survives.
+ */
+@Serializable
+enum class RoutePreference { AUTO, DIRECT, GATEWAY }

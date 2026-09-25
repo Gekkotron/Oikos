@@ -29,6 +29,10 @@ class ProfileRepository internal constructor(
     val state: StateFlow<ProfileState> =
         store.data.map(::toState).flowOn(ioDispatcher).stateIn(scope, SharingStarted.Eagerly, ProfileState.Loading)
 
+    /** The route choice (gateway spec §4); `AUTO` until the user picks one. */
+    val route: StateFlow<RoutePreference> =
+        store.data.map { it.route }.stateIn(scope, SharingStarted.Eagerly, RoutePreference.AUTO)
+
     suspend fun save(profile: ConnectionProfile) {
         val id = installId()
         val stored = toStored(profile, id)
@@ -44,6 +48,11 @@ class ProfileRepository internal constructor(
     /** The Rooms step was finished or skipped; it is not shown again for this profile. */
     suspend fun finishRooms() {
         store.updateData { it.copy(roomsPending = false) }
+    }
+
+    /** Changes only the route; the profile, and so [state], stay equal. */
+    suspend fun setRoute(route: RoutePreference) {
+        store.updateData { it.copy(route = route) }
     }
 
     suspend fun installId(): String =

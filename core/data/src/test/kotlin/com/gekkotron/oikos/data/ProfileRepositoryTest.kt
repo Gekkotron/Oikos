@@ -158,4 +158,35 @@ class ProfileRepositoryTest {
         old.writeText(f.readText().replace(Regex(""",?"roomsPending":(true|false)"""), ""))
         assertEquals(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("broker.local"))), repo(old).settled())
     }
+
+    @Test
+    fun `route defaults to AUTO and is saved`() = runTest {
+        val r = repo()
+        r.save(direct)
+        assertEquals(RoutePreference.AUTO, r.route.value)
+        r.setRoute(RoutePreference.GATEWAY)
+        assertEquals(RoutePreference.GATEWAY, r.route.first { it == RoutePreference.GATEWAY })
+        assertTrue("\"GATEWAY\"" in file().readText())
+    }
+
+    @Test
+    fun `clear resets the route`() = runTest {
+        val r = repo()
+        r.save(direct)
+        r.setRoute(RoutePreference.DIRECT)
+        r.route.first { it == RoutePreference.DIRECT }
+        r.clear()
+        assertEquals(RoutePreference.AUTO, r.route.first { it == RoutePreference.AUTO })
+    }
+
+    @Test
+    fun `changing the route leaves the profile state equal and keeps roomsPending`() = runTest {
+        val r = repo()
+        r.save(direct)
+        val before = r.state.first { it is ProfileState.Ready }
+        r.setRoute(RoutePreference.GATEWAY)
+        r.route.first { it == RoutePreference.GATEWAY }
+        assertEquals(before, r.state.value)
+        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.value)
+    }
 }
