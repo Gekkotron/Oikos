@@ -98,6 +98,12 @@ class DirectMqttTransport(
         removed.forEach { unsubscribe(it) }
     }
 
+    /**
+     * `withTimeout` abandons the coroutine waiting on `send().await()` but does not cancel the
+     * underlying HiveMQ QoS 1 send, which keeps retrying in the background. So a publish that times out
+     * here (and whose caller rolls the edit back and shows "Couldn't save") can still reach the broker
+     * later, once the link recovers.
+     */
     override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) {
         if (!isValidPublishTopic(topic)) throw PublishFailed("invalid publish topic '$topic'")
         if (!client.state.isConnected) throw PublishFailed("not connected")

@@ -130,6 +130,9 @@ class MqttDiscoverySource(
      * empty payload) instead of leaving `{}` behind. If the broker does not take it, the local change is
      * rolled back, unless something newer replaced it meanwhile, and [PublishFailed] is rethrown:
      * otherwise the phone would show an edit that the retained value undoes at the next reconnect.
+     *
+     * A timed-out publish can still land later (see [com.gekkotron.oikos.transport.DirectMqttTransport.publish]):
+     * the rollback above may end up undone once the broker actually applies it.
      */
     override suspend fun setOverride(uniqueId: String, override: UiOverride) {
         require(uniqueId.isNotEmpty() && uniqueId != AREAS_ID && isValidPublishTopic(UI_PREFIX + uniqueId)) {
