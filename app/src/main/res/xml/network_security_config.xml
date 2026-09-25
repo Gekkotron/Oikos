@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gateway spec §5 (amends parent spec §8): HTTP cleartext is off for the whole app, and only system CAs are
+  trusted. The gateway is HTTPS only. The MQTT TCP socket is not governed by this file; plain TCP to the LAN
+  broker stays allowed with the onboarding warning (direct-connection spec §4.5).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

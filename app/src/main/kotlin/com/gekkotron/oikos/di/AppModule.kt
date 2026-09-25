@@ -1,33 +1,35 @@
 package com.gekkotron.oikos.di
 
+import android.content.Context
 import android.util.Log
 import com.gekkotron.oikos.connection.DirectConnectionTester
 import com.gekkotron.oikos.connection.EntitySourceSession
+import com.gekkotron.oikos.connection.TransportFactory
 import com.gekkotron.oikos.connection.clientIdFor
+import com.gekkotron.oikos.connection.networkChanges
 import com.gekkotron.oikos.connection.setupClientIdFor
 import com.gekkotron.oikos.connection.toSpec
 import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
-import com.gekkotron.oikos.demo.DemoBroker
 import com.gekkotron.oikos.feature.home.presentation.DefaultDispatcher
 import com.gekkotron.oikos.feature.onboarding.ConnectionTester
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.ActiveTransport
-import com.gekkotron.oikos.transport.DirectMqttTransport
 import com.gekkotron.oikos.transport.MqttTransport
-import com.gekkotron.oikos.transport.TransportSpec
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import okhttp3.OkHttpClient
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -49,18 +51,29 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun activeTransport(profiles: ProfileRepository, @ApplicationScope scope: CoroutineScope): ActiveTransport = ActiveTransport(
+    fun okHttp(): OkHttpClient = OkHttpClient()
+
+    @Provides
+    @Singleton
+    fun transportFactory(
+        @ApplicationContext context: Context,
+        http: OkHttpClient,
+        @ApplicationScope scope: CoroutineScope,
+    ): TransportFactory = TransportFactory(scope, context.networkChanges(), http)
+
+    @Provides
+    @Singleton
+    fun activeTransport(
+        profiles: ProfileRepository,
+        factory: TransportFactory,
+        @ApplicationScope scope: CoroutineScope,
+    ): ActiveTransport = ActiveTransport(
         // installId() is a suspend DataStore write; resolved once rather than re-run on every emission.
         specs = flow {
             val id = profiles.installId()
-            emitAll(profiles.state.map { it.toSpec(clientIdFor(id)) })
+            emitAll(combine(profiles.state, profiles.route) { state, route -> state.toSpec(clientIdFor(id), route) })
         },
-        factory = { spec ->
-            when (spec) {
-                TransportSpec.Demo -> DemoBroker(scope)
-                is TransportSpec.Direct -> DirectMqttTransport(spec, scope)
-            }
-        },
+        factory = factory::create,
         scope = scope,
     )
 
