@@ -22,6 +22,11 @@ class AppViewModel @Inject constructor(
      * be an equal one, such as the demo again, and must still start from an empty house), and the app
      * returns to onboarding.
      */
+    /** The Rooms step was finished or skipped (a no-op when it was opened from Home). */
+    fun finishRooms() {
+        viewModelScope.launch { profiles.finishRooms() }
+    }
+
     fun setUpAgain() {
         viewModelScope.launch {
             profiles.clear()

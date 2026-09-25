@@ -1,5 +1,7 @@
 package com.gekkotron.oikos
 
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
@@ -75,19 +77,15 @@ class MainActivityTest {
         compose.onNodeWithText("Demo").assertExists()
     }
 
-    @Test
-    fun `after the demo, a direct broker shows only its own house`() {
+    private val kettle = """{"name":"Kettle","unique_id":"kettle","command_topic":"k/set","state_topic":"k/state",
+        "device":{"identifiers":["kettle"],"name":"Kitchen kettle"}}"""
+
+    private fun connectToBroker(config: String) {
         val broker = EmbeddedBroker().also { it.start(); brokers += it }
         val peer = broker.peer()
-        val config = """{"name":"Kettle","unique_id":"kettle","command_topic":"k/set","state_topic":"k/state",
-            "device":{"identifiers":["kettle"],"name":"Kitchen kettle"}}"""
         peer.publishWith().topic("homeassistant/switch/kettle/config").payload(config.encodeToByteArray())
             .qos(MqttQos.AT_LEAST_ONCE).retain(true).send()
         peer.disconnect()
-
-        openDemo()
-        compose.onNodeWithText("Demo").performClick()
-        compose.onNodeWithText("Set up connection again").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Enter manually"), timeoutMillis = 10_000)
         compose.onNodeWithText("Enter manually").performClick()
         compose.onNode(hasSetTextAction() and hasText("Host")).performTextInput("127.0.0.1")
@@ -95,7 +93,49 @@ class MainActivityTest {
         compose.onNodeWithText("Connect").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Kitchen kettle"), timeoutMillis = 10_000)
         compose.onNodeWithText("Continue").performScrollTo().performClick()
+    }
+
+    /** The Rooms list is lazy: its last item may not be composed until the list scrolls to it. */
+    private fun finishRooms(label: String) {
+        compose.waitUntilAtLeastOneExists(hasText("Which room is each device in?"), timeoutMillis = 10_000)
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(label))
+        compose.onNodeWithText(label).performClick()
+    }
+
+    @Test
+    fun `after the demo, a direct broker shows only its own house`() {
+        openDemo()
+        compose.onNodeWithText("Demo").performClick()
+        compose.onNodeWithText("Set up connection again").performClick()
+        connectToBroker(kettle)
+        finishRooms("Skip")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
         compose.onAllNodes(hasContentDescription("Floor lamp", substring = true)).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a new connection asks for rooms, and a room created there shows on Home`() {
+        connectToBroker(kettle)
+        compose.waitUntilAtLeastOneExists(hasText("Which room is each device in?"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Kitchen kettle").performClick()
+        compose.onNode(hasSetTextAction() and hasText("New room")).performTextInput("Kitchen")
+        compose.onNodeWithText("Add").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Done"), timeoutMillis = 10_000)
+        finishRooms("Done")
+        compose.waitUntilAtLeastOneExists(
+            hasContentDescription("Kettle", substring = true) and hasContentDescription("Kitchen", substring = true),
+            timeoutMillis = 10_000,
+        )
+        compose.onNodeWithText("Kitchen").assertExists()
+    }
+
+    @Test
+    fun `the demo goes straight to Home, and Assign rooms opens the step and returns`() {
+        openDemo()
+        compose.onNodeWithText("Which room is each device in?").assertDoesNotExist()
+        compose.onNodeWithText("Demo").performClick()
+        compose.onNodeWithText("Assign rooms").performClick()
+        finishRooms("Skip")
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
     }
 }

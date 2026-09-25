@@ -13,6 +13,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.gekkotron.oikos.AppViewModel
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
 import com.gekkotron.oikos.feature.home.ui.HomeRoute
 import com.gekkotron.oikos.feature.onboarding.ui.OnboardingRoute
 import kotlinx.serialization.Serializable
@@ -23,13 +24,17 @@ data object OnboardingKey : NavKey
 @Serializable
 data object HomeKey : NavKey
 
+@Serializable
+data object RoomsKey : NavKey
+
 /** The saved profile picks the root: Ready → Home; none or locked → onboarding (spec §2). */
 @Composable
 fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
-    val root: NavKey = when (profile) {
+    val root: NavKey = when (val p = profile) {
         ProfileState.Loading -> return // a few milliseconds at launch; the background is already drawn
-        is ProfileState.Ready -> HomeKey
+        // A direct profile that was just set up first gets the Rooms step (spec §5.2 step 5), on the live source.
+        is ProfileState.Ready -> if (p.roomsPending) RoomsKey else HomeKey
         ProfileState.None, ProfileState.Locked -> OnboardingKey
     }
     // One back stack for the app's lifetime. A new root (onboarding finished, or "set up again")
@@ -52,7 +57,19 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
         ),
         entryProvider = entryProvider {
             entry<OnboardingKey> { OnboardingRoute() }
-            entry<HomeKey> { HomeRoute(onSetUpAgain = viewModel::setUpAgain) }
+            entry<RoomsKey> {
+                RoomsRoute(onDone = {
+                    // First run: finishing flips the root to Home, which replaces this entry. From Home: pop back.
+                    viewModel.finishRooms()
+                    if (backStack.size > 1) backStack.removeLastOrNull()
+                })
+            }
+            entry<HomeKey> {
+                HomeRoute(
+                    onSetUpAgain = viewModel::setUpAgain,
+                    onAssignRooms = { if (backStack.lastOrNull() != RoomsKey) backStack.add(RoomsKey) },
+                )
+            }
         },
     )
 }
