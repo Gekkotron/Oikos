@@ -1,10 +1,15 @@
 package com.gekkotron.oikos.transport
 
 import com.gekkotron.oikos.transport.testing.FakeManagedTransport
+import com.gekkotron.oikos.transport.testing.FakeMqttTransport
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -142,5 +147,120 @@ class HandoverTest {
         assertNull(h.current.value)
         assertEquals(LinkState.Offline(LinkState.Offline.CLOSED), h.link.value)
         assertFalse(h.switchTo(connected()), "a closed handover accepts nothing")
+    }
+
+    /** A [ManagedTransport] whose [close] blocks until the test releases [closeGate]. */
+    private class SlowCloseTransport(private val fake: FakeMqttTransport = FakeMqttTransport()) : ManagedTransport {
+        val closeGate = CompletableDeferred<Unit>()
+        var closed = false
+            private set
+
+        override val link: StateFlow<LinkState> get() = fake.link
+
+        override fun messages(): SharedFlow<MqttMessage> = fake.messages()
+
+        override suspend fun setSubscriptions(filters: Set<String>) = fake.setSubscriptions(filters)
+
+        override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) =
+            fake.publish(topic, payload, qos, retain)
+
+        override fun start() = Unit
+
+        override suspend fun close() {
+            closeGate.await()
+            closed = true
+        }
+    }
+
+    @Test
+    fun `flip finishes disposing the old transport even if the caller is cancelled mid-flip`() = runTest {
+        val (h, _) = handover()
+        val old = SlowCloseTransport()
+        h.switchTo(old)
+        val next = connecting()
+        val switched = async { h.switchTo(next) }
+        runCurrent()
+        next.fake.setLink(LinkState.Connected(TransportMode.GATEWAY))
+        runCurrent()
+        // The flip already committed `next` as current and is now suspended disposing `old` (NonCancellable).
+        assertSame(next, h.current.value)
+        switched.cancel()
+        runCurrent()
+        assertFalse(old.closed, "still disposing old, unaffected by the caller's own cancellation")
+        assertFalse(next.closed, "the survivor must not be torn down by the cancelled caller's cleanup")
+        old.closeGate.complete(Unit)
+        runCurrent()
+        assertTrue(old.closed)
+        assertSame(next, h.current.value)
+        assertFalse(next.closed)
+        h.close()
+        runCurrent()
+        assertTrue(next.closed)
+    }
+
+    /**
+     * Simulates [close] winning a race against a pending [switchTo]: the handover is fully closed
+     * (disposing this still-unstarted slot) before [start] returns control, then [start] proceeds anyway.
+     */
+    private class SelfClosingOnStart(private val handoverRef: () -> Handover) : ManagedTransport {
+        private val fake = FakeMqttTransport()
+        val calls = mutableListOf<String>()
+
+        override val link: StateFlow<LinkState> get() = fake.link
+
+        override fun messages(): SharedFlow<MqttMessage> = fake.messages()
+
+        override suspend fun setSubscriptions(filters: Set<String>) = fake.setSubscriptions(filters)
+
+        override suspend fun publish(topic: String, payload: ByteArray, qos: Int, retain: Boolean) =
+            fake.publish(topic, payload, qos, retain)
+
+        override fun start() {
+            runBlocking { handoverRef().close() }
+            calls += "start"
+        }
+
+        override suspend fun close() {
+            calls += "close"
+        }
+    }
+
+    @Test
+    fun `a transport closed before it started is closed again once it actually starts`() = runTest {
+        val h = Handover(backgroundScope, connectTimeout = 15.seconds)
+        val next = SelfClosingOnStart { h }
+        assertFalse(h.switchTo(next))
+        assertEquals(listOf("close", "start", "close"), next.calls)
+    }
+
+    @Test
+    fun `the old leaving Connected during the wait flips at once instead of waiting out the timeout`() = runTest {
+        val (h, _) = handover()
+        val old = connected()
+        h.switchTo(old)
+        val next = connecting()
+        val switched = async { h.switchTo(next) }
+        runCurrent()
+        old.fake.setLink(LinkState.Reconnecting(1))
+        runCurrent()
+        assertTrue(switched.isCompleted, "should flip immediately once the old leaves Connected, without waiting out connectTimeout")
+        assertTrue(switched.await())
+        assertSame(next, h.current.value)
+        assertTrue(old.closed)
+    }
+
+    @Test
+    fun `close sets Offline together with current becoming null, not only once the transport finishes closing`() = runTest {
+        val (h, _) = handover()
+        val slow = SlowCloseTransport()
+        h.switchTo(slow)
+        val closing = launch { h.close() }
+        runCurrent()
+        // close() is now suspended disposing `slow` (closeGate not yet released).
+        assertNull(h.current.value)
+        assertEquals(LinkState.Offline(LinkState.Offline.CLOSED), h.link.value)
+        slow.closeGate.complete(Unit)
+        runCurrent()
+        closing.join()
     }
 }

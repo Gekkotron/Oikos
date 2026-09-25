@@ -60,7 +60,9 @@ internal class Handover(
     suspend fun switchTo(next: ManagedTransport): Boolean = switching.withLock {
         val inbox = Channel<MqttMessage>(Channel.UNLIMITED)
         // Undispatched: subscribed before start(), so the first retained message is already buffered.
-        val intake = scope.launch(start = CoroutineStart.UNDISPATCHED) { next.messages().collect { inbox.send(it) } }
+        // trySend, not send: once dispose() closes this channel, a straggling emission must not throw
+        // ClosedSendChannelException (UNLIMITED never fails to accept otherwise).
+        val intake = scope.launch(start = CoroutineStart.UNDISPATCHED) { next.messages().collect { inbox.trySend(it) } }
         val slot = Slot(next, inbox, intake)
         var flipped = false
         try {
@@ -70,9 +72,16 @@ internal class Handover(
             }
             if (!admitted) return false
             next.start()
+            // close() may have raced us here and already disposed this (still unstarted) slot; the
+            // transport is now actually running and must be closed again now there is something to stop.
+            val stillOpen = lock.withLock { !closed.value }
+            if (!stillOpen) {
+                closeQuietly(next)
+                return false
+            }
             applySubscriptions(next)
             val old = lock.withLock { active }
-            val ready = old == null || old.transport.link.value !is LinkState.Connected || awaitConnected(next)
+            val ready = old == null || old.transport.link.value !is LinkState.Connected || awaitConnected(next, old.transport)
             if (ready) flipped = flip(slot, old)
             flipped
         } catch (e: CancellationException) {
@@ -109,16 +118,25 @@ internal class Handover(
             listOfNotNull(active, pending).also {
                 active = null
                 pending = null
+                // Set together with `current` becoming null: no window where a collector observes
+                // current == null while link still reports the old (now-meaningless) state.
                 _current.value = null
+                _link.value = LinkState.Offline(LinkState.Offline.CLOSED)
             }
         }
-        slots.forEach { dispose(it) }
-        _link.value = LinkState.Offline(LinkState.Offline.CLOSED)
+        // Never cancelled halfway: every slot we took from `active`/`pending` above must end up closed.
+        withContext(NonCancellable) {
+            slots.forEach { dispose(it) }
+        }
     }
 
-    private suspend fun awaitConnected(next: ManagedTransport): Boolean =
+    /** Also completes once [old] itself leaves `Connected`: no point waiting out the timeout for [next]
+     *  to connect while the transport we would keep is already dead. */
+    private suspend fun awaitConnected(next: ManagedTransport, old: ManagedTransport): Boolean =
         withTimeoutOrNull(connectTimeout) {
-            combine(next.link, closed) { link, isClosed -> isClosed || link is LinkState.Connected }.first { it }
+            combine(next.link, closed, old.link) { link, isClosed, oldLink ->
+                isClosed || link is LinkState.Connected || oldLink !is LinkState.Connected
+            }.first { it }
         } != null
 
     /** Re-applies when [setSubscriptions] ran meanwhile, so [next] never ends up on an older set. */
@@ -130,20 +148,29 @@ internal class Handover(
         }
     }
 
-    private suspend fun flip(slot: Slot, old: Slot?): Boolean {
-        lock.withLock {
-            if (closed.value) return false
-            pending = null
-            active = slot
-            // Stop the old transport's forwarding before the new one starts: no straggler after the flip.
-            old?.forward?.cancelAndJoin()
-            old?.mirror?.cancelAndJoin()
-            slot.mirror = scope.launch(start = CoroutineStart.UNDISPATCHED) { slot.transport.link.collect { _link.value = it } }
-            slot.forward = scope.launch(start = CoroutineStart.UNDISPATCHED) { for (m in slot.inbox) out.emit(m) }
-            _current.value = slot.transport
+    /**
+     * Once committed (`active = slot`), this must run to completion regardless of the caller being
+     * cancelled: a caller cancelled mid-flip must not leave `active`/`current` pointing at a slot whose
+     * old counterpart (or whose own [dispose] in the finally below) was only half torn down.
+     */
+    private suspend fun flip(slot: Slot, old: Slot?): Boolean = withContext(NonCancellable) {
+        val committed = lock.withLock {
+            if (closed.value) {
+                false
+            } else {
+                pending = null
+                active = slot
+                // Stop the old transport's forwarding before the new one starts: no straggler after the flip.
+                old?.forward?.cancelAndJoin()
+                old?.mirror?.cancelAndJoin()
+                slot.mirror = scope.launch(start = CoroutineStart.UNDISPATCHED) { slot.transport.link.collect { _link.value = it } }
+                slot.forward = scope.launch(start = CoroutineStart.UNDISPATCHED) { for (m in slot.inbox) out.emit(m) }
+                _current.value = slot.transport
+                true
+            }
         }
-        old?.let { dispose(it) }
-        return true
+        if (committed) old?.let { dispose(it) }
+        committed
     }
 
     private suspend fun dispose(slot: Slot) {
@@ -152,8 +179,12 @@ internal class Handover(
         slot.forward?.cancel()
         slot.mirror?.cancel()
         slot.inbox.close()
+        closeQuietly(slot.transport)
+    }
+
+    private suspend fun closeQuietly(transport: ManagedTransport) {
         try {
-            slot.transport.close()
+            transport.close()
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
