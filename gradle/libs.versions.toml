@@ -21,6 +21,7 @@ datastore = "1.2.1"
 androidxTestRunner = "1.7.0"
 camerax = "1.6.2"
 mlkitBarcode = "17.3.0"
+googleServices = "4.5.0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -36,6 +37,7 @@ android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref
 compose-compiler-gradle-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
 hilt-gradle-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hilt" }
 ksp-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
+google-services-gradle-plugin = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }

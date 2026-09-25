@@ -1,20 +1,57 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("oikos.android.application")
     id("oikos.android.compose")
     id("oikos.hilt")
     id("oikos.serialization")
+    id("com.google.gms.google-services")
 }
+
+val versionPropsFile = file("version.properties")
+val versionProps = Properties().apply {
+    if (versionPropsFile.canRead()) {
+        FileInputStream(versionPropsFile).use { load(it) }
+    } else {
+        throw GradleException("Could not read app/version.properties!")
+    }
+}
+val appVersionCode = versionProps.getProperty("VERSION_CODE").toInt()
+
+val signingPropsFile = file("signing.properties")
+val signingProps = Properties().apply {
+    if (signingPropsFile.canRead()) {
+        FileInputStream(signingPropsFile).use { load(it) }
+    }
+}
+val hasSigningConfig = signingPropsFile.canRead()
 
 android {
     namespace = "com.gekkotron.oikos"
+    if (hasSigningConfig) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(signingProps.getProperty("storeFile"))
+                keyAlias = signingProps.getProperty("keyAlias")
+                storePassword = signingProps.getProperty("storePassword")
+                keyPassword = signingProps.getProperty("keyPassword")
+            }
+        }
+    }
     defaultConfig {
         applicationId = "com.gekkotron.oikos"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = "0.1.0.$appVersionCode"
     }
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+        }
+        release {
+            if (hasSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     androidResources {
