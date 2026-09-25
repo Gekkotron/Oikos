@@ -64,6 +64,19 @@ class RoomsScreenTest {
     }
 
     @Test
+    fun `a single device uses the singular form`() {
+        show(
+            RoomsUiState(
+                loading = false,
+                rows = listOf(RoomRowUi("plug", "Plug", listOf("p"), UNASSIGNED_AREA, null)),
+                rooms = emptyList(),
+                assigned = 1,
+            ),
+        )
+        compose.onNodeWithText("1 of 1 device has a room").assertExists()
+    }
+
+    @Test
     fun `choosing a room in the picker assigns the row`() {
         show(state())
         compose.onNodeWithText("Plug").performClick()

@@ -110,9 +110,15 @@
     <string name="link_assign_rooms">Attribuer les pièces</string>
     <string name="rooms_title">Dans quelle pièce est chaque appareil ?</string>
     <string name="rooms_subtitle">Les pièces viennent des appareils qui les indiquent. Vous pourrez tout modifier plus tard par un appui long sur une carte.</string>
-    <string name="rooms_progress">%1$d appareils sur %2$d ont une pièce</string>
+    <plurals name="rooms_progress">
+        <item quantity="one">%1$d appareil sur %2$d a une pièce</item>
+        <item quantity="other">%1$d appareils sur %2$d ont une pièce</item>
+    </plurals>
     <string name="rooms_several">Plusieurs pièces</string>
-    <string name="rooms_entities">%1$d entités</string>
+    <plurals name="rooms_entities">
+        <item quantity="one">%1$d entité</item>
+        <item quantity="other">%1$d entités</item>
+    </plurals>
     <string name="rooms_skip">Passer</string>
     <string name="rooms_done">Terminé</string>
     <string name="rooms_pick_title">Pièce de %1$s</string>

@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -84,7 +85,7 @@ fun RoomsScreen(
                     if (state.loading) {
                         Text(stringResource(R.string.home_discovering), style = OikosTheme.type.body)
                     } else {
-                        Text(stringResource(R.string.rooms_progress, state.assigned, state.rows.size), style = OikosTheme.type.label)
+                        Text(pluralStringResource(R.plurals.rooms_progress, state.rows.size, state.assigned, state.rows.size), style = OikosTheme.type.label)
                     }
                 }
             }
@@ -128,7 +129,7 @@ private fun RoomRow(row: RoomRowUi, onClick: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(row.name, style = OikosTheme.type.body)
-            if (row.entityIds.size > 1) Text(stringResource(R.string.rooms_entities, row.entityIds.size), style = OikosTheme.type.label)
+            if (row.entityIds.size > 1) Text(pluralStringResource(R.plurals.rooms_entities, row.entityIds.size, row.entityIds.size), style = OikosTheme.type.label)
         }
         Spacer(Modifier.width(12.dp))
         Text(room, style = OikosTheme.type.label)

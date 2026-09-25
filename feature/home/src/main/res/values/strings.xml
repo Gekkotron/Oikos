@@ -110,9 +110,15 @@
     <string name="link_assign_rooms">Assign rooms</string>
     <string name="rooms_title">Which room is each device in?</string>
     <string name="rooms_subtitle">Rooms come from the devices where they say so. You can change any of this later by long-pressing a card.</string>
-    <string name="rooms_progress">%1$d of %2$d devices have a room</string>
+    <plurals name="rooms_progress">
+        <item quantity="one">%1$d of %2$d device has a room</item>
+        <item quantity="other">%1$d of %2$d devices have a room</item>
+    </plurals>
     <string name="rooms_several">Several rooms</string>
-    <string name="rooms_entities">%1$d entities</string>
+    <plurals name="rooms_entities">
+        <item quantity="one">%1$d entity</item>
+        <item quantity="other">%1$d entities</item>
+    </plurals>
     <string name="rooms_skip">Skip</string>
     <string name="rooms_done">Done</string>
     <string name="rooms_pick_title">Room for %1$s</string>
