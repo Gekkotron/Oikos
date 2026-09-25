@@ -28,7 +28,8 @@ class HomeUiBuilderTest {
         states: Map<String, EntityState> = emptyMap(),
         selected: RoomFilter = RoomFilter.All,
         areaList: List<Area> = areas,
-    ) = HomeUiBuilder.build(entities.associateBy { it.uniqueId }, states, areaList, selected, link, Locale.US)
+        labels: LabelText = LabelText { null },
+    ) = HomeUiBuilder.build(entities.associateBy { it.uniqueId }, states, areaList, selected, link, Locale.US, labels)
 
     @Test
     fun `empty source is loading`() {
@@ -203,5 +204,34 @@ class HomeUiBuilderTest {
         assertEquals(listOf("cover"), s.cards.map { it.id })
         assertEquals(0, s.hiddenCount)
         assertFalse(s.chips.any { it.filter == RoomFilter.Hidden })
+    }
+
+    @Test
+    fun `a known label is translated after the device name, an override or an unknown label is shown as is`() {
+        val fr = LabelText { if (it == "Local temperature") "Température locale" else null }
+        fun labelled(id: String, name: String, label: String?, ui: UiOverride = UiOverride()) =
+            testEntity(id, Kind.SENSOR, name = name, ui = ui).copy(deviceName = "Thermostat", label = label)
+        val s = build(
+            labelled("t", "Thermostat Local temperature", "Local temperature"),
+            labelled("u", "Thermostat Frost guard", "Frost guard"),
+            labelled("r", "Radiator", "Local temperature", ui = UiOverride(name = "Radiator")),
+            labelled("m", "Thermostat", null),
+            labels = fr,
+        )
+        assertEquals("Thermostat Température locale", s.card("t")?.name)
+        assertEquals("Thermostat Frost guard", s.card("u")?.name)
+        assertEquals("Radiator", s.card("r")?.name)
+        assertEquals("Thermostat", s.card("m")?.name)
+    }
+
+    @Test
+    fun `cards sort by their translated name`() {
+        val fr = LabelText { mapOf("Power" to "Puissance", "Pressure" to "Pression")[it] }
+        val s = build(
+            testEntity("w", Kind.SENSOR, name = "Meter Power").copy(deviceName = "Meter", label = "Power"),
+            testEntity("p", Kind.SENSOR, name = "Meter Pressure").copy(deviceName = "Meter", label = "Pressure"),
+            labels = fr,
+        )
+        assertEquals(listOf("Meter Pression", "Meter Puissance"), s.cards.map { it.name })
     }
 }

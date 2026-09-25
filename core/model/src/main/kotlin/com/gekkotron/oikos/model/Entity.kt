@@ -35,4 +35,8 @@ data class Entity(
     val ui: UiOverride = UiOverride(),
     /** Unique id of the entity this one duplicates (e.g. a Z2M "Moving" sensor folded into its cover). */
     val partOf: String? = null,
+    /** Short device name when [name] is that device name followed by [label]. */
+    val deviceName: String? = null,
+    /** The entity's own label as published (e.g. "Local temperature"), or null when [name] isn't device + label. */
+    val label: String? = null,
 )

@@ -33,6 +33,7 @@ class HomeViewModel @Inject constructor(
     private val source: EntitySource,
     private val savedState: SavedStateHandle,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val labels: LabelText = LabelText { null },
 ) : ViewModel() {
     // conflate() collapses a burst of state messages to one rebuild per collection turn instead of one
     // per message, and flowOn moves the combine (and HomeUiBuilder.build) off Main; the final value is
@@ -44,7 +45,7 @@ class HomeViewModel @Inject constructor(
         savedState.getStateFlow(KEY_FILTER, RoomFilter.All.key),
         source.link,
     ) { entities, states, areas, key, link ->
-        HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault())
+        HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels)
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)

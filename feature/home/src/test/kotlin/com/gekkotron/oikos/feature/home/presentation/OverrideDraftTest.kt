@@ -14,8 +14,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class OverrideDraftTest {
-    private fun card(entity: Entity): CardUi =
-        HomeUiBuilder.build(mapOf(entity.uniqueId to entity), emptyMap(), listOf(Area("kitchen", "Kitchen")), RoomFilter.All, LinkState.Connecting, Locale.US)
+    private fun card(entity: Entity, labels: LabelText = LabelText { null }): CardUi =
+        HomeUiBuilder.build(mapOf(entity.uniqueId to entity), emptyMap(), listOf(Area("kitchen", "Kitchen")), RoomFilter.All, LinkState.Connecting, Locale.US, labels)
             .card(entity.uniqueId)!!
 
     // Area comes from suggested_area: no explicit override.
@@ -30,6 +30,14 @@ class OverrideDraftTest {
     fun `changed fields are written`() {
         val draft = OverrideDraft.from(suggested).copy(name = " Ceiling ", areaId = "living", favorite = true, hidden = true, order = "3")
         assertEquals(UiOverride(name = "Ceiling", area = "living", favorite = true, hidden = true, order = 3), draft.applyTo(suggested))
+    }
+
+    @Test
+    fun `saving a translated name unchanged keeps it translated`() {
+        val probe = testEntity("t", Kind.SENSOR, "Probe Temperature").copy(deviceName = "Probe", label = "Temperature")
+        val translated = card(probe) { "Température" }
+        assertEquals("Probe Température", translated.name)
+        assertEquals(UiOverride(), OverrideDraft.from(translated).applyTo(translated))
     }
 
     @Test

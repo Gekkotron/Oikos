@@ -10,6 +10,11 @@ import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.transport.LinkState
 import java.util.Locale
 
+/** Translates an entity label published by the source ("Local temperature"); null keeps it as is. */
+fun interface LabelText {
+    operator fun invoke(label: String): String?
+}
+
 /** Entities + states + areas → everything the Home screen draws (spec §5.2). */
 object HomeUiBuilder {
     const val HERO_WEATHER = "hero_weather"
@@ -23,7 +28,9 @@ object HomeUiBuilder {
         selected: RoomFilter,
         link: LinkState,
         locale: Locale,
+        labels: LabelText = LabelText { null },
     ): HomeUiState {
+        val names = entities.mapValues { (_, e) -> displayName(e, labels) }
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
         val areaNames = areas.associate { it.id to it.name }
         val standalone = entities.values.filter { it.partOf == null }
@@ -49,16 +56,16 @@ object HomeUiBuilder {
                 compareBy<Entity>(
                     { it.ui.order ?: Int.MAX_VALUE },
                     { areaIndex[it.area] ?: Int.MAX_VALUE },
-                    { it.name.lowercase(locale) },
+                    { names.getValue(it.uniqueId).lowercase(locale) },
                     { it.uniqueId },
                 ),
             )
-            .map { card(it, states[it.uniqueId], areaNames, locale) }
+            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale) }
 
         return HomeUiState(
             loading = entities.isEmpty(),
             link = link,
-            hero = hero?.let { card(it, states[it.uniqueId], areaNames, locale) },
+            hero = hero?.let { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale) },
             chips = chips,
             selected = effective,
             cards = cards,
@@ -74,11 +81,19 @@ object HomeUiBuilder {
         RoomFilter.Hidden -> false
     }
 
-    private fun card(entity: Entity, state: EntityState?, areaNames: Map<String, String>, locale: Locale): CardUi {
+    /** A name the user typed wins; otherwise a known label is translated after the device name. */
+    private fun displayName(entity: Entity, labels: LabelText): String {
+        if (entity.ui.name != null) return entity.name
+        val device = entity.deviceName ?: return entity.name
+        val label = entity.label?.let(labels::invoke) ?: return entity.name
+        return "$device $label"
+    }
+
+    private fun card(entity: Entity, name: String, state: EntityState?, areaNames: Map<String, String>, locale: Locale): CardUi {
         val value = state?.value ?: StateValue.Unknown
         return CardUi(
             id = entity.uniqueId,
-            name = entity.name,
+            name = name,
             kind = entity.kind,
             deviceClass = entity.deviceClass,
             areaName = if (entity.area == UNASSIGNED_AREA) null else areaNames[entity.area] ?: entity.area,

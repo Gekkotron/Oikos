@@ -117,10 +117,13 @@ object DiscoveryParser {
         val device = parseDevice(config["device"])
         val rawDeviceName = (config["device"] as? JsonObject)?.let { MqttBindings("device", it).str("name") }
         val uniqueId = b.str("unique_id") ?: listOfNotNull(component, nodeId, objectId).joinToString("_")
+        val names = displayName(b.str("name"), device, rawDeviceName, objectId)
         val entity = Entity(
             uniqueId = uniqueId,
             deviceId = device?.id,
-            name = displayName(b.str("name"), device, rawDeviceName, objectId),
+            name = names.name,
+            deviceName = names.deviceName,
+            label = names.label,
             kind = kind,
             deviceClass = b.str("device_class"),
             unit = b.str("unit_of_measurement"),
@@ -131,7 +134,9 @@ object DiscoveryParser {
         return Built.Ok(DiscoveredEntity(entity, device))
     }
 
-    private fun displayName(entityName: String?, device: Device?, rawDeviceName: String?, objectId: String): String {
+    private class Names(val name: String, val deviceName: String? = null, val label: String? = null)
+
+    private fun displayName(entityName: String?, device: Device?, rawDeviceName: String?, objectId: String): Names {
         // An entity name that repeats the full device path gets the short device name instead.
         val name = if (entityName != null && device != null && rawDeviceName != null && rawDeviceName != device.name && entityName.startsWith(rawDeviceName)) {
             device.name + entityName.removePrefix(rawDeviceName)
@@ -139,9 +144,12 @@ object DiscoveryParser {
             entityName
         }
         return when {
-            name == null -> device?.name ?: objectId
-            device != null && !name.startsWith(device.name) -> "${device.name} $name"
-            else -> name
+            name == null -> Names(device?.name ?: objectId, deviceName = device?.name)
+            device == null -> Names(name)
+            name == device.name -> Names(name, deviceName = device.name)
+            name.startsWith(device.name + " ") -> Names(name, device.name, name.removePrefix(device.name + " ").trim().ifEmpty { null })
+            name.startsWith(device.name) -> Names(name)
+            else -> Names("${device.name} $name", device.name, name)
         }
     }
 

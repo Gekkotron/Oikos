@@ -277,5 +277,20 @@ class DiscoveryParserTest {
         val config = """{"command_topic":"z/p/set","state_topic":"z/p","unique_id":"p_power","name":"rooms/julien/prise Power",
             "device":{"identifiers":["p"],"name":"rooms/julien/prise"}}"""
         assertEquals("prise Power", single("homeassistant/switch/p/power/config", config).entity.name)
+        assertEquals("prise" to "Power", single("homeassistant/switch/p/power/config", config).entity.let { it.deviceName to it.label })
+    }
+
+    @Test
+    fun `the device name and the entity's own label are kept apart for translation`() {
+        fun parts(config: String) = single("homeassistant/switch/obj/config", config).entity.let { it.deviceName to it.label }
+        val temp = single("homeassistant/sensor/0x00158d0006c3d4e5/temperature/config", fixture("z2m_temperature.json")).entity
+        assertEquals("capteur" to "Temperature", temp.deviceName to temp.label)
+        val light = single("homeassistant/light/0x00178801086a1b2c/light/config", fixture("z2m_light.json")).entity
+        assertEquals("lampe" to null, light.deviceName to light.label)
+        assertEquals("Plug" to "power", parts("""{"cmd_t":"c","name":"Plug power","dev":{"ids":["p"],"name":"Plug"}}"""))
+        assertEquals("Plug" to null, parts("""{"cmd_t":"c","name":"Plug","dev":{"ids":["p"],"name":"Plug"}}"""))
+        // A name that only happens to start with the device name is one custom name, not device + label.
+        assertEquals(null to null, parts("""{"cmd_t":"c","name":"Plugin light","dev":{"ids":["p"],"name":"Plug"}}"""))
+        assertEquals(null to null, parts("""{"cmd_t":"c","name":"Relay"}"""))
     }
 }
