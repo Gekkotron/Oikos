@@ -29,6 +29,16 @@ class SwitchMapperTest {
     }
 
     @Test
+    fun `zigbee2mqtt boolean switch with an if-else template decodes`() {
+        val b = bindings(
+            "switch",
+            """{"state_topic":"s","command_topic":"c","payload_on":"true","payload_off":"false","value_template":"{% if value_json['alarm'] %}true{% else %}false{% endif %}"}""",
+        )
+        assertEquals(Decoded.State(OnOff(false)), SwitchMapper.decode(b, "s", """{"alarm":false,"battery":100}""", Unknown))
+        assertEquals(Decoded.State(OnOff(true)), SwitchMapper.decode(b, "s", """{"alarm":true}""", Unknown))
+    }
+
+    @Test
     fun `commands use payloads, retain and qos`() {
         val b = bindings("switch", """{"command_topic":"c","payload_on":"1","payload_off":"0","retain":true,"qos":1}""")
         assertEquals(Encoded.Publish(listOf(Outgoing("c", "1", true, 1))), SwitchMapper.encode(b, Command.TurnOn(), Unknown))

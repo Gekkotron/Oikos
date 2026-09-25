@@ -50,17 +50,32 @@ private fun parseJsonOrFailure(payload: String): Any = try {
 
 private fun evaluate(segments: List<Segment>, vars: Map<String, Any?>): Any? {
     val expressions = segments.filterIsInstance<Segment.Expr>()
-    if (expressions.isEmpty()) return segments.joinToString("") { (it as Segment.Text).text }
-    val onlyWhitespaceAround = segments.all { it is Segment.Expr || (it as Segment.Text).text.isBlank() }
+    val onlyWhitespaceAround = segments.all { it is Segment.Expr || (it is Segment.Text && it.text.isBlank()) }
     if (expressions.size == 1 && onlyWhitespaceAround) {
         return eval(expressions.single().expression, vars).let { if (it === Undefined) null else it }
     }
-    return segments.joinToString("") { segment ->
+    return renderText(segments, vars)
+}
+
+private fun renderText(segments: List<Segment>, vars: Map<String, Any?>): String =
+    segments.joinToString("") { segment ->
         when (segment) {
             is Segment.Text -> segment.text
             is Segment.Expr -> eval(segment.expression, vars).let { if (it === Undefined) "" else it.asPayloadString() ?: "None" }
+            is Segment.If -> renderText(if (truthy(eval(segment.condition, vars))) segment.then else segment.otherwise, vars)
         }
     }
+
+/** Python truthiness; undefined and none are false. */
+private fun truthy(v: Any?): Boolean = when (v) {
+    null, Undefined -> false
+    is Boolean -> v
+    is Long -> v != 0L
+    is Double -> v != 0.0
+    is String -> v.isNotEmpty()
+    is JsonObject -> v.isNotEmpty()
+    is JsonArray -> v.isNotEmpty()
+    else -> true
 }
 
 /** JSON primitives become Kotlin values; objects and arrays are kept for further access. */
@@ -102,7 +117,9 @@ private fun looseNumber(v: Any?): Number? = when (v) {
 }
 
 private fun applyFilter(name: String, v: Any?, args: List<Any?>): Any? = when (name) {
-    "default" -> if (v === Undefined) args.firstOrNull() else v
+    "default" -> if (v === Undefined || (args.getOrNull(1) == true && !truthy(v))) args.firstOrNull() else v
+    "string" -> if (v === Undefined) "" else v.asPayloadString() ?: "None"
+    "truncate" -> truncate(if (v === Undefined) "" else v.asPayloadString() ?: "None", args)
     "int" -> looseNumber(v)?.toLong() ?: 0L
     "float" -> looseNumber(v)?.toDouble() ?: 0.0
     "round" -> {
@@ -117,4 +134,16 @@ private fun applyFilter(name: String, v: Any?, args: List<Any?>): Any? = when (n
     "lower" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").lowercase()
     "upper" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").uppercase()
     else -> throw TemplateEvalError("unknown filter '$name'")
+}
+
+/** Jinja `truncate(length=255, killwords=False, end='...', leeway=5)`. */
+private fun truncate(s: String, args: List<Any?>): String {
+    val length = (args.getOrNull(0) as? Long)?.toInt() ?: 255
+    val killWords = args.getOrNull(1) == true
+    val end = args.getOrNull(2) as? String ?: "..."
+    val leeway = (args.getOrNull(3) as? Long)?.toInt() ?: 5
+    if (length < end.length) throw TemplateEvalError("truncate length is shorter than its end")
+    if (s.length <= length + leeway) return s
+    val cut = s.take(length - end.length)
+    return (if (killWords) cut else cut.substringBeforeLast(' ')) + end
 }

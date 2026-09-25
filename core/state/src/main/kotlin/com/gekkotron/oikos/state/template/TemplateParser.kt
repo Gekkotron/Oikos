@@ -20,6 +20,9 @@ internal sealed interface Expression {
 internal sealed interface Segment {
     data class Text(val text: String) : Segment
     data class Expr(val expression: Expression) : Segment
+
+    /** `{% if cond %}…{% else %}…{% endif %}`, not nested; branches hold text and expressions only. */
+    data class If(val condition: Expression, val then: List<Segment>, val otherwise: List<Segment>) : Segment
 }
 
 internal sealed interface Token {
@@ -30,25 +33,59 @@ internal sealed interface Token {
 }
 
 internal object TemplateParser {
-    val FILTERS = setOf("int", "float", "round", "lower", "upper", "default")
+    val FILTERS = setOf("int", "float", "round", "lower", "upper", "default", "string", "truncate")
 
     fun parse(template: String): List<Segment> {
-        if ("{%" in template || "{#" in template) throw UnsupportedTemplate("statements and comments are not supported")
+        if ("{#" in template) throw UnsupportedTemplate("comments are not supported")
         val segments = mutableListOf<Segment>()
+        var open: OpenIf? = null
+        val out = { segment: Segment -> open?.current?.add(segment) ?: segments.add(segment) }
         var i = 0
         while (i < template.length) {
-            val open = template.indexOf("{{", i)
-            if (open < 0) {
-                segments += Segment.Text(template.substring(i))
+            val next = listOf(template.indexOf("{{", i), template.indexOf("{%", i)).filter { it >= 0 }.minOrNull()
+            if (next == null) {
+                out(Segment.Text(template.substring(i)))
                 break
             }
-            if (open > i) segments += Segment.Text(template.substring(i, open))
-            val close = template.indexOf("}}", open + 2)
-            if (close < 0) throw UnsupportedTemplate("unclosed '{{'")
-            segments += Segment.Expr(ExpressionParser(tokenize(template.substring(open + 2, close))).parseAll())
+            if (next > i) out(Segment.Text(template.substring(i, next)))
+            val isStatement = template[next + 1] == '%'
+            val close = template.indexOf(if (isStatement) "%}" else "}}", next + 2)
+            if (close < 0) throw UnsupportedTemplate("unclosed '${template.substring(next, next + 2)}'")
+            val body = template.substring(next + 2, close)
+            if (!isStatement) {
+                out(Segment.Expr(ExpressionParser(tokenize(body)).parseAll()))
+            } else {
+                val tokens = tokenize(body)
+                when ((tokens.firstOrNull() as? Token.Ident)?.name) {
+                    "if" -> {
+                        if (open != null) throw UnsupportedTemplate("nested 'if' is not supported")
+                        open = OpenIf(ExpressionParser(tokens.drop(1)).parseAll())
+                    }
+                    "else" -> {
+                        val o = open ?: throw UnsupportedTemplate("'else' outside 'if'")
+                        if (tokens.size != 1 || o.inElse) throw UnsupportedTemplate("unexpected 'else'")
+                        o.inElse = true
+                    }
+                    "endif" -> {
+                        val o = open ?: throw UnsupportedTemplate("'endif' outside 'if'")
+                        if (tokens.size != 1) throw UnsupportedTemplate("unexpected tokens after 'endif'")
+                        open = null
+                        segments += Segment.If(o.condition, o.then, o.otherwise)
+                    }
+                    else -> throw UnsupportedTemplate("only if/else/endif statements are supported")
+                }
+            }
             i = close + 2
         }
+        if (open != null) throw UnsupportedTemplate("missing 'endif'")
         return segments
+    }
+
+    private class OpenIf(val condition: Expression) {
+        val then = mutableListOf<Segment>()
+        val otherwise = mutableListOf<Segment>()
+        var inElse = false
+        val current get() = if (inElse) otherwise else then
     }
 
     private fun tokenize(src: String): List<Token> {

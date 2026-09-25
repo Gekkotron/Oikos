@@ -62,6 +62,52 @@ class TemplatesTest {
     }
 
     @Test
+    fun `boolean default also rescues null and empty values`() {
+        assertEquals("", v("{{ value_json.a | default('', true) }}", """{"a":null}"""))
+        assertEquals("x", v("{{ value_json.a | default('x', True) }}", """{"a":""}"""))
+        assertEquals("x", v("{{ value_json.nope | default('x', true) }}", """{"a":1}"""))
+        assertEquals("v", v("{{ value_json.a | default('x', true) }}", """{"a":"v"}"""))
+        assertEquals(null, v("{{ value_json.a | default('x', false) }}", """{"a":null}"""))
+    }
+
+    @Test
+    fun `string and truncate filters`() {
+        assertEquals("21", v("{{ value_json.a | string }}", """{"a":21}"""))
+        assertEquals("True", v("{{ value_json.a | string }}", """{"a":true}"""))
+        assertEquals("None", v("{{ value_json.a | string }}", """{"a":null}"""))
+        assertEquals("abc", v("{{ value | truncate(5) }}", "abc"))
+        assertEquals("ab", v("{{ value | truncate(2, True, '', 0) }}", "abcdef"))
+        assertEquals("abcd...", v("{{ value | truncate(7, True, '...', 0) }}", "abcdefghij"))
+        assertEquals("abcdefghij", v("{{ value | truncate(7, True) }}", "abcdefghij"))
+        assertEquals("one...", v("{{ value | truncate(9, False, '...', 0) }}", "one two three"))
+    }
+
+    @Test
+    fun `zigbee2mqtt string sensor template`() {
+        val t = """{{ value_json["timestamp_a"] | default('',True) | string | truncate(254, True, '', 0) }}"""
+        assertEquals("2026-09-25T07:35:49.426Z", v(t, """{"timestamp_a":"2026-09-25T07:35:49.426Z"}"""))
+        assertEquals("", v(t, """{"timestamp_a":null}"""))
+    }
+
+    @Test
+    fun `if else statement renders the branch for the condition's truthiness`() {
+        val t = """{% if value_json["alarm"] %}true{% else %}false{% endif %}"""
+        assertEquals("true", v(t, """{"alarm":true}"""))
+        assertEquals("false", v(t, """{"alarm":false}"""))
+        assertEquals("false", v(t, """{"alarm":null}"""))
+        assertEquals("false", v(t, """{"other":1}"""))
+        assertEquals("false", v(t, """{"alarm":0}"""))
+        assertEquals("false", v(t, """{"alarm":""}"""))
+        assertEquals("true", v(t, """{"alarm":"x"}"""))
+    }
+
+    @Test
+    fun `if without else and with expressions in branches`() {
+        assertEquals("", v("{% if value_json.a %}on{% endif %}", """{"a":false}"""))
+        assertEquals("s=ON!", v("s={% if value_json.a %}{{ value_json.a | upper }}{% endif %}!", """{"a":"on"}"""))
+    }
+
+    @Test
     fun `literals`() {
         assertEquals("a", v("{{ 'a' }}", "x"))
         assertEquals(-1L, v("{{ -1 }}", "x"))
@@ -96,7 +142,13 @@ class TemplatesTest {
     @Test
     fun `unsupported syntax is reported, not thrown`() {
         listOf(
-            "{% if value_json.moving %}MOVING{% endif %}",
+            "{% if value_json.a %}{% if value_json.b %}x{% endif %}{% endif %}",
+            "{% if value_json.a %}x{% elif value_json.b %}y{% endif %}",
+            "{% if value_json.a %}x",
+            "{% else %}x{% endif %}",
+            "{% for x in value_json %}x{% endfor %}",
+            "{% if value_json.a == 1 %}x{% endif %}",
+            "{%- if value_json.a %}x{% endif %}",
             "{# comment #}",
             "{{ value_json.x == 1 }}",
             "{{ now() }}",

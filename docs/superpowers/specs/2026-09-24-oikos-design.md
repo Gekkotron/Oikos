@@ -275,7 +275,8 @@ interface EntitySource {
 - **Template evaluator.** A deliberately small subset of Jinja:
   - `{{ value }}`
   - `{{ value_json.a.b }}`, `{{ value_json['key with spaces'] }}` and mixed forms
-  - Filters `| int`, `| float`, `| round(n)`, `| lower`, `| upper`, `| default(x)`
+  - Filters `| int`, `| float`, `| round(n)`, `| lower`, `| upper`, `| default(x)`, `| default(x, true)`, `| string`, `| truncate(n, killwords, end, leeway)`
+  - One non-nested `{% if <expr> %}…{% else %}…{% endif %}` using Python truthiness (zigbee2mqtt boolean switches)
 
   Anything else counts as *unsupported*. The entity's state then shows as `—`, its card is marked "template unsupported" in the log screen, and nothing crashes.
 - **Payload semantics** follow HA per component. Examples: light and switch use `payload_on`/`payload_off` and `state_value_template`; cover uses `position_topic`, `position_open`/`position_closed` and `set_position_topic`; binary sensor uses `payload_on`/`payload_off`; the alarm panel uses the standard states. The per-kind mapping lives in one file per kind, `kinds/*.kt`.
