@@ -12,6 +12,10 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         google()
+        // The gateway's own Kotlin SDK (athena-gateway-client), built by JitPack from its tags.
+        maven("https://jitpack.io") {
+            content { includeGroup("com.github.Gekkotron.Athena-HttpMqttGateway") }
+        }
     }
 }
 

@@ -26,6 +26,9 @@ firebaseBom = "34.19.0"
 firebaseCrashlyticsPlugin = "3.0.8"
 # Not in the Firebase BoM.
 firebaseAppDistribution = "16.0.0-beta20"
+athenaGatewayClient = "v1.1"
+# Test-only; matches the OkHttp 4.12 that athena-gateway-client brings.
+okhttpMockwebserver = "4.12.0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -75,3 +78,5 @@ androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", versi
 androidx-camera-compose = { module = "androidx.camera:camera-compose", version.ref = "camerax" }
 mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }
 androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
+athena-gateway-client = { module = "com.github.Gekkotron.Athena-HttpMqttGateway:athena-gateway-client", version.ref = "athenaGatewayClient" }
+mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttpMockwebserver" }

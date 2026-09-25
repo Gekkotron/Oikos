@@ -18,6 +18,15 @@ sealed interface LinkState {
             const val CLOSED = "closed"
             const val NOT_STARTED = "not started"
             const val FAILED = "failed to start"
+
+            /** Gateway HTTP 401: no key on the gateway matched ours. */
+            const val KEY_REJECTED = "gateway key not accepted"
+
+            /** Gateway 403 "Request expired": the phone's clock is outside the gateway's window. */
+            const val CLOCK_SKEW = "phone clock is off"
+
+            /** Any other gateway 403 (port or destination not allowed for this key). */
+            const val GATEWAY_REFUSED = "gateway refused"
         }
     }
 }
