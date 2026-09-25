@@ -2,17 +2,22 @@ package com.gekkotron.oikos.designsystem
 
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.components.OikosCard
 import org.junit.Rule
@@ -70,6 +75,22 @@ class OikosCardTest {
     fun `clickable card carries the long-click label too`() {
         show(label = "Controls")
         assertEquals("Controls", compose.onNodeWithTag("card").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+    }
+
+    @Test
+    fun `long-press-only card is keyboard-focusable`() {
+        show(onClick = null, label = "Customize")
+        compose.onNodeWithTag("card").requestFocus().assertIsFocused()
+    }
+
+    @Test
+    fun `Enter, DPad-center and Numpad-enter activate the long-press-only card when focused`() {
+        show(onClick = null, label = "Customize")
+        compose.onNodeWithTag("card").requestFocus()
+        compose.onNodeWithTag("card").performKeyInput { pressKey(Key.Enter) }
+        compose.onNodeWithTag("card").performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.onNodeWithTag("card").performKeyInput { pressKey(Key.NumPadEnter) }
+        assertEquals(listOf("long", "long", "long"), events)
     }
 
     @Test

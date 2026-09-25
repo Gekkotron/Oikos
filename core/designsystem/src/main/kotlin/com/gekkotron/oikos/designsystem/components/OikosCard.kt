@@ -3,7 +3,10 @@ package com.gekkotron.oikos.designsystem.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -14,6 +17,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -22,6 +26,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.onLongClick
@@ -29,6 +38,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
+
+/** Enter, DPad-center and the numpad Enter all activate a focused long-press-only card. */
+private val LONG_PRESS_KEYS = setOf(Key.Enter, Key.DirectionCenter, Key.NumPadEnter)
 
 /**
  * The base card: glass (Night Glass) or paper (Warm Minimal); `on` switches to the amber gradient or
@@ -50,6 +62,8 @@ fun OikosCard(
     val background = if (on) Brush.linearGradient(listOf(c.cardOnStart, c.cardOnEnd)) else SolidColor(c.card)
     val haptics = LocalHapticFeedback.current
     val longClick by rememberUpdatedState(onLongClick)
+    val focusInteractionSource = remember { MutableInteractionSource() }
+    val focused by focusInteractionSource.collectIsFocusedAsState()
     // `enabled` gates the tap only: an unavailable device must still be long-pressable, to hide or rename it.
     val clicks = when {
         onClick != null && enabled ->
@@ -60,6 +74,17 @@ fun OikosCard(
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     longClick?.invoke()
                 })
+            }
+            // No tap, so this is the only way D-pad, keyboard or Switch Access users reach it.
+            .focusable(interactionSource = focusInteractionSource)
+            .then(if (focused) Modifier.border(2.dp, c.cardOnBorder, shape) else Modifier)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp && event.key in LONG_PRESS_KEYS) {
+                    longClick?.invoke()
+                    true
+                } else {
+                    false
+                }
             }
             // `this.` picks the semantics action, not the nullable `onLongClick` parameter of the same name.
             .semantics { this.onLongClick(label = onLongClickLabel) { longClick?.invoke(); true } }
