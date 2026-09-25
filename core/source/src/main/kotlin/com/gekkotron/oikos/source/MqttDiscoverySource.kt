@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -193,7 +194,7 @@ class MqttDiscoverySource(
             val declared = areasDocument.areas
             val entities = all.associate { d ->
                 val ui = overrides[d.entity.uniqueId] ?: UiOverride()
-                val area = resolveArea(ui.area ?: d.device?.suggestedArea ?: UNASSIGNED_AREA, declared)
+                val area = resolveArea(ui.area ?: d.device?.suggestedArea ?: d.device?.pathArea ?: UNASSIGNED_AREA, declared)
                 d.entity.uniqueId to d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
             }
             Snapshot(entities, all.mapNotNull { it.device }.associateBy { it.id }, computeAreas(declared, entities.values))
@@ -207,13 +208,17 @@ class MqttDiscoverySource(
     }
 
     private fun resolveArea(raw: String, declared: List<Area>): String =
-        declared.firstOrNull { it.id == raw || it.name == raw }?.id ?: raw
+        declared.firstOrNull { it.id == raw || it.name.equals(raw, ignoreCase = true) }?.id ?: raw
+
+    /** "julien" → "Julien", "salle_de_bain" → "Salle de bain"; the id stays raw. */
+    private fun implicitName(raw: String): String =
+        raw.replace('_', ' ').replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
 
     private fun computeAreas(declared: List<Area>, entities: Collection<Entity>): List<Area> {
         val used = entities.mapTo(mutableSetOf()) { it.area }
         val declaredIds = declared.mapTo(mutableSetOf()) { it.id }
         val ordered = declared.sortedWith(compareBy<Area>({ it.order ?: Int.MAX_VALUE }, { it.name }))
-        val implicit = (used - declaredIds - UNASSIGNED_AREA).sorted().map { Area(it, it) }
+        val implicit = (used - declaredIds - UNASSIGNED_AREA).sorted().map { Area(it, implicitName(it)) }
         val unassigned = if (UNASSIGNED_AREA in used && UNASSIGNED_AREA !in declaredIds) listOf(Area(UNASSIGNED_AREA, UNASSIGNED_AREA)) else emptyList()
         return ordered + implicit + unassigned
     }

@@ -177,7 +177,7 @@ A small inconsistency to fix while there: the `mqtt_handler.py` fallback subscri
 ### 3.D zigbee2mqtt
 
 - Set `homeassistant: { enabled: true }`, keeping the default discovery prefix `homeassistant`.
-- `friendly_name` values stay `rooms/<room>/<device>`. Rooms still come from Oikos overrides, or from `suggested_area` if set.
+- `friendly_name` values stay `rooms/<room>/<device>`. Any device name with three or more `/` segments gives a suggested room (the second-to-last segment) and a display name (the last segment). This applies only when the device sends no `suggested_area`, so HA's own field still wins. Shorter names are left as they are.
 
 ---
 
@@ -266,7 +266,7 @@ interface EntitySource {
 4. **Overrides:**
    - `oikos/ui/<unique_id>` holds a retained JSON `UiOverride`, and `oikos/ui/_areas` holds a retained `{ "areas": [{ "id", "name", "icon", "order" }] }`.
    - Oikos is the writer, so overrides sync between phones.
-   - The effective area is `override.area ?: device.suggestedArea ?: "Unassigned"`.
+   - The effective area is `override.area ?: device.suggestedArea ?: device.pathArea ?: "Unassigned"`, where `pathArea` comes from a hierarchical device name (§3.D). A declared area matches a raw area by id, or by name ignoring case.
 5. **State subscription.** Computes the distinct set of state, availability and attribute topics of all entities and asks the transport for exactly that set. The set is recomputed (debounced 500 ms) when entities change.
 
 ### 4.4 State and templates (`:core:state`)

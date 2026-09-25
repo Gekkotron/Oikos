@@ -31,13 +31,14 @@ class DiscoveryParserTest {
         val d = single("homeassistant/light/0x00178801086a1b2c/light/config", fixture("z2m_light.json"))
         assertEquals("0x00178801086a1b2c_light_zigbee2mqtt", d.entity.uniqueId)
         assertEquals(Kind.LIGHT, d.entity.kind)
-        assertEquals("rooms/salon/lampe", d.entity.name)
+        assertEquals("lampe", d.entity.name)
         assertTrue(d.entity.capabilities.brightness)
         assertEquals(setOf("color_temp"), d.entity.capabilities.colorModes)
         assertEquals("zigbee2mqtt_0x00178801086a1b2c", d.device?.id)
         assertEquals("Philips", d.device?.manufacturer)
         assertEquals(d.device?.id, d.entity.deviceId)
         assertEquals("zigbee2mqtt/rooms/salon/lampe", d.b.str("state_topic"))
+        assertEquals("salon", d.device?.pathArea)
     }
 
     @Test
@@ -57,7 +58,7 @@ class DiscoveryParserTest {
         assertEquals("door", d.entity.deviceClass)
         assertEquals("False", d.b.str("payload_on"))
         assertEquals("True", d.b.str("payload_off"))
-        assertEquals("rooms/entree/porte Door", d.entity.name)
+        assertEquals("porte Door", d.entity.name)
     }
 
     @Test
@@ -67,7 +68,7 @@ class DiscoveryParserTest {
         val temp = single("homeassistant/sensor/0x00158d0006c3d4e5/temperature/config", fixture("z2m_temperature.json"))
         val hum = single("homeassistant/sensor/0x00158d0006c3d4e5/humidity/config", fixture("z2m_humidity.json"))
         assertEquals("°C", temp.entity.unit)
-        assertEquals("rooms/salon/capteur Temperature", temp.entity.name)
+        assertEquals("capteur Temperature", temp.entity.name)
         assertEquals(temp.b.str("state_topic"), hum.b.str("state_topic"))
         assertEquals(temp.device, hum.device)
     }
@@ -260,5 +261,21 @@ class DiscoveryParserTest {
         assertEquals(listOf("a1"), r.items.map { it.entity.uniqueId })
         assertEquals(1, r.skipped.size)
         assertTrue("hidden" in r.skipped.single() && "diagnostic" in r.skipped.single())
+    }
+
+    @Test
+    fun `hierarchical device names split into a room and a short name, short paths are left alone`() {
+        assertEquals(DevicePath.Parts("lampe", "julien"), DevicePath.split("rooms/julien/lampe"))
+        assertEquals(DevicePath.Parts("plafond", "salon"), DevicePath.split("maison/rdc/salon/plafond"))
+        assertEquals(DevicePath.Parts("AC/DC plug", null), DevicePath.split("AC/DC plug"))
+        assertEquals(DevicePath.Parts("a//b", null), DevicePath.split("a//b"))
+        assertEquals(DevicePath.Parts("Lampe", null), DevicePath.split("Lampe"))
+    }
+
+    @Test
+    fun `an entity name that repeats the full device path is shortened too`() {
+        val config = """{"command_topic":"z/p/set","state_topic":"z/p","unique_id":"p_power","name":"rooms/julien/prise Power",
+            "device":{"identifiers":["p"],"name":"rooms/julien/prise"}}"""
+        assertEquals("prise Power", single("homeassistant/switch/p/power/config", config).entity.name)
     }
 }

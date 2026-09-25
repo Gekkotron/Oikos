@@ -280,4 +280,40 @@ class MqttDiscoverySourceTest {
         assertTrue(h.source.entities.value.isEmpty())
         assertEquals(1, h.diagnostics.size)
     }
+
+    private fun z2mSwitch(id: String, deviceName: String, extraDevice: String = "") =
+        """{"command_topic":"z/$id/set","state_topic":"z/$id","unique_id":"$id","name":null,"device":{"identifiers":["$id"],"name":"$deviceName"$extraDevice}}"""
+
+    @Test
+    fun `a hierarchical device name gives the room when there is no suggested_area, and suggested_area wins`() = runTest {
+        val h = start()
+        h.transport.deliver("homeassistant/switch/p/config", z2mSwitch("p", "rooms/julien/prise"))
+        h.transport.deliver("homeassistant/switch/q/config", z2mSwitch("q", "rooms/julien/radio", ""","suggested_area":"Bureau""""))
+        runCurrent()
+        val p = h.source.entities.value.getValue("p")
+        assertEquals("prise", p.name)
+        assertEquals("julien", p.area)
+        assertEquals("Bureau", h.source.entities.value.getValue("q").area)
+        assertEquals(Area("julien", "Julien"), h.source.areas.value.first { it.id == "julien" })
+        assertEquals("prise", h.source.devices.value.getValue("p").name)
+    }
+
+    @Test
+    fun `a declared area matches a path room by name ignoring case`() = runTest {
+        val h = start()
+        h.source.setAreas(listOf(Area("bedroom_j", "Julien")))
+        h.transport.deliver("homeassistant/switch/p/config", z2mSwitch("p", "rooms/julien/prise"))
+        runCurrent()
+        assertEquals("bedroom_j", h.source.entities.value.getValue("p").area)
+        assertEquals(listOf("bedroom_j"), h.source.areas.value.map { it.id })
+    }
+
+    @Test
+    fun `an override still beats the path room`() = runTest {
+        val h = start()
+        h.transport.deliver("homeassistant/switch/p/config", z2mSwitch("p", "rooms/julien/prise"))
+        runCurrent()
+        h.source.setOverride("p", UiOverride(area = "kitchen"))
+        assertEquals("kitchen", h.source.entities.value.getValue("p").area)
+    }
 }

@@ -115,11 +115,12 @@ object DiscoveryParser {
         if (kind == Kind.SELECT && b.strList("options").isNullOrEmpty()) return Built.Bad("select without options")
 
         val device = parseDevice(config["device"])
+        val rawDeviceName = (config["device"] as? JsonObject)?.let { MqttBindings("device", it).str("name") }
         val uniqueId = b.str("unique_id") ?: listOfNotNull(component, nodeId, objectId).joinToString("_")
         val entity = Entity(
             uniqueId = uniqueId,
             deviceId = device?.id,
-            name = displayName(b.str("name"), device, objectId),
+            name = displayName(b.str("name"), device, rawDeviceName, objectId),
             kind = kind,
             deviceClass = b.str("device_class"),
             unit = b.str("unit_of_measurement"),
@@ -130,10 +131,18 @@ object DiscoveryParser {
         return Built.Ok(DiscoveredEntity(entity, device))
     }
 
-    private fun displayName(entityName: String?, device: Device?, objectId: String): String = when {
-        entityName == null -> device?.name ?: objectId
-        device != null && !entityName.startsWith(device.name) -> "${device.name} $entityName"
-        else -> entityName
+    private fun displayName(entityName: String?, device: Device?, rawDeviceName: String?, objectId: String): String {
+        // An entity name that repeats the full device path gets the short device name instead.
+        val name = if (entityName != null && device != null && rawDeviceName != null && rawDeviceName != device.name && entityName.startsWith(rawDeviceName)) {
+            device.name + entityName.removePrefix(rawDeviceName)
+        } else {
+            entityName
+        }
+        return when {
+            name == null -> device?.name ?: objectId
+            device != null && !name.startsWith(device.name) -> "${device.name} $name"
+            else -> name
+        }
     }
 
     private fun parseDevice(element: JsonElement?): Device? {
@@ -148,7 +157,8 @@ object DiscoveryParser {
             (pair as? JsonArray)?.joinToString(":") { (it as? JsonPrimitive)?.contentOrNull.orEmpty() }
         }
         val id = ids.firstOrNull() ?: connections.firstOrNull() ?: return null
-        return Device(id, d.str("name") ?: id, d.str("manufacturer"), d.str("model"), d.str("suggested_area"))
+        val path = DevicePath.split(d.str("name") ?: id)
+        return Device(id, path.name, d.str("manufacturer"), d.str("model"), d.str("suggested_area"), pathArea = path.area)
     }
 
     private fun capabilities(kind: Kind, b: MqttBindings): Capabilities = when (kind) {
