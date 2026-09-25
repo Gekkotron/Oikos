@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.IOException
+import java.util.Base64
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -48,6 +49,7 @@ class AthenaGatewayApiTest {
     private fun envelope(json: String) =
         MockResponse().setHeader("Content-Type", "application/octet-stream").setBody(seal(json))
     private fun sent(): JsonObject = crypto.open(server.takeRequest().body.readUtf8())
+    private fun ByteArray.toBase64(): String = Base64.getEncoder().encodeToString(this)
 
     @Test
     fun `subscribe sends sorted topics, qos 1 and the broker inside the envelope`() = runBlocking {
@@ -105,8 +107,29 @@ class AthenaGatewayApiTest {
 
     @Test
     fun `a refused broker login behind the gateway is BrokerRejected`() = runBlocking {
-        server.enqueue(sse(event("""{"type":"error","message":"Connection failed with code 5"}""")))
+        server.enqueue(sse(event("""{"type":"error","message":"Connection failed with code 5","code":5}""")))
         assertEquals(Refusal.BrokerRejected, assertFailsWith<GatewayRefused> { api().stream(setOf("a")).collect() }.refusal)
+    }
+
+    @Test
+    fun `raw bytes win over the parsed payload`() = runBlocking {
+        val binary = byteArrayOf(0xFF.toByte(), 0x00, 0x01)
+        server.enqueue(
+            sse(
+                event("""{"type":"connected"}"""),
+                event(
+                    """{"type":"message","topic":"sensor/temp","payload":21.5,""" +
+                        """"payload_b64":"${"21.50".encodeToByteArray().toBase64()}","qos":1,"retain":false}""",
+                ),
+                event(
+                    """{"type":"message","topic":"sensor/raw","payload":null,""" +
+                        """"payload_b64":"${binary.toBase64()}","qos":0,"retain":false}""",
+                ),
+            ),
+        )
+        val messages = api().stream(setOf("#")).toList().filterIsInstance<GatewayEvent.Message>().map { it.message }
+        assertEquals("21.50", messages[0].payload.decodeToString(), "the exact broker bytes win over the reparsed 21.5")
+        assertEquals(binary.toList(), messages[1].payload.toList(), "a binary payload passes through untouched")
     }
 
     @Test

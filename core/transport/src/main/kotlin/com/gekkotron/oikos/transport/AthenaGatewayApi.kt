@@ -36,7 +36,8 @@ class AthenaGatewayApi internal constructor(
             .mapNotNull { event ->
                 when (event) {
                     is MqttEvent.Connected -> GatewayEvent.Connected
-                    is MqttEvent.Message -> GatewayEvent.Message(MqttMessage(event.topic, event.payload.toPayloadBytes(), event.retain))
+                    is MqttEvent.Message ->
+                        GatewayEvent.Message(MqttMessage(event.topic, event.raw ?: event.payload.toPayloadBytes(), event.retain))
                     else -> null // Reconnecting only comes with `reconnect`; newer event types are ignored
                 }
             }
@@ -66,8 +67,8 @@ internal fun Throwable.toStreamFailure(): Throwable = when (this) {
     is GatewayException.Unauthorized -> GatewayRefused(Refusal.KeyRejected)
     is GatewayException.Rejected -> GatewayRefused(if (reason == EXPIRED) Refusal.ClockSkew else Refusal.Forbidden(reason))
     is GatewayException.BadRequest -> GatewayRefused(Refusal.Forbidden("bad request"))
-    is GatewayException.StreamError ->
-        if (MQTT_REFUSED.containsMatchIn(reason)) GatewayRefused(Refusal.BrokerRejected) else IOException(reason, this)
+    is GatewayException.BrokerRefused -> GatewayRefused(Refusal.BrokerRejected)
+    is GatewayException.StreamError -> IOException(reason, this)
     // Transport, GatewayError (including an undecryptable frame), anything else: worth another try.
     else -> IOException(message ?: javaClass.simpleName, this)
 }
@@ -76,6 +77,7 @@ internal fun Throwable.toStreamFailure(): Throwable = when (this) {
 internal fun GatewayException.publishText(): String = when (this) {
     is GatewayException.Unauthorized -> LinkState.Offline.KEY_REJECTED
     is GatewayException.Rejected -> if (reason == EXPIRED) LinkState.Offline.CLOCK_SKEW else reason
+    is GatewayException.BrokerRefused -> LinkState.Offline.REJECTED
     is GatewayException.GatewayError -> reason
     is GatewayException.Upstream -> errorText(body) ?: "broker error $status"
     else -> message ?: javaClass.simpleName
@@ -87,6 +89,3 @@ internal fun TransportSpec.Gateway.broker(): Broker? =
 internal fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 
 private const val EXPIRED = "Request expired"
-
-/** CONNACK 4 (bad username or password) and 5 (not authorised), as the gateway's paho callback words them. */
-private val MQTT_REFUSED = Regex("""Connection failed with code [45]\b""")
