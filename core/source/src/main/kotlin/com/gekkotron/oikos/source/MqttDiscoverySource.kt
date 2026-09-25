@@ -18,6 +18,7 @@ import com.gekkotron.oikos.model.UiOverrides
 import com.gekkotron.oikos.source.discovery.DiscoveredEntity
 import com.gekkotron.oikos.source.discovery.DiscoveryParser
 import com.gekkotron.oikos.source.discovery.DiscoveryResult
+import com.gekkotron.oikos.source.discovery.SensorAttachment
 import com.gekkotron.oikos.state.CommandTracker
 import com.gekkotron.oikos.state.StateStore
 import com.gekkotron.oikos.state.kinds.Encoded
@@ -236,7 +237,11 @@ class MqttDiscoverySource(
                 val area = canonical[raw.lowercase(Locale.ROOT)]?.takeIf { raw !in declaredIds } ?: raw
                 d.entity.uniqueId to d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
             }
-            Snapshot(entities, all.mapNotNull { it.device }.associateBy { it.id }, computeAreas(declared, entities.values))
+            // Recomputed from scratch every time, so it stays correct regardless of the order the cover
+            // and its "Moving" sensor arrive in, and clears when either is removed.
+            val partOf = SensorAttachment.compute(entities.values)
+            val attached = entities.mapValues { (id, e) -> partOf[id]?.let { e.copy(partOf = it) } ?: e }
+            Snapshot(attached, all.mapNotNull { it.device }.associateBy { it.id }, computeAreas(declared, attached.values))
         }
         // Lock order is always source -> store; the store never calls back into the source.
         store.setEntities(snapshot.entities.values)

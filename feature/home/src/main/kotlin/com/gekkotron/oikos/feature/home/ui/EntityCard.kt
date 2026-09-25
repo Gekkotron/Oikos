@@ -11,19 +11,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.OikosCard
 import com.gekkotron.oikos.designsystem.components.PendingDot
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
+import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.feature.home.presentation.TapAction
+import com.gekkotron.oikos.model.CoverState
 
 @Composable
 internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -33,6 +33,7 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
     val onText = stringResource(R.string.value_on)
     val offText = stringResource(R.string.value_off)
     val toggle = card.tap == TapAction.TOGGLE
+    val moving = (card.value as? CardValue.Cover)?.state?.takeIf { it == CoverState.OPENING || it == CoverState.CLOSING }
     OikosCard(
         modifier = modifier
             .testTag("card-${card.id}")
@@ -48,7 +49,7 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
         onLongClickLabel = stringResource(if (card.hasSheet) R.string.action_controls else R.string.action_customize),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(kindGlyph(card.kind, card.deviceClass), fontSize = 20.sp, modifier = Modifier.clearAndSetSemantics { })
+            KindGlyph(card.kind, card.deviceClass, moving)
             Spacer(Modifier.weight(1f))
             if (card.pending) PendingDot()
         }

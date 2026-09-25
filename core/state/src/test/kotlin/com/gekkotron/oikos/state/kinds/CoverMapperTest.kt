@@ -49,6 +49,57 @@ class CoverMapperTest {
     }
 
     @Test
+    fun `zigbee2mqtt 2_14 shutter value_template decodes state and position from one message`() {
+        // real zigbee2mqtt 2.14 discovery config for a Tuya curtain/blind switch (TS130F); state_topic == position_topic.
+        val b = bindings(
+            "cover",
+            """{"state_topic":"zigbee2mqtt/rooms/living/shutter_south",
+               "position_topic":"zigbee2mqtt/rooms/living/shutter_south",
+               "position_template":"{{ value_json[\"position\"] }}",
+               "state_open":"OPEN","state_closed":"CLOSE","state_opening":"UP","state_closing":"DOWN","state_stopped":"STOP",
+               "value_template":"{% if \"position\" in value_json and value_json[\"position\"] == 0 and \"state\" in value_json and value_json[\"state\"] == \"CLOSE\" %}CLOSE{% elif \"position\" in value_json and value_json[\"position\"] == 100 and \"state\" in value_json and value_json[\"state\"] == \"OPEN\" %}OPEN{% elif \"moving\" in value_json and value_json[\"moving\"] == \"UP\" %}UP{% elif \"moving\" in value_json and value_json[\"moving\"] == \"DOWN\" %}DOWN{% elif \"moving\" in value_json and value_json[\"moving\"] == \"STOP\" and \"position\" in value_json %}{% if value_json[\"position\"] == 0 %}CLOSE{% else %}OPEN{% endif %}{% elif \"state\" in value_json and value_json[\"state\"] == \"OPEN\" %}OPEN{% elif \"state\" in value_json and value_json[\"state\"] == \"CLOSE\" %}CLOSE{% else %}STOP{% endif %}"}""",
+        )
+        val topic = "zigbee2mqtt/rooms/living/shutter_south"
+        assertEquals(
+            Decoded.State(Cover(CoverState.OPENING, 40)),
+            CoverMapper.decode(b, topic, """{"position":40,"moving":"UP","state":"OPEN"}""", Unknown),
+        )
+        assertEquals(
+            Decoded.State(Cover(CoverState.CLOSING, 40)),
+            CoverMapper.decode(b, topic, """{"position":40,"moving":"DOWN","state":"OPEN"}""", Unknown),
+        )
+        assertEquals(
+            Decoded.State(Cover(CoverState.CLOSED, 0)),
+            CoverMapper.decode(b, topic, """{"position":0,"moving":"STOP","state":"CLOSE"}""", Unknown),
+        )
+        assertEquals(
+            Decoded.State(Cover(CoverState.OPEN, 40)),
+            CoverMapper.decode(b, topic, """{"position":40,"moving":"STOP","state":"OPEN"}""", Unknown),
+        )
+        assertEquals(
+            Decoded.State(Cover(CoverState.OPEN, 100)),
+            CoverMapper.decode(b, topic, """{"position":100,"state":"OPEN"}""", Unknown),
+        )
+        // Starting from an end stop: Z2M's template tests "fully closed/open" before "moving", so it answers CLOSE/OPEN.
+        assertEquals(
+            Decoded.State(Cover(CoverState.OPENING, 0)),
+            CoverMapper.decode(b, topic, """{"position":0,"moving":"UP","state":"CLOSE"}""", Unknown),
+        )
+        assertEquals(
+            Decoded.State(Cover(CoverState.CLOSING, 100)),
+            CoverMapper.decode(b, topic, """{"position":100,"moving":"DOWN","state":"OPEN"}""", Unknown),
+        )
+    }
+
+    @Test
+    fun `a moving field is ignored when the cover's template does not read it`() {
+        assertEquals(
+            Decoded.State(Cover(CoverState.OPEN, 42)),
+            CoverMapper.decode(z2m, "z", """{"position":42,"state":"OPEN","moving":"UP"}""", Unknown),
+        )
+    }
+
+    @Test
     fun `unrecognised state is ignored`() {
         val b = bindings("cover", """{"state_topic":"s"}""")
         assertEquals(Decoded.Ignored, CoverMapper.decode(b, "s", "wobbling", Unknown))

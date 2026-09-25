@@ -5,11 +5,16 @@ import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.state.mqtt.MqttBindings
 import com.gekkotron.oikos.state.template.asDouble
+import com.gekkotron.oikos.state.template.TemplateResult
+import com.gekkotron.oikos.state.template.Templates
 import com.gekkotron.oikos.state.template.asPayloadString
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 object CoverMapper : KindMapper {
+    // Brackets escaped: Android's ICU regex engine rejects a bare ']'.
+    private val READS_MOVING = Regex("""value_json(?:\.moving\b|\[\s*["']moving["']\s*\])""")
+
     override fun stateTopics(b: MqttBindings): Set<String> = setOfNotNull(b.str("state_topic"), b.str("position_topic"))
 
     override fun decode(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded {
@@ -17,7 +22,8 @@ object CoverMapper : KindMapper {
         val parts = PartialDecode()
         if (topic == b.str("state_topic")) {
             parts.part(renderIncoming(b, "value_template", payload)) { v ->
-                val state = stateFor(b, v.asPayloadString()) ?: return@part false
+                // Z2M/HA templates may pad rendered branches with whitespace; HA trims before matching.
+                val state = movingState(b, payload) ?: stateFor(b, v.asPayloadString()?.trim()) ?: return@part false
                 cover = cover.copy(state = state)
                 true
             }
@@ -34,6 +40,16 @@ object CoverMapper : KindMapper {
             }
         }
         return parts.result(cover)
+    }
+
+    /**
+     * Zigbee2MQTT's template tests "fully closed/open" before "moving", so a cover leaving an end stop
+     * reads CLOSE/OPEN while its motor runs. When the template reads `moving`, a moving value wins.
+     */
+    private fun movingState(b: MqttBindings, payload: String): CoverState? {
+        if (b.str("value_template")?.let(READS_MOVING::containsMatchIn) != true) return null
+        val moving = (Templates.renderValue("{{ value_json.moving }}", payload) as? TemplateResult.Value)?.value
+        return stateFor(b, moving.asPayloadString()?.trim())?.takeIf { it == CoverState.OPENING || it == CoverState.CLOSING }
     }
 
     private fun stateFor(b: MqttBindings, s: String?): CoverState? = when (s) {

@@ -27,6 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -422,6 +423,63 @@ class MqttDiscoverySourceTest {
         runCurrent()
         assertTrue(a.await().isFailure && b.await().isFailure)
         assertEquals(listOf("salon"), source.areas.value.map { it.id })
+    }
+
+    private fun fixture(name: String) = javaClass.getResource("/discovery/$name")!!.readText()
+
+    private val shutterCoverTopic = "homeassistant/cover/847127fffe08106c/shutter_south/config"
+    private val shutterMovingTopic = "homeassistant/sensor/847127fffe08106c/shutter_south_moving/config"
+    private val shutterCoverId = "0x847127fffe08106c_cover_zigbee2mqtt"
+    private val shutterMovingId = "0x847127fffe08106c_moving_zigbee2mqtt"
+
+    @Test
+    fun `a Z2M Moving sensor is attached to its cover regardless of arrival order`() = runTest {
+        val cover = fixture("z2m_shutter_cover.json")
+        val moving = fixture("z2m_shutter_moving.json")
+
+        val coverFirst = start()
+        coverFirst.transport.deliver(shutterCoverTopic, cover)
+        coverFirst.transport.deliver(shutterMovingTopic, moving)
+        runCurrent()
+        assertEquals(shutterCoverId, coverFirst.source.entities.value.getValue(shutterMovingId).partOf)
+        assertNull(coverFirst.source.entities.value.getValue(shutterCoverId).partOf)
+
+        val movingFirst = start()
+        movingFirst.transport.deliver(shutterMovingTopic, moving)
+        movingFirst.transport.deliver(shutterCoverTopic, cover)
+        runCurrent()
+        assertEquals(shutterCoverId, movingFirst.source.entities.value.getValue(shutterMovingId).partOf)
+    }
+
+    @Test
+    fun `a sensor on another topic or reading a field the cover does not use stays unattached`() = runTest {
+        val h = start()
+        h.transport.deliver(shutterCoverTopic, fixture("z2m_shutter_cover.json"))
+        h.transport.deliver(
+            "homeassistant/sensor/847127fffe08106c/elsewhere/config",
+            """{"state_topic":"zigbee2mqtt/rooms/living/other","value_template":"{{ value_json[\"moving\"] }}","unique_id":"other_topic_sensor","device":{"identifiers":["zigbee2mqtt_0x847127fffe08106c"]}}""",
+        )
+        h.transport.deliver(
+            "homeassistant/sensor/847127fffe08106c/battery/config",
+            """{"state_topic":"zigbee2mqtt/rooms/living/shutter_south","value_template":"{{ value_json[\"battery\"] }}","unique_id":"battery_sensor","device":{"identifiers":["zigbee2mqtt_0x847127fffe08106c"]}}""",
+        )
+        runCurrent()
+        assertNull(h.source.entities.value.getValue("other_topic_sensor").partOf)
+        assertNull(h.source.entities.value.getValue("battery_sensor").partOf)
+    }
+
+    @Test
+    fun `removing the cover clears partOf on the sensor`() = runTest {
+        val h = start()
+        h.transport.deliver(shutterCoverTopic, fixture("z2m_shutter_cover.json"))
+        h.transport.deliver(shutterMovingTopic, fixture("z2m_shutter_moving.json"))
+        runCurrent()
+        assertEquals(shutterCoverId, h.source.entities.value.getValue(shutterMovingId).partOf)
+
+        h.transport.deliver(shutterCoverTopic, "")
+        runCurrent()
+        assertNull(h.source.entities.value.getValue(shutterMovingId).partOf)
+        assertFalse(shutterCoverId in h.source.entities.value)
     }
 
     // Final review I3

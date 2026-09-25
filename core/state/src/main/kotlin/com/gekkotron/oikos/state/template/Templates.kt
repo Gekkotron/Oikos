@@ -98,7 +98,23 @@ private fun eval(e: Expression, vars: Map<String, Any?>): Any? = when (e) {
     }
     is Expression.Access -> access(eval(e.target, vars), e.key)
     is Expression.Filtered -> applyFilter(e.name, eval(e.target, vars), e.args)
+    is Expression.And -> truthy(eval(e.left, vars)) && truthy(eval(e.right, vars))
+    is Expression.Eq -> equalsValue(eval(e.left, vars), eval(e.right, vars))
+    is Expression.In -> containsKey(e.key, eval(e.target, vars))
 }
+
+/** `==`: strings compare to strings, numbers to numbers (0 == 0.0); undefined never equals anything. */
+private fun equalsValue(a: Any?, b: Any?): Boolean {
+    if (a === Undefined || b === Undefined) return false
+    return when {
+        a is String && b is String -> a == b
+        a is Number && b is Number -> a.toDouble() == b.toDouble()
+        else -> false
+    }
+}
+
+/** `<literal> in <expr>`: key membership, false unless the target is a JSON object. */
+private fun containsKey(key: String, target: Any?): Boolean = target is JsonObject && key in target
 
 private fun access(target: Any?, key: Any): Any? = when {
     target is JsonObject && key is String -> if (key in target) normalize(target[key]) else Undefined

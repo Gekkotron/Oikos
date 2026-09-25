@@ -33,4 +33,6 @@ data class Entity(
     val area: String = UNASSIGNED_AREA,
     /** The override applied to this entity (defaults when none). */
     val ui: UiOverride = UiOverride(),
+    /** Unique id of the entity this one duplicates (e.g. a Z2M "Moving" sensor folded into its cover). */
+    val partOf: String? = null,
 )

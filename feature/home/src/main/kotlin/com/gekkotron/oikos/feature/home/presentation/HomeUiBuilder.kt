@@ -26,8 +26,9 @@ object HomeUiBuilder {
     ): HomeUiState {
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
         val areaNames = areas.associate { it.id to it.name }
-        val visible = entities.values.filterNot { it.ui.hidden }
-        val hidden = entities.values.filter { it.ui.hidden }
+        val standalone = entities.values.filter { it.partOf == null }
+        val visible = standalone.filterNot { it.ui.hidden }
+        val hidden = standalone.filter { it.ui.hidden }
         val hero = visible.filter { it.ui.cardStyle == HERO_WEATHER }.minByOrNull { it.uniqueId }
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }
 

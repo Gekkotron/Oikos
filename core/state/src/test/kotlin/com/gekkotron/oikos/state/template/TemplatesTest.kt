@@ -142,15 +142,20 @@ class TemplatesTest {
     @Test
     fun `unsupported syntax is reported, not thrown`() {
         listOf(
-            "{% if value_json.a %}{% if value_json.b %}x{% endif %}{% endif %}",
-            "{% if value_json.a %}x{% elif value_json.b %}y{% endif %}",
             "{% if value_json.a %}x",
             "{% else %}x{% endif %}",
+            "{% elif value_json.a %}x{% endif %}",
+            "{% if value_json.a %}x{% else %}y{% elif value_json.b %}z{% endif %}",
             "{% for x in value_json %}x{% endfor %}",
-            "{% if value_json.a == 1 %}x{% endif %}",
             "{%- if value_json.a %}x{% endif %}",
+            "{% if value_json.a or value_json.b %}x{% endif %}",
+            "{% if not value_json.a %}x{% endif %}",
+            "{% if value_json.a != 1 %}x{% endif %}",
+            "{% if value_json.a < 1 %}x{% endif %}",
             "{# comment #}",
             "{{ value_json.x == 1 }}",
+            "{{ value_json.a and value_json.b }}",
+            "{{ 'a' in value_json }}",
             "{{ now() }}",
             "{{ value | tojson }}",
             "{{ value",
@@ -158,6 +163,50 @@ class TemplatesTest {
             "{{ value_json.x + 1 }}",
             "{{ }}",
         ).forEach { t -> assertIs<TemplateResult.Unsupported>(Templates.renderValue(t, "1"), t) }
+    }
+
+    @Test
+    fun `'in' checks key membership, false unless the target is a JSON object`() {
+        val t = """{% if "a" in value_json %}yes{% else %}no{% endif %}"""
+        assertEquals("yes", v(t, """{"a":1}"""))
+        assertEquals("no", v(t, """{"b":1}"""))
+        assertEquals("no", v(t, "1"))
+    }
+
+    @Test
+    fun `'and' is left-to-right and short-circuits`() {
+        // if "a" is missing, evaluating the right side (round on undefined) would raise; short-circuit avoids it.
+        val t = """{% if "a" in value_json and value_json["a"] | round == 1 %}yes{% else %}no{% endif %}"""
+        assertEquals("yes", v(t, """{"a":1}"""))
+        assertEquals("no", v(t, """{"a":2}"""))
+        assertEquals("no", v(t, """{"b":1}"""))
+    }
+
+    @Test
+    fun `'==' compares strings and numbers, never undefined`() {
+        val t = """{% if value_json["a"] == value_json["b"] %}eq{% else %}neq{% endif %}"""
+        assertEquals("eq", v(t, """{"a":"x","b":"x"}"""))
+        assertEquals("neq", v(t, """{"a":"x","b":"y"}"""))
+        assertEquals("eq", v(t, """{"a":0,"b":0.0}"""))
+        assertEquals("neq", v(t, """{"a":0,"b":"0"}"""))
+        assertEquals("neq", v(t, """{"a":1}"""))
+    }
+
+    @Test
+    fun `elif chain picks the first true branch, else is the fallback`() {
+        val t = """{% if value_json.a == 1 %}one{% elif value_json.a == 2 %}two{% elif value_json.a == 3 %}three{% else %}other{% endif %}"""
+        assertEquals("one", v(t, """{"a":1}"""))
+        assertEquals("two", v(t, """{"a":2}"""))
+        assertEquals("three", v(t, """{"a":3}"""))
+        assertEquals("other", v(t, """{"a":4}"""))
+    }
+
+    @Test
+    fun `nested if inside a branch`() {
+        val t = """{% if value_json.a %}{% if value_json.b %}ab{% else %}a{% endif %}{% else %}none{% endif %}"""
+        assertEquals("ab", v(t, """{"a":true,"b":true}"""))
+        assertEquals("a", v(t, """{"a":true,"b":false}"""))
+        assertEquals("none", v(t, """{"a":false,"b":true}"""))
     }
 
     @Test

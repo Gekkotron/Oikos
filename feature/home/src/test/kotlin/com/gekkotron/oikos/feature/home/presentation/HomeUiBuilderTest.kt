@@ -192,4 +192,16 @@ class HomeUiBuilderTest {
     fun `hidden filter key round-trips`() {
         assertEquals(RoomFilter.Hidden, RoomFilter.fromKey(RoomFilter.Hidden.key))
     }
+
+    @Test
+    fun `an entity attached to another is skipped everywhere, card, hero, chips and hidden`() {
+        val s = build(
+            testEntity("cover", Kind.COVER, area = "living"),
+            testEntity("moving", Kind.SENSOR, area = "living", partOf = "cover"),
+            testEntity("hidden_moving", Kind.SENSOR, area = "living", partOf = "cover", ui = UiOverride(hidden = true)),
+        )
+        assertEquals(listOf("cover"), s.cards.map { it.id })
+        assertEquals(0, s.hiddenCount)
+        assertFalse(s.chips.any { it.filter == RoomFilter.Hidden })
+    }
 }
