@@ -30,17 +30,34 @@ class TransportSelectorTest {
     /** Gateways connect at once unless [gatewayConnects] is false. */
     private var gatewayConnects = true
 
+    /** Direct candidates are born already rejected when this is true, before ever becoming current. */
+    private var directRejectsOnCreate = false
+
+    /** The next call to [probe] throws this instead of returning [reachable], then falls back to normal. */
+    private var probeThrows: Throwable? = null
+
     private fun TestScope.selector(route: Route = Route.AUTO): Pair<TransportSelector, MutableList<String>> {
         val s = TransportSelector(
             TransportSpec.Routed(directSpec, gatewaySpec, route),
-            direct = { FakeManagedTransport(it).also(directs::add) },
+            direct = {
+                FakeManagedTransport(it).also { d ->
+                    if (directRejectsOnCreate) d.fake.setLink(LinkState.Offline(LinkState.Offline.REJECTED))
+                    directs += d
+                }
+            },
             gateway = {
                 FakeManagedTransport(it).also { g ->
                     g.fake.setLink(if (gatewayConnects) LinkState.Connected(TransportMode.GATEWAY) else LinkState.Connecting)
                     gateways += g
                 }
             },
-            probe = { probes++; reachable },
+            probe = {
+                probes++
+                probeThrows?.let {
+                    probeThrows = null
+                    throw it
+                } ?: reachable
+            },
             networkChanges = network,
             scope = backgroundScope,
         )
@@ -139,6 +156,40 @@ class TransportSelectorTest {
         advanceTimeBy(1.seconds + 1.milliseconds)
         runCurrent()
         assertEquals(2, directs.size)
+    }
+
+    @Test
+    fun `a direct candidate rejected before it is current is not retried until a network change`() = runTest {
+        reachable = false
+        directRejectsOnCreate = true
+        selector()
+        assertTrue(directs.isEmpty())
+        assertEquals(1, gateways.size)
+        reachable = true
+        // 60 s re-probe, then up to 15 s for the switch attempt itself to time out and be disposed.
+        advanceTimeBy(75.seconds + 10.milliseconds)
+        runCurrent()
+        assertEquals(1, directs.size, "the rejected candidate was tried exactly once")
+        advanceTimeBy(3 * 60.seconds)
+        runCurrent()
+        assertEquals(1, directs.size, "no retry of the rejected direct candidate on re-probe")
+        network.emit(Unit)
+        advanceTimeBy(1.seconds + 1.milliseconds)
+        runCurrent()
+        assertEquals(2, directs.size, "a network change tries direct again")
+    }
+
+    @Test
+    fun `a probe that throws does not kill the selector loop`() = runTest {
+        probeThrows = IllegalStateException("boom")
+        val (s, _) = selector()
+        assertTrue(directs.isEmpty())
+        assertTrue(gateways.isEmpty())
+        network.emit(Unit)
+        advanceTimeBy(1.seconds + 1.milliseconds)
+        runCurrent()
+        assertEquals(1, directs.size)
+        assertEquals(LinkState.Connected(TransportMode.DIRECT), s.link.value)
     }
 
     @Test
