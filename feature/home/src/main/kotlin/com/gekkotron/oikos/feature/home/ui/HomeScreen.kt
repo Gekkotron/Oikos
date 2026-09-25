@@ -1,7 +1,7 @@
 package com.gekkotron.oikos.feature.home.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,9 +34,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -165,6 +170,8 @@ fun HomeScreen(
 
 @Composable
 private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}) {
+    val haptics = LocalHapticFeedback.current
+    val customizeLabel = stringResource(R.string.action_customize)
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = OikosTheme.type.display, modifier = Modifier.weight(1f))
@@ -172,9 +179,17 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Un
                 Text(
                     cardValueText(hero.value),
                     style = OikosTheme.type.display,
+                    // Long-press only, so it must not expose a click action TalkBack would announce as
+                    // "double-tap to activate" and then do nothing (spec §5.2); see OikosCard for the same pattern.
                     modifier = Modifier
                         .testTag("hero")
-                        .combinedClickable(onClick = {}, onLongClick = onHeroLongClick, onLongClickLabel = stringResource(R.string.action_customize)),
+                        .pointerInput(Unit) {
+                            detectTapGestures(onLongPress = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onHeroLongClick()
+                            })
+                        }
+                        .semantics { onLongClick(label = customizeLabel) { onHeroLongClick(); true } },
                 )
             }
         }

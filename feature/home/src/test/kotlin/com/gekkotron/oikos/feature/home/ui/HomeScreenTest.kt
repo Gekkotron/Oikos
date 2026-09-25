@@ -249,4 +249,19 @@ class HomeScreenTest {
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertEquals(listOf("outdoor" to UiOverride()), customizedHere)
     }
+
+    @Test
+    fun `the header temperature has no click action, only a labelled long-click`() {
+        val withHero = entities + ("outdoor" to testEntity("outdoor", Kind.SENSOR, "Outdoor", unit = "°C", ui = UiOverride(cardStyle = HomeUiBuilder.HERO_WEATHER)))
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("hero").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+        assertEquals("Customize", compose.onNodeWithTag("hero").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+    }
 }
