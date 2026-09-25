@@ -22,6 +22,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,7 +56,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ControlSheet(card: CardUi, onSend: (Command) -> Unit, onDismiss: () -> Unit) {
+internal fun ControlSheet(card: CardUi, onSend: (Command) -> Unit, onCustomize: () -> Unit, onDismiss: () -> Unit) {
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -73,6 +74,7 @@ internal fun ControlSheet(card: CardUi, onSend: (Command) -> Unit, onDismiss: ()
                 Kind.ALARM_PANEL -> AlarmControls(card, onSend)
                 else -> Unit
             }
+            TextButton(onClick = onCustomize, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_customize)) }
         }
     }
 }

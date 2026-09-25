@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.home.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,14 +51,21 @@ import com.gekkotron.oikos.feature.home.presentation.HomeViewModel
 import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.presentation.TapAction
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.UiOverride
 import java.time.LocalTime
 
 @Composable
-fun HomeRoute(onSetUpAgain: () -> Unit = {}, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeRoute(onSetUpAgain: () -> Unit = {}, onAssignRooms: () -> Unit = {}, viewModel: HomeViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send)
-    HomeScreen(state, viewModel::select, viewModel::tap, viewModel::send, snackbar, onSetUpAgain = onSetUpAgain)
+    HomeScreen(
+        state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
+        onSetUpAgain = onSetUpAgain,
+        onCustomize = viewModel::customize,
+        onCreateRoom = viewModel::createRoom,
+        onAssignRooms = onAssignRooms,
+    )
 }
 
 @Composable
@@ -70,9 +78,13 @@ fun HomeScreen(
     now: LocalTime = LocalTime.now(),
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     onSetUpAgain: () -> Unit = {},
+    onCustomize: (String, UiOverride) -> Unit = { _, _ -> },
+    onCreateRoom: (String) -> String? = { null },
+    onAssignRooms: () -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
@@ -97,7 +109,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }) }
                 item(key = "chips", span = { GridItemSpan(maxLineSpan) }) { HomeChips(state, onSelect) }
                 if (state.loading) {
                     item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
@@ -108,7 +120,7 @@ fun HomeScreen(
                     EntityCard(
                         card = card,
                         onClick = { if (card.tap == TapAction.OPEN_SHEET) sheetId = card.id else onTap(card) },
-                        onLongClick = if (card.hasSheet) ({ sheetId = card.id }) else null,
+                        onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id },
                     )
                 }
             }
@@ -124,19 +136,47 @@ fun HomeScreen(
     }
     val sheetCard = sheetId?.let(state::card)
     if (sheetCard != null) {
-        ControlSheet(sheetCard, onSend = { onSend(sheetCard.id, it) }, onDismiss = { sheetId = null })
+        ControlSheet(
+            sheetCard,
+            onSend = { onSend(sheetCard.id, it) },
+            onCustomize = { sheetId = null; customizeId = sheetCard.id },
+            onDismiss = { sheetId = null },
+        )
+    }
+    val customizeCard = customizeId?.let(state::card)
+    if (customizeCard != null) {
+        CustomizeSheet(
+            customizeCard,
+            state.rooms,
+            onSave = { onCustomize(customizeCard.id, it) },
+            onCreateRoom = onCreateRoom,
+            onDismiss = { customizeId = null },
+        )
     }
     if (linkSheet) {
-        LinkSheet(state.link, onSetUpAgain = { linkSheet = false; onSetUpAgain() }, onDismiss = { linkSheet = false })
+        LinkSheet(
+            state.link,
+            onSetUpAgain = { linkSheet = false; onSetUpAgain() },
+            onAssignRooms = { linkSheet = false; onAssignRooms() },
+            onDismiss = { linkSheet = false },
+        )
     }
 }
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}) {
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = OikosTheme.type.display, modifier = Modifier.weight(1f))
-            state.hero?.let { Text(cardValueText(it.value), style = OikosTheme.type.display) }
+            state.hero?.let { hero ->
+                Text(
+                    cardValueText(hero.value),
+                    style = OikosTheme.type.display,
+                    modifier = Modifier
+                        .testTag("hero")
+                        .combinedClickable(onClick = {}, onLongClick = onHeroLongClick, onLongClickLabel = stringResource(R.string.action_customize)),
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
         LinkPill(state.link, onClick = onPillClick)

@@ -26,10 +26,11 @@ import com.gekkotron.oikos.transport.TransportMode
 /** Link status and the Plan 1 way out of a profile; Settings takes this over later (spec §5.2). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun LinkSheet(link: LinkState, onSetUpAgain: () -> Unit, onDismiss: () -> Unit) {
+internal fun LinkSheet(link: LinkState, onSetUpAgain: () -> Unit, onAssignRooms: () -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(linkDescription(link), style = OikosTheme.type.body, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            OutlinedButton(onClick = onAssignRooms, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_assign_rooms)) }
             OutlinedButton(onClick = onSetUpAgain, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_set_up_again)) }
         }
     }

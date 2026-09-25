@@ -87,4 +87,16 @@ class LinkSheetTest {
         val statusNode = compose.onNodeWithText("Connected directly to your broker.")
         assertEquals(LiveRegionMode.Polite, statusNode.fetchSemanticsNode().config[SemanticsProperties.LiveRegion])
     }
+
+    @Test
+    fun `assign rooms calls back and closes the sheet`() {
+        var called = false
+        compose.setContent {
+            OikosTheme { HomeScreen(HomeUiState(loading = false, link = LinkState.Connected(TransportMode.DIRECT)), {}, {}, { _, _ -> }, onAssignRooms = { called = true }) }
+        }
+        compose.onNodeWithText("Wi-Fi direct").performClick()
+        compose.onNodeWithText("Assign rooms").performClick()
+        assertTrue(called)
+        compose.onNodeWithText("Connected directly to your broker.").assertDoesNotExist()
+    }
 }

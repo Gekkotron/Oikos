@@ -1,5 +1,14 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsActions
+import com.gekkotron.oikos.model.UiOverride
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.CompositionLocalProvider
@@ -58,6 +67,7 @@ class HomeScreenTest {
         ),
         testEntity("coffee", Kind.SWITCH, "Coffee machine", area = "kitchen"),
         testEntity("plug", Kind.SWITCH, "Garage plug", area = "garage"),
+        testEntity("temp", Kind.SENSOR, "Temperature", area = "living", unit = "°C"),
     ).associateBy { it.uniqueId }
     private val states = mapOf(
         "lamp" to EntityState("lamp", StateValue.Light(true, 180)),
@@ -71,6 +81,7 @@ class HomeScreenTest {
     private val taps = mutableListOf<String>()
     private val sends = mutableListOf<Pair<String, Command>>()
     private val selects = mutableListOf<RoomFilter>()
+    private val customized = mutableListOf<Pair<String, UiOverride>>()
 
     private fun state(): HomeUiState =
         HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
@@ -84,6 +95,7 @@ class HomeScreenTest {
                     onSelect = { selects += it },
                     onTap = { taps += it.id },
                     onSend = { id, c -> sends += id to c },
+                    onCustomize = { id, o -> customized += id to o },
                     now = LocalTime.NOON,
                     windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
@@ -130,11 +142,42 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `unavailable card is disabled and says so`() {
+    fun `unavailable card ignores taps and can still be customized`() {
         show()
-        compose.onNodeWithTag("card-plug").assertIsNotEnabled().performClick()
+        compose.onNodeWithTag("card-plug").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick)).performClick()
         compose.onNodeWithContentDescription("Garage plug, Unavailable, Garage").assertExists()
         assertEquals(emptyList(), taps)
+        compose.onNodeWithTag("card-plug").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithText("Hide from Home").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("plug" to UiOverride(hidden = true)), customized)
+    }
+
+    @Test
+    fun `long-press on a sensor opens the override sheet and saves a rename`() {
+        show()
+        compose.onNodeWithTag("card-temp").performScrollTo().performTouchInput { longClick() }
+        compose.onNode(hasSetTextAction() and hasText("Name")).performTextReplacement("Living temperature")
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("temp" to UiOverride(name = "Living temperature")), customized)
+    }
+
+    @Test
+    fun `long-press on a dimmable light opens its controls, and Customize opens the override sheet`() {
+        show()
+        compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
+        compose.onNodeWithText("Brightness").assertExists()
+        compose.onNodeWithText("Customize…").performScrollTo().performClick()
+        compose.onNodeWithText("Hide from Home").assertExists()
+        compose.onNodeWithText("Brightness").assertDoesNotExist()
+    }
+
+    @Test
+    fun `long-press actions are labelled for accessibility`() {
+        show()
+        assertEquals("Controls", compose.onNodeWithTag("card-lamp").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+        compose.onNodeWithTag("card-temp").performScrollTo()
+        assertEquals("Customize", compose.onNodeWithTag("card-temp").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
     }
 
     @Test
@@ -170,5 +213,40 @@ class HomeScreenTest {
         compose.waitForIdle()
         val large = compose.onNodeWithTag("card-coffee").getBoundsInRoot().let { it.bottom - it.top }
         assertTrue(large > normal, "card height $normal at 1x vs $large at 2x")
+    }
+
+    @Test
+    fun `hidden chip lists hidden cards, described as hidden`() {
+        val withHidden = entities + ("secret" to testEntity("secret", Kind.SWITCH, "Secret switch", area = "kitchen", ui = UiOverride(hidden = true)))
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(withHidden, states, areas, RoomFilter.Hidden, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = { selects += it }, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithText("Hidden (1)").assertExists()
+        // No state was given for "secret", so its value is "—"; only the name and the hidden suffix matter here.
+        compose.onNodeWithContentDescription("Secret switch, —, Kitchen, hidden").assertExists()
+    }
+
+    @Test
+    fun `long-pressing the header temperature opens its override sheet, so the hero style can be undone`() {
+        val withHero = entities + ("outdoor" to testEntity("outdoor", Kind.SENSOR, "Outdoor", unit = "°C", ui = UiOverride(cardStyle = HomeUiBuilder.HERO_WEATHER)))
+        val customizedHere = mutableListOf<Pair<String, UiOverride>>()
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(withHero, states + ("outdoor" to EntityState("outdoor", StateValue.Numeric(12.0))), areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> }, now = LocalTime.NOON,
+                    onCustomize = { id, o -> customizedHere += id to o },
+                )
+            }
+        }
+        compose.onNodeWithTag("hero").performTouchInput { longClick() }
+        compose.onNodeWithText("Standard").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("outdoor" to UiOverride()), customizedHere)
     }
 }
