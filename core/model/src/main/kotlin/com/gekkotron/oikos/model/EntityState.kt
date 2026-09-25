@@ -11,4 +11,6 @@ data class EntityState(
     val lastUpdate: Instant? = null,
     /** True while an optimistic command waits for confirmation. */
     val pending: Boolean = false,
+    /** True while the value comes from the entity cache and no live message has confirmed it. */
+    val stale: Boolean = false,
 )

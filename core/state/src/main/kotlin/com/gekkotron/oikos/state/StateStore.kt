@@ -38,6 +38,7 @@ class StateStore(
     private var topicIndex: Map<String, List<String>> = emptyMap()
     private val confirmed = mutableMapOf<String, StateValue>()
     private val lastPayload = mutableMapOf<String, String>()
+    private val restoredTopics = mutableSetOf<String>() // last payload came from the entity cache
     private val confirmTopics = mutableMapOf<String, Set<String>>()
     private val reported = mutableSetOf<String>()
 
@@ -82,16 +83,24 @@ class StateStore(
      */
     fun retainPayloads(subscribed: Set<String>): Unit = synchronized(lock) {
         lastPayload.keys.retainAll(subscribed)
+        restoredTopics.retainAll(subscribed)
     }
 
-    /** Returns the ids whose value was confirmed by this message. */
-    fun onMessage(topic: String, payload: String): Set<String> = synchronized(lock) {
+    /** Returns the ids whose value was confirmed by this message. A [restored] message comes from the entity cache. */
+    fun onMessage(topic: String, payload: String, restored: Boolean = false): Set<String> = synchronized(lock) {
         val ids = topicIndex[topic] ?: return emptySet()
         lastPayload[topic] = payload
+        if (restored) restoredTopics += topic else restoredTopics -= topic
         val next = _states.value.toMutableMap()
         val confirmedIds = ids.filterTo(mutableSetOf()) { apply(it, topic, payload, next) }
         _states.value = next
         confirmedIds
+    }
+
+    /** The broker has replayed what it holds: nothing is stale any more. */
+    fun settle(): Unit = synchronized(lock) {
+        restoredTopics.clear()
+        _states.value = _states.value.mapValues { (_, s) -> if (s.stale) s.copy(stale = false) else s }
     }
 
     /**
@@ -152,7 +161,7 @@ class StateStore(
         }
         t.availability?.let { if (topic in it.spec.topics && it.onMessage(topic, payload)) s = s.copy(available = it.available) }
         if (topic == t.attributesTopic) parseAttributes(payload)?.let { s = s.copy(attributes = it) }
-        states[id] = s
+        states[id] = s.copy(stale = topic in restoredTopics)
         return confirmedNow
     }
 

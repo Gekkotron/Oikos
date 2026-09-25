@@ -147,4 +147,47 @@ class StateStoreTest {
         store.setEntities(listOf(lamp))
         assertEquals(emptySet(), store.onMessage("nobody/listens", "x"))
     }
+
+    private fun stale(id: String) = store.states.value.getValue(id).stale
+
+    @Test
+    fun `a restored message makes its entities stale and a live one clears it`() {
+        store.setEntities(listOf(temperature, humidity))
+        store.onMessage("z/capteur", """{"temperature":21.5,"humidity":48}""", restored = true)
+        assertEquals(StateValue.Numeric(21.5), value("t"))
+        assertTrue(stale("t"))
+        assertTrue(stale("h"))
+
+        store.onMessage("z/capteur", """{"temperature":22.0,"humidity":47}""")
+        assertFalse(stale("t"))
+        assertFalse(stale("h"))
+    }
+
+    @Test
+    fun `a live availability message clears stale too`() {
+        store.setEntities(listOf(lamp))
+        store.onMessage("s", "ON", restored = true)
+        assertTrue(stale("l"))
+        store.onMessage("s/avail", "online")
+        assertFalse(stale("l"))
+    }
+
+    @Test
+    fun `settle clears every stale state`() {
+        store.setEntities(listOf(temperature, lamp))
+        store.onMessage("z/capteur", """{"temperature":21.5}""", restored = true)
+        store.onMessage("s", "ON", restored = true)
+        store.settle()
+        assertFalse(stale("t"))
+        assertFalse(stale("l"))
+    }
+
+    @Test
+    fun `an entity added later replays a restored payload as stale`() {
+        store.setEntities(listOf(temperature))
+        store.onMessage("z/capteur", """{"temperature":21.5,"humidity":48}""", restored = true)
+        store.setEntities(listOf(temperature, humidity))
+        assertEquals(StateValue.Numeric(48.0), value("h"))
+        assertTrue(stale("h"))
+    }
 }
