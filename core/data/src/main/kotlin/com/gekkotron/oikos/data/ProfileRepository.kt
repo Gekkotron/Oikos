@@ -41,6 +41,11 @@ class ProfileRepository internal constructor(
         store.updateData { StoredProfile(installId = id) }
     }
 
+    /** The Rooms step was finished or skipped; it is not shown again for this profile. */
+    suspend fun finishRooms() {
+        store.updateData { it.copy(roomsPending = false) }
+    }
+
     suspend fun installId(): String =
         store.updateData { if (it.installId.isEmpty()) it.copy(installId = newId()) else it }.installId
 
@@ -48,7 +53,7 @@ class ProfileRepository internal constructor(
         null -> ProfileState.None
         StoredMode.DEMO -> ProfileState.Ready(ConnectionProfile.Demo)
         StoredMode.DIRECT -> try {
-            s.toDirect()?.let { ProfileState.Ready(it) } ?: ProfileState.None
+            s.toDirect()?.let { ProfileState.Ready(it, s.roomsPending) } ?: ProfileState.None
         } catch (e: SecretUnavailable) {
             ProfileState.Locked
         }
@@ -73,6 +78,7 @@ class ProfileRepository internal constructor(
             gateway = p.gateway?.let { StoredGateway(it.url, it.brokerHost, seal(it.key)) },
             prefix = p.prefix,
             pushTokenTopic = p.pushTokenTopic,
+            roomsPending = true,
         )
     }
 

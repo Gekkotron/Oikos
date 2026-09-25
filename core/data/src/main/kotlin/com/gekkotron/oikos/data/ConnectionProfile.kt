@@ -57,5 +57,6 @@ sealed interface ProfileState {
 
     /** A profile exists but its secrets could not be decrypted, for example after a restore to a new phone. */
     data object Locked : ProfileState
-    data class Ready(val profile: ConnectionProfile) : ProfileState
+    /** [roomsPending]: show the Rooms step before Home (a direct profile that was just set up). */
+    data class Ready(val profile: ConnectionProfile, val roomsPending: Boolean = false) : ProfileState
 }

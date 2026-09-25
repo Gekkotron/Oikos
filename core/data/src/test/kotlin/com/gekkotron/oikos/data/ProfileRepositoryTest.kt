@@ -39,7 +39,7 @@ class ProfileRepositoryTest {
     fun `direct profile round-trips`() = runTest {
         val r = repo()
         r.save(direct)
-        assertEquals(ProfileState.Ready(direct), r.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.first { it is ProfileState.Ready })
     }
 
     @Test
@@ -54,7 +54,7 @@ class ProfileRepositoryTest {
         val r = repo()
         val profile = ConnectionProfile.Direct(LocalBroker("broker.local", username = "u", password = "p@ss wörd:1 🔑"))
         r.save(profile)
-        assertEquals(ProfileState.Ready(profile), r.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(profile, roomsPending = true), r.state.first { it is ProfileState.Ready })
     }
 
     @Test
@@ -99,7 +99,7 @@ class ProfileRepositoryTest {
         repo(f).apply { save(plain); state.first { it is ProfileState.Ready } }
         val copy = file("copy.json").also { f.copyTo(it) }
         secrets.failDecrypt = true
-        assertEquals(ProfileState.Ready(plain), repo(copy).settled())
+        assertEquals(ProfileState.Ready(plain, roomsPending = true), repo(copy).settled())
     }
 
     @Test
@@ -124,5 +124,38 @@ class ProfileRepositoryTest {
     fun `a corrupt file falls back to an empty profile`() = runTest {
         val f = file().apply { writeText("{not json") }
         assertEquals(ProfileState.None, repo(f).settled())
+    }
+
+    @Test
+    fun `a direct profile asks for rooms until finishRooms, and that survives a restart`() = runTest {
+        val f = file()
+        val r = repo(f)
+        r.save(direct)
+        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.first { it is ProfileState.Ready })
+        r.finishRooms()
+        assertEquals(ProfileState.Ready(direct), r.state.first { it == ProfileState.Ready(direct) })
+        val copy = tmp.root.resolve("copy.json")
+        f.copyTo(copy)
+        assertEquals(ProfileState.Ready(direct), repo(copy).settled())
+    }
+
+    @Test
+    fun `saving a new direct profile asks for rooms again`() = runTest {
+        val r = repo()
+        r.save(direct)
+        r.finishRooms()
+        r.state.first { it == ProfileState.Ready(direct) }
+        r.clear()
+        r.save(direct)
+        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.first { it is ProfileState.Ready })
+    }
+
+    @Test
+    fun `a profile file written before the flag existed does not ask for rooms`() = runTest {
+        val f = file()
+        repo(f).apply { save(ConnectionProfile.Direct(LocalBroker("broker.local"))); state.first { it is ProfileState.Ready } }
+        val old = tmp.root.resolve("old.json")
+        old.writeText(f.readText().replace(Regex(""",?"roomsPending":(true|false)"""), ""))
+        assertEquals(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("broker.local"))), repo(old).settled())
     }
 }

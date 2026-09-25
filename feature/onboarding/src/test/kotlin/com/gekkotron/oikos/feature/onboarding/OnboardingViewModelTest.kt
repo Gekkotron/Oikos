@@ -158,7 +158,7 @@ class OnboardingViewModelTest {
         vm.onQrScanned(qr)
         tester.result.value = TestState.Connected(listOf("Kettle"))
         vm.finish()
-        assertEquals(ProfileState.Ready(qrProfile), profiles.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(qrProfile, roomsPending = true), profiles.state.first { it is ProfileState.Ready })
         assertEquals(0, tester.active)
     }
 
@@ -175,7 +175,7 @@ class OnboardingViewModelTest {
 
         secrets.failEncrypt = false
         vm.finish()
-        assertEquals(ProfileState.Ready(qrProfile), withTimeout(10.seconds) { profiles.state.first { it is ProfileState.Ready } })
+        assertEquals(ProfileState.Ready(qrProfile, roomsPending = true), withTimeout(10.seconds) { profiles.state.first { it is ProfileState.Ready } })
         assertFalse(vm.state.value.saveFailed)
     }
 
