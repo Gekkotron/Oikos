@@ -44,7 +44,7 @@ The alternatives were rejected. A structured snapshot of `Entity` and `EntitySta
 
 ### 3.3 `:core:data` — `EntityCache`
 
-- Stored as DataStore JSON, like `profile.json`, at `noBackupFilesDir/entity-cache.json`. That location is never backed up. `data_extraction_rules.xml` gets an explicit exclusion as well, for clarity.
+- Stored as DataStore JSON, like `profile.json`, at `noBackupFilesDir/entity-cache.json`. That location is never backed up. `data_extraction_rules.xml` cannot name it (no rule domain covers it), so it only gets a comment saying so.
 - The document is `{ "profileKey": String, "messages": { topic: payload } }`.
 - `profileKey` is `"$host:$port:$prefix"`. It holds no username, password or gateway key.
 - API:
