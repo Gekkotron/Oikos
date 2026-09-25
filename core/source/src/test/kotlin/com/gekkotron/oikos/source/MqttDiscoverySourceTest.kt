@@ -10,6 +10,7 @@ import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.MqttMessage
+import com.gekkotron.oikos.transport.PublishFailed
 import com.gekkotron.oikos.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -315,5 +316,51 @@ class MqttDiscoverySourceTest {
         runCurrent()
         h.source.setOverride("p", UiOverride(area = "kitchen"))
         assertEquals("kitchen", h.source.entities.value.getValue("p").area)
+    }
+
+    @Test
+    fun `a default override clears the retained topic instead of publishing an empty object`() = runTest {
+        val h = start()
+        h.transport.deliver(lightTopic, lightConfig)
+        runCurrent()
+        val discoveredName = h.source.entities.value.getValue(lightId).name
+        h.source.setOverride(lightId, UiOverride(name = "X"))
+        h.source.setOverride(lightId, UiOverride())
+        val last = h.transport.published.last()
+        assertEquals("oikos/ui/$lightId", last.topic)
+        assertEquals(0, last.payload.size)
+        assertTrue(last.retained)
+        assertEquals(discoveredName, h.source.entities.value.getValue(lightId).name)
+        assertEquals(UiOverride(), h.source.entities.value.getValue(lightId).ui)
+    }
+
+    @Test
+    fun `a failed override publish restores the previous override and rethrows`() = runTest {
+        val h = start()
+        h.transport.deliver(lightTopic, lightConfig)
+        runCurrent()
+        h.source.setOverride(lightId, UiOverride(name = "X"))
+        h.transport.failPublishes = true
+        assertFailsWith<PublishFailed> { h.source.setOverride(lightId, UiOverride(name = "Y")) }
+        assertEquals("X", h.source.entities.value.getValue(lightId).name)
+    }
+
+    @Test
+    fun `a failed first override publish leaves no override behind`() = runTest {
+        val h = start()
+        h.transport.deliver(lightTopic, lightConfig)
+        runCurrent()
+        h.transport.failPublishes = true
+        assertFailsWith<PublishFailed> { h.source.setOverride(lightId, UiOverride(hidden = true)) }
+        assertFalse(h.source.entities.value.getValue(lightId).ui.hidden)
+    }
+
+    @Test
+    fun `a failed areas publish restores the previous areas and rethrows`() = runTest {
+        val h = start()
+        h.source.setAreas(listOf(Area("salon", "Salon")))
+        h.transport.failPublishes = true
+        assertFailsWith<PublishFailed> { h.source.setAreas(listOf(Area("salon", "Salon"), Area("kitchen", "Kitchen"))) }
+        assertEquals(listOf("salon"), h.source.areas.value.map { it.id })
     }
 }

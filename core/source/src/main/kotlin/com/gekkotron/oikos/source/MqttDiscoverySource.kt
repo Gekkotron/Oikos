@@ -119,21 +119,45 @@ class MqttDiscoverySource(
         return CommandResult.Accepted
     }
 
+    /**
+     * Applies locally, then publishes retained. A default override removes the retained message (an
+     * empty payload) instead of leaving `{}` behind. If the broker does not take it, the local change is
+     * rolled back, unless something newer replaced it meanwhile, and [PublishFailed] is rethrown:
+     * otherwise the phone would show an edit that the retained value undoes at the next reconnect.
+     */
     override suspend fun setOverride(uniqueId: String, override: UiOverride) {
         require(uniqueId.isNotEmpty() && uniqueId != AREAS_ID && isValidPublishTopic(UI_PREFIX + uniqueId)) {
             "unique_id '$uniqueId' cannot be used in an override topic"
         }
-        synchronized(lock) { overrides[uniqueId] = override }
+        val cleared = override == UiOverride()
+        val previous = synchronized(lock) { if (cleared) overrides.remove(uniqueId) else overrides.put(uniqueId, override) }
         publishEntities()
-        transport.publish(UI_PREFIX + uniqueId, UiOverrides.encode(override).encodeToByteArray(), qos = 1, retain = true)
+        val payload = if (cleared) ByteArray(0) else UiOverrides.encode(override).encodeToByteArray()
+        try {
+            transport.publish(UI_PREFIX + uniqueId, payload, qos = 1, retain = true)
+        } catch (e: PublishFailed) {
+            synchronized(lock) {
+                if (overrides[uniqueId] == override.takeUnless { cleared }) {
+                    if (previous == null) overrides.remove(uniqueId) else overrides[uniqueId] = previous
+                }
+            }
+            publishEntities()
+            throw e
+        }
     }
 
     override suspend fun setAreas(areas: List<Area>) {
         val document = AreasDocument(areas)
-        synchronized(lock) { areasDocument = document }
+        val previous = synchronized(lock) { areasDocument.also { areasDocument = document } }
         publishEntities()
         val json = OikosJson.encodeToString(AreasDocument.serializer(), document)
-        transport.publish(AREAS_TOPIC, json.encodeToByteArray(), qos = 1, retain = true)
+        try {
+            transport.publish(AREAS_TOPIC, json.encodeToByteArray(), qos = 1, retain = true)
+        } catch (e: PublishFailed) {
+            synchronized(lock) { if (areasDocument == document) areasDocument = previous }
+            publishEntities()
+            throw e
+        }
     }
 
     private fun handle(message: MqttMessage) {
