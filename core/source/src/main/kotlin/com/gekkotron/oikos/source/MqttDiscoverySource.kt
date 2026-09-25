@@ -37,7 +37,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.Locale
@@ -74,6 +76,8 @@ class MqttDiscoverySource(
     private val liveTopics = mutableSetOf<String>()
     private val restoredOnly = mutableSetOf<String>()
     private val _journalVersion = MutableStateFlow(0L)
+    @Volatile private var settled = false
+    @Volatile private var liveCount = 0L
 
     /** Increments whenever [journal] may have changed. */
     val journalVersion: StateFlow<Long> = _journalVersion.asStateFlow()
@@ -105,6 +109,18 @@ class MqttDiscoverySource(
                     store.retainPayloads(topics)
                 }
             }
+        }
+        scope.launch {
+            // Settle once the broker's retained replay has gone quiet after the first connection.
+            link.first { it is LinkState.Connected }
+            val maxRounds = SETTLE_MAX.inWholeMilliseconds / SETTLE_QUIET.inWholeMilliseconds
+            var rounds = 0L
+            do {
+                val seen = liveCount
+                delay(SETTLE_QUIET)
+                rounds++
+            } while (liveCount != seen && rounds < maxRounds)
+            settle()
         }
     }
 
@@ -180,6 +196,7 @@ class MqttDiscoverySource(
     }
 
     override suspend fun restore(messages: Map<String, String>) {
+        if (settled) return // the broker already replayed everything; a late cache would only add ghosts
         // Configs first so state messages find their entity, then overrides, then states.
         val ordered = messages.entries.sortedBy { (topic, _) ->
             when {
@@ -203,17 +220,43 @@ class MqttDiscoverySource(
     }
 
     /** A [restored] message comes from the entity cache and never replaces one received live. */
+    /** The broker has replayed what it holds: restored configs and overrides it did not re-send are gone. */
+    private fun settle() {
+        synchronized(lock) {
+            settled = true
+            for (topic in restoredOnly) {
+                payloads.remove(topic)
+                when {
+                    topic == AREAS_TOPIC -> {
+                        areasDocument = AreasDocument()
+                        confirmedAreas = areasDocument
+                    }
+                    topic.startsWith(UI_PREFIX) -> topic.removePrefix(UI_PREFIX).let {
+                        overrides.remove(it)
+                        confirmedOverrides.remove(it)
+                    }
+                    else -> discovered.remove(topic)
+                }
+            }
+            restoredOnly.clear()
+        }
+        publishEntities()
+        store.settle()
+        _journalVersion.value++
+    }
+
     private fun handle(message: MqttMessage, restored: Boolean = false) {
         val topic = message.topic
         try {
             val payload = message.payloadString()
             synchronized(lock) {
                 if (restored) {
-                    if (topic in liveTopics) return
+                    if (settled || topic in liveTopics) return
                     restoredOnly += topic
                 } else {
                     liveTopics += topic
                     restoredOnly -= topic
+                    liveCount++
                 }
                 if (payload.isEmpty()) payloads.remove(topic) else payloads[topic] = payload
             }
@@ -327,5 +370,7 @@ class MqttDiscoverySource(
         const val AREAS_ID = "_areas"
         const val AREAS_TOPIC = UI_PREFIX + AREAS_ID
         val SUBSCRIPTION_DEBOUNCE: Duration = 500.milliseconds
+        val SETTLE_QUIET: Duration = 2.seconds
+        val SETTLE_MAX: Duration = 10.seconds
     }
 }

@@ -4,6 +4,7 @@ import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.model.UiOverrides
 import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.TransportMode
 import com.gekkotron.oikos.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -93,5 +94,67 @@ class EntityCacheSourceTest {
         runCurrent()
         assertTrue(source.journalVersion.value > before)
         assertEquals(emptySet(), source.journal().keys)
+    }
+
+    private val quiet = MqttDiscoverySource.SETTLE_QUIET.inWholeMilliseconds
+    private val connected = LinkState.Connected(TransportMode.DIRECT)
+
+    @Test
+    fun `after connecting, restored configs the broker no longer holds are pruned with their override`() = runTest {
+        val (transport, source) = start()
+        source.restore(cached)
+        runCurrent()
+        transport.setLink(connected)
+        runCurrent()
+        assertTrue(lightId in source.entities.value)
+
+        advanceTimeBy(quiet + 1)
+        runCurrent()
+        assertFalse(lightId in source.entities.value)
+        assertEquals(emptySet(), source.journal().keys)
+    }
+
+    @Test
+    fun `configs re-sent live survive and every state is settled`() = runTest {
+        val (transport, source) = start()
+        source.restore(cached)
+        runCurrent()
+        transport.setLink(connected)
+        transport.deliver(lightTopic, lightConfig, retain = true) // the broker's retained replay
+        runCurrent()
+        // The replay lands in the first window, so settling takes one more quiet window.
+        advanceTimeBy(2 * quiet + 1)
+        runCurrent()
+        val light = source.entities.value.getValue(lightId)
+        assertEquals("Salon", light.area)
+        // The override was only restored, never re-sent: it is gone, so the name falls back.
+        assertEquals("Lampe", light.name)
+        assertFalse(source.states().first().getValue(lightId).stale)
+    }
+
+    @Test
+    fun `a steady stream still settles by the cap`() = runTest {
+        val (transport, source) = start()
+        source.restore(cached)
+        runCurrent()
+        transport.setLink(connected)
+        runCurrent()
+        repeat(12) {
+            transport.deliver("homeassistant/noise/$it", "x") // subscribed, so it counts as live traffic
+            advanceTimeBy(1_000)
+            runCurrent()
+        }
+        assertFalse(lightId in source.entities.value)
+    }
+
+    @Test
+    fun `a restore that arrives after settle is ignored`() = runTest {
+        val (_, source) = start(FakeMqttTransport())
+        advanceTimeBy(quiet + 1)
+        runCurrent()
+        source.restore(cached)
+        runCurrent()
+        assertFalse(lightId in source.entities.value)
+        assertTrue(source.journal().isEmpty())
     }
 }
