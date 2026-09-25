@@ -23,11 +23,11 @@ Plan 1 made Oikos work on the home network. This part makes it work **anywhere**
 
 ---
 
-## 2. The gateway's wire contract (server v1.1, `Athena-HttpMqttGateway@39e6dee`)
+## 2. The gateway's wire contract (server v1.2, `Athena-HttpMqttGateway@19a06d3`)
 
-Sub-project A has landed: multi-topic subscribe, the timestamp window on `/mqtt/subscribe`, a nonce replay cache, and a 15 s keepalive. Server v1.1 also tags the gateway's own errors with `source: "gateway"`.
+Sub-project A has landed: multi-topic subscribe, the timestamp window on `/mqtt/subscribe`, a nonce replay cache, and a 15 s keepalive. Server v1.1 tags the gateway's own errors with `source: "gateway"`. Server v1.2 adds each message's exact bytes (`payload_b64`) and a `code` on broker-login errors.
 
-**Oikos does not speak this protocol itself.** It uses the gateway's Kotlin SDK, `athena-gateway-client` v1.1 (JitPack, `sdk/kotlin` in the gateway repo). The SDK handles the envelope crypto, SSE framing and error decoding. The table below is what the SDK implements; it matters here for the payload encoding and the refusal mapping. **The house gateway must run server v1.1 or later.**
+**Oikos does not speak this protocol itself.** It uses the gateway's Kotlin SDK, `athena-gateway-client` v1.2 (JitPack, `sdk/kotlin` in the gateway repo). The SDK handles the envelope crypto, SSE framing and error decoding. The table below is what the SDK implements; it matters here for the payload encoding and the refusal mapping. **The house gateway must run server v1.2 or later.**
 
 | Aspect | Contract |
 |---|---|
@@ -40,9 +40,7 @@ Sub-project A has landed: multi-topic subscribe, the timestamp window on `/mqtt/
 
 `broker_port` is never sent: the gateway uses its own `MQTT_BROKER_PORT`, and the phone's local port may be a WebSocket port. `broker_host` comes from the QR code's `gateway.broker_host` and is omitted when absent. The username and password are the local broker's, and they only travel inside the envelope.
 
-**Payload re-encoding.** A string value becomes its UTF-8 bytes. Any other JSON value becomes its compact JSON text, so `{"state": "ON"}` stays JSON that templates can read. Two limits come from the gateway: a number loses its formatting (`21.50` arrives as `21.5`), and a JSON string literal loses its quotes. Neither matters for HA templates.
-
-**Known gateway limit (follow-up for sub-project A).** If a payload is not valid UTF-8, the gateway sends an `error` event and ends the stream. The app simply reconnects with backoff. A retained binary payload on a subscribed topic would therefore make the gateway route unusable. Nothing in the current house publishes one.
+**Payloads.** The SDK's `Message.raw` holds the exact bytes the broker delivered, from server v1.2 on. Oikos uses those bytes as they are: `21.50` stays `21.50`, and binary payloads pass through. Only a server older than v1.2 (where `raw` is null) makes Oikos fall back to re-encoding the parsed `payload`. There, a string value becomes its UTF-8 bytes and any other JSON value becomes compact JSON text.
 
 ---
 
@@ -88,12 +86,12 @@ The new stream is complete and in order from its own start, so after the flip ev
 `GatewayTransport` depends on a small `GatewayApi` seam: `stream(topics): Flow<GatewayEvent>` (`Connected`, `Message`) and `publish(...)`. `AthenaGatewayApi` implements it with `AthenaGatewayClient`:
 
 - **Construction.** `AthenaGatewayClient(url, key as hex, okHttpClient)`, built from the app's shared OkHttp client with a 10 s `callTimeout` for publishes. The SDK clears that timeout for streams and gives them a 45 s read timeout. That read timeout is the dead-stream rule, because keepalives count as bytes. `Broker(host = brokerHost, username, password)`, never `port`. A URL that is not `https://` is rejected.
-- **Streams.** `subscribe(*topics.sorted(), qos = 1, broker)` **without** the SDK's `reconnect`: `GatewayTransport` owns reconnecting, so it can hand over make-before-break. `MqttEvent.Connected` and `MqttEvent.Message` map to our events. Payloads are re-encoded as described in §2, and other or newer event types are ignored. The flow completes when the gateway sends `disconnected`.
+- **Streams.** `subscribe(*topics.sorted(), qos = 1, broker)` **without** the SDK's `reconnect`: `GatewayTransport` owns reconnecting, so it can hand over make-before-break. `MqttEvent.Connected` and `MqttEvent.Message` map to our events, with the payload taken as described in §2. Other or newer event types are ignored. The flow completes when the gateway sends `disconnected`.
 - **Errors**
   - `Unauthorized` → `GatewayRefused(KeyRejected)`.
   - `Rejected("Request expired")` → `ClockSkew`; any other `Rejected` or a `BadRequest` → `Forbidden(reason)`.
-  - A `StreamError` saying `Connection failed with code 4|5` → `BrokerRejected` (`Offline(REJECTED)`).
-  - Everything else (`Transport`, `GatewayError` including an undecryptable frame, other `StreamError`s) → `IOException`, which means retry.
+  - `BrokerRefused` (CONNACK 4/5, server v1.2) → `BrokerRejected` (`Offline(REJECTED)`).
+  - Everything else (`Transport`, `GatewayError` including an undecryptable frame, `StreamError`) → `IOException`, which means retry.
 - **Publish.** `publish(topic, payload.decodeToString(), qos, retain, broker)`. A `GatewayException` becomes `PublishFailed` with short, secret-free text: the offline reason for a rejected key or a clock refusal, and the gateway's own error text otherwise.
 - **Accepted differences from the parent spec.** The SDK does not check the timestamps of responses; the gateway's own "Request expired" check covers a skewed clock. A single undecryptable frame ends the stream, and the reconnect backoff then applies. There is no count of 5 bad frames in a row.
 

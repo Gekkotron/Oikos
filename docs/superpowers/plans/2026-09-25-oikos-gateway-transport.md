@@ -6,7 +6,7 @@
 
 **Architecture:**
 - **`:core:transport`**
-  - `AthenaGatewayApi` adapts `AthenaGatewayClient` (the `athena-gateway-client` SDK, v1.1) to a small `GatewayApi` seam. The SDK owns the wire format: envelope crypto, SSE, error decoding.
+  - `AthenaGatewayApi` adapts `AthenaGatewayClient` (the `athena-gateway-client` SDK, v1.2) to a small `GatewayApi` seam. The SDK owns the wire format: envelope crypto, SSE, error decoding.
   - `GatewayTransport` runs one `GatewayStream` per topic set, and owns reconnecting and backoff. It calls the SDK's `subscribe` without `reconnect`.
   - `TransportSelector` chooses Direct or Gateway for a `TransportSpec.Routed` (probe, network changes, re-probe, "rejected" fallback).
   - Both hand over between transports with a shared `Handover` (make-before-break, buffered).
@@ -16,13 +16,13 @@
 - **Home** gets a route picker in the link sheet.
 - **Onboarding's tester** falls back to the gateway.
 
-**Tech Stack:** Kotlin 2.4, coroutines/Flow, `com.github.Gekkotron.Athena-HttpMqttGateway:athena-gateway-client:v1.1` (JitPack; brings OkHttp 4.12), `okhttp3:mockwebserver` 4.12 for tests, `EnvelopeCrypto` (`:core:crypto`, tests only, to play the gateway), Hilt, Jetpack Compose, JUnit Jupiter (JVM modules), JUnit4 + Robolectric (Android modules), kotlinx-coroutines-test.
+**Tech Stack:** Kotlin 2.4, coroutines/Flow, `com.github.Gekkotron.Athena-HttpMqttGateway:athena-gateway-client:v1.2` (JitPack; brings OkHttp 4.12), `okhttp3:mockwebserver` 4.12 for tests, `EnvelopeCrypto` (`:core:crypto`, tests only, to play the gateway), Hilt, Jetpack Compose, JUnit Jupiter (JVM modules), JUnit4 + Robolectric (Android modules), kotlinx-coroutines-test.
 
 **Spec:** `docs/superpowers/specs/2026-09-25-oikos-gateway-transport-design.md` (parents: `2026-09-24-oikos-design.md` §3.A, §4.5, §7, §8; `2026-09-24-oikos-direct-connection-design.md`). SDK docs: `sdk/kotlin/README.md` in `Gekkotron/Athena-HttpMqttGateway`.
 
 **Branch:** `feat/gateway-transport`, created from `master` (at or after `05b95ca`).
 
-**Prerequisite (manual, before the phone check):** the house gateway runs server **v1.1 or later**. The SDK needs the `source: "gateway"` tag (commit `d80e0d3`) to tell a gateway refusal from an upstream error. Update it with `update.sh` on the gateway host.
+**Prerequisite (manual, before the phone check):** the house gateway runs server **v1.2 or later**. The SDK needs the `source: "gateway"` tag (v1.1) to tell a gateway refusal from an upstream error, and the raw payload bytes and broker-login `code` (v1.2). Update it with `update.sh` on the gateway host.
 
 ## Global Constraints
 
@@ -126,7 +126,7 @@ In `settings.gradle.kts`, inside `dependencyResolutionManagement { repositories 
 In `gradle/libs.versions.toml`, under `[versions]` after `firebaseAppDistribution`, add:
 
 ```toml
-athenaGatewayClient = "v1.1"
+athenaGatewayClient = "v1.2"
 # Test-only; matches the OkHttp 4.12 that athena-gateway-client brings.
 okhttpMockwebserver = "4.12.0"
 ```
@@ -155,7 +155,7 @@ dependencies {
 ```
 
 Run: `./gradlew :core:transport:dependencies --configuration runtimeClasspath | grep -E "athena|okhttp"`
-Expected: `athena-gateway-client:v1.1` and `okhttp:4.12.0` resolve, with no `FAILED`.
+Expected: `athena-gateway-client:v1.2` and `okhttp:4.12.0` resolve, with no `FAILED`.
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -542,6 +542,13 @@ git -c user.name=Gekkotron -c user.email=60887050+Gekkotron@users.noreply.github
 
 ### Task 3: `AthenaGatewayApi` (adapter over the SDK)
 
+> **Amended for SDK v1.2** (released during execution). The code below targets v1.1. On top of it:
+> - payload bytes = `event.raw ?: event.payload.toPayloadBytes()`;
+> - `GatewayException.BrokerRefused` → `GatewayRefused(Refusal.BrokerRejected)`, replacing the `Connection failed with code [45]` regex (`StreamError` → `IOException`);
+> - `publishText` maps `BrokerRefused` to `LinkState.Offline.REJECTED`;
+> - the broker-refused test's error event carries `"code":5`;
+> - a new test checks that `payload_b64` bytes (`21.50`, binary) win over the parsed payload.
+
 **Files:**
 - Create: `core/transport/src/main/kotlin/com/gekkotron/oikos/transport/AthenaGatewayApi.kt`
 - Test: `core/transport/src/test/kotlin/com/gekkotron/oikos/transport/AthenaGatewayApiTest.kt`
@@ -845,7 +852,7 @@ private val MQTT_REFUSED = Regex("""Connection failed with code [45]\b""")
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `./gradlew :core:transport:test --tests '*AthenaGatewayApiTest*'`
-Expected: PASS. If a mapping test fails, compare with `ResponseDecoder` in the SDK (`sdk/kotlin/src/main/kotlin/.../internal/ResponseDecoder.kt`, tag `v1.1`). It is the source of truth for which `GatewayException` each reply becomes.
+Expected: PASS. If a mapping test fails, compare with `ResponseDecoder` in the SDK (`sdk/kotlin/src/main/kotlin/.../internal/ResponseDecoder.kt`, tag `v1.2`). It is the source of truth for which `GatewayException` each reply becomes.
 
 - [ ] **Step 5: Commit**
 
