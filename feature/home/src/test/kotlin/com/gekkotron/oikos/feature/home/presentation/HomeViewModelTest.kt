@@ -62,6 +62,22 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `a stale Hidden selection resets to All instead of reappearing once something else is hidden`() = runTest(dispatcher) {
+        source.entities.value += "secret" to testEntity("secret", Kind.SWITCH, area = "kitchen", ui = UiOverride(hidden = true))
+        val handle = SavedStateHandle()
+        val vm = HomeViewModel(source, handle, dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.select(RoomFilter.Hidden)
+        assertEquals(RoomFilter.Hidden, vm.state.value.selected)
+        // Unhiding the last hidden card drops the Hidden chip; the view falls back to All.
+        source.entities.value += "secret" to testEntity("secret", Kind.SWITCH, area = "kitchen")
+        assertEquals(RoomFilter.All, vm.state.value.selected)
+        // Hiding another card brings the Hidden chip back; a stale saved key would jump back to it.
+        source.entities.value += "lamp" to testEntity("lamp", Kind.LIGHT, area = "kitchen", ui = UiOverride(hidden = true))
+        assertEquals(RoomFilter.All, vm.state.value.selected)
+    }
+
+    @Test
     fun `tapping sends an absolute on-off so Retry repeats the intent, and ignores sheet cards`() = runTest(dispatcher) {
         source.entities.value += "off" to testEntity("off", Kind.SWITCH, area = "kitchen")
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)

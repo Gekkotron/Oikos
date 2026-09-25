@@ -45,7 +45,12 @@ class HomeViewModel @Inject constructor(
         savedState.getStateFlow(KEY_FILTER, RoomFilter.All.key),
         source.link,
     ) { entities, states, areas, key, link ->
-        HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels)
+        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels)
+        // The selected chip may no longer exist (its last card was unhidden, its area emptied…); build()
+        // already falls back to All for this state, but the saved key must follow, or a stale "hidden"
+        // key comes back to life and jumps the screen back there as soon as something is hidden again.
+        if (ui.selected.key != key) savedState[KEY_FILTER] = ui.selected.key
+        ui
     }.conflate().flowOn(defaultDispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
