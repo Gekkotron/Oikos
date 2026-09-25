@@ -1,5 +1,7 @@
 package com.gekkotron.oikos
 
+import com.gekkotron.oikos.data.EntityCache
+import com.gekkotron.oikos.data.FileEntityCache
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.SecretStore
 import com.gekkotron.oikos.di.ApplicationScope
@@ -20,6 +22,11 @@ object TestDataModule {
     @Singleton
     fun profiles(@ApplicationScope scope: CoroutineScope): ProfileRepository =
         ProfileRepository.create(Files.createTempDirectory("oikos").resolve("profile.json").toFile(), PassThrough, scope)
+
+    @Provides
+    @Singleton
+    fun entityCache(@ApplicationScope scope: CoroutineScope): EntityCache =
+        FileEntityCache.create(Files.createTempDirectory("oikos").resolve("entity-cache.json").toFile(), scope)
 
     private object PassThrough : SecretStore {
         override fun encrypt(plain: ByteArray) = plain.copyOf()

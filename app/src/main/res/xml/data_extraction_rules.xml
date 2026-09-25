@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The profile is useless without its Keystore key, which never leaves the phone (spec §4.3). -->
 <data-extraction-rules>
+    <!-- The entity cache lives in noBackupFilesDir, which is never backed up or transferred. -->
     <cloud-backup>
         <exclude domain="file" path="datastore/profile.json" />
     </cloud-backup>

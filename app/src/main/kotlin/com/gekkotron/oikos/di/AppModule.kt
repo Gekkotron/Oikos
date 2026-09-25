@@ -6,6 +6,7 @@ import com.gekkotron.oikos.connection.EntitySourceSession
 import com.gekkotron.oikos.connection.clientIdFor
 import com.gekkotron.oikos.connection.setupClientIdFor
 import com.gekkotron.oikos.connection.toSpec
+import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.demo.DemoBroker
@@ -68,8 +69,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun entitySourceSession(transport: MqttTransport, @ApplicationScope scope: CoroutineScope): EntitySourceSession =
-        EntitySourceSession(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") })
+    fun entitySourceSession(transport: MqttTransport, cache: EntityCache, @ApplicationScope scope: CoroutineScope): EntitySourceSession =
+        EntitySourceSession(transport, scope, diagnostics = { Log.w("Oikos", "${it.source}: ${it.message}") }, cache = cache)
 
     /** Unscoped: each new Home gets the source for the current profile (spec §2). Home only exists while Ready. */
     @Provides

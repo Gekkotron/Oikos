@@ -1,15 +1,20 @@
 package com.gekkotron.oikos.connection
 
 import com.gekkotron.oikos.data.ConnectionProfile
+import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.source.EntitySource
+import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.testing.FakeMqttTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -70,5 +75,62 @@ class EntitySourceSessionTest {
         val second = session.current(ConnectionProfile.Demo)
         assertNotSame(first, second)
         assertTrue(scopes[1].isActive)
+    }
+
+    private val lightTopic = "homeassistant/light/0x01/light/config"
+    private val lightConfig = """{"schema":"json","command_topic":"z2m/lampe/set","state_topic":"z2m/lampe","unique_id":"lamp","name":"Lampe"}"""
+
+    @Test
+    fun `a direct source is restored from the cache for its key`() = runBlocking {
+        val cache = FakeEntityCache(direct.cacheKey() to mapOf(lightTopic to lightConfig))
+        transport.setLink(LinkState.Offline("test"))
+        val source = EntitySourceSession(transport, parent, cache = cache).current(direct)
+        withTimeout(2_000) { source.entities.first { "lamp" in it } }
+        Unit
+    }
+
+    @Test
+    fun `a cache for another broker is not restored`() = runBlocking {
+        val cache = FakeEntityCache("other:1883:homeassistant" to mapOf(lightTopic to lightConfig))
+        transport.setLink(LinkState.Offline("test"))
+        val source = EntitySourceSession(transport, parent, cache = cache).current(direct)
+        delay(200)
+        assertTrue(source.entities.value.isEmpty())
+    }
+
+    @Test
+    fun `the journal is saved under the profile key`() = runBlocking {
+        val cache = FakeEntityCache()
+        EntitySourceSession(transport, parent, cache = cache).current(direct)
+        transport.deliver(lightTopic, lightConfig, retain = true)
+        withTimeout(5_000) { while (cache.stored == null) delay(50) }
+        assertEquals(direct.cacheKey(), cache.stored!!.first)
+        assertTrue(lightTopic in cache.stored!!.second)
+    }
+
+    @Test
+    fun `the demo and reset clear the cache`() = runBlocking {
+        val cache = FakeEntityCache(direct.cacheKey() to mapOf(lightTopic to lightConfig))
+        val session = EntitySourceSession(transport, parent, cache = cache)
+        session.current(ConnectionProfile.Demo)
+        withTimeout(2_000) { while (cache.clears == 0) delay(10) }
+        session.current(direct)
+        session.reset()
+        assertEquals(2, cache.clears)
+    }
+}
+
+private class FakeEntityCache(var stored: Pair<String, Map<String, String>>? = null) : EntityCache {
+    var clears = 0
+
+    override suspend fun load(key: String) = stored?.takeIf { it.first == key }?.second.orEmpty()
+
+    override suspend fun save(key: String, messages: Map<String, String>) {
+        stored = key to messages
+    }
+
+    override suspend fun clear() {
+        clears++
+        stored = null
     }
 }
