@@ -40,8 +40,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -170,6 +172,7 @@ fun HomeScreen(
 private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
+    val staleText = stringResource(R.string.card_stale)
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = OikosTheme.type.display, modifier = Modifier.weight(1f))
@@ -181,13 +184,17 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Un
                     // "double-tap to activate" and then do nothing (spec §5.2); see OikosCard for the same pattern.
                     modifier = Modifier
                         .testTag("hero")
+                        .alpha(if (hero.stale) 0.6f else 1f)
                         .pointerInput(Unit) {
                             detectTapGestures(onLongPress = {
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onHeroLongClick()
                             })
                         }
-                        .semantics { onLongClick(label = customizeLabel) { onHeroLongClick(); true } },
+                        .semantics {
+                            onLongClick(label = customizeLabel) { onHeroLongClick(); true }
+                            if (hero.stale) stateDescription = staleText
+                        },
                 )
             }
         }

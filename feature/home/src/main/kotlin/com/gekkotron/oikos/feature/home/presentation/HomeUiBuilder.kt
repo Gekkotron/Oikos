@@ -105,6 +105,7 @@ object HomeUiBuilder {
             wide = entity.kind == Kind.SENSOR && entity.deviceClass in WIDE_CLASSES,
             available = state?.available ?: true,
             pending = state?.pending ?: false,
+            stale = state?.stale ?: false,
             tap = tapFor(entity.kind),
             hasSheet = entity.kind in SHEET_KINDS || (entity.kind == Kind.LIGHT && entity.capabilities.brightness),
             areaId = entity.area,

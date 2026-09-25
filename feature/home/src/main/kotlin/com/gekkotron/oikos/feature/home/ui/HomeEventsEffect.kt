@@ -31,6 +31,7 @@ fun HomeEventsEffect(events: Flow<HomeEvent>, snackbar: SnackbarHostState, onRet
                 }
                 is HomeEvent.Rejected -> snackbar.showSnackbar(resources.getString(R.string.home_rejected, event.reason))
                 HomeEvent.SaveFailed -> snackbar.showSnackbar(resources.getString(R.string.home_save_failed))
+                HomeEvent.WaitingForConnection -> snackbar.showSnackbar(resources.getString(R.string.home_waiting_connection))
             }
         }
     }

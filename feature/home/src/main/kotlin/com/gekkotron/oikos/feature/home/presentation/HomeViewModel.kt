@@ -97,6 +97,8 @@ class HomeViewModel @Inject constructor(
 
     fun send(id: String, command: Command) {
         viewModelScope.launch {
+            // A cached value may be outdated: never act on it (entity cache spec §3.6).
+            if (state.value.card(id)?.stale == true) return@launch _events.send(HomeEvent.WaitingForConnection)
             val result = source.send(id, command)
             if (result is CommandResult.Rejected) _events.send(HomeEvent.Rejected(id, result.reason))
         }

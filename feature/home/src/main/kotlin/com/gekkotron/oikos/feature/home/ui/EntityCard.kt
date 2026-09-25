@@ -32,15 +32,17 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
     val description = stringResource(if (card.hidden) R.string.card_description_hidden else R.string.card_description, card.name, valueText, room)
     val onText = stringResource(R.string.value_on)
     val offText = stringResource(R.string.value_off)
+    val staleText = stringResource(R.string.card_stale)
     val toggle = card.tap == TapAction.TOGGLE
     val moving = (card.value as? CardValue.Cover)?.state?.takeIf { it == CoverState.OPENING || it == CoverState.CLOSING }
     OikosCard(
         modifier = modifier
             .testTag("card-${card.id}")
-            .alpha(if (card.hidden) 0.6f else 1f)
+            .alpha(if (card.hidden || card.stale) 0.6f else 1f)
             .semantics {
                 contentDescription = description
                 if (toggle) stateDescription = if (card.on) onText else offText
+                if (card.stale) stateDescription = staleText
             },
         on = card.on,
         enabled = card.available,

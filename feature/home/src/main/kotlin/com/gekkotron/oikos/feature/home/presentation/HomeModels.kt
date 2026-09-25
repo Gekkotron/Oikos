@@ -76,6 +76,8 @@ data class CardUi(
     val wide: Boolean,
     val available: Boolean,
     val pending: Boolean,
+    /** The value comes from the entity cache and no live data has confirmed it yet. */
+    val stale: Boolean = false,
     val tap: TapAction,
     val hasSheet: Boolean,
     /** Effective area id; [UNASSIGNED_AREA] when the entity has no room. */
@@ -103,4 +105,5 @@ sealed interface HomeEvent {
     data class NotConfirmed(val id: String, val command: Command) : HomeEvent
     data class Rejected(val id: String, val reason: String) : HomeEvent
     data object SaveFailed : HomeEvent
+    data object WaitingForConnection : HomeEvent
 }

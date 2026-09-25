@@ -174,4 +174,6 @@
     <string name="entity_label_fan_mode">Fan mode</string>
     <string name="entity_label_child_lock">Child lock</string>
     <string name="entity_label_led_indication">LED indication</string>
+    <string name="home_waiting_connection">Waiting for the connection</string>
+    <string name="card_stale">Last known value</string>
 </resources>

@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -154,5 +155,34 @@ class HomeViewModelTest {
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
         vm.customize("lamp", listOf(Area("office", "Office"), Area("attic", "Attic")), UiOverride(area = "attic"))
         assertEquals(listOf(listOf(Area("kitchen", "Kitchen"), Area("attic", "Attic"))), source.areaWrites)
+    }
+
+    @Test
+    fun `a stale card is dimmed and neither a tap nor a sheet command sends`() = runTest(dispatcher) {
+        source.stateMap.value = mapOf(
+            "lamp" to EntityState("lamp", StateValue.Light(true, 255), stale = true),
+            "shutter" to EntityState("shutter", StateValue.Unknown, stale = true),
+        )
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+
+        val lamp = vm.state.value.cards.first { it.id == "lamp" }
+        assertTrue(lamp.stale)
+        vm.tap(lamp)
+        vm.send("shutter", Command.Open)
+        assertEquals(emptyList(), source.sent)
+        assertEquals(listOf<HomeEvent>(HomeEvent.WaitingForConnection, HomeEvent.WaitingForConnection), events)
+    }
+
+    @Test
+    fun `a live state is not stale and sends`() = runTest(dispatcher) {
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val lamp = vm.state.value.cards.first { it.id == "lamp" }
+        assertFalse(lamp.stale)
+        vm.tap(lamp)
+        assertEquals(listOf<Pair<String, Command>>("lamp" to Command.TurnOff), source.sent)
     }
 }
