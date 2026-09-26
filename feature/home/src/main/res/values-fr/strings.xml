@@ -76,6 +76,13 @@
     <string name="link_offline_not_configured">Aucune connexion n\'est configurée.</string>
     <string name="link_offline_not_started">Pas encore connecté.</string>
     <string name="link_offline_failed">Impossible de démarrer la connexion.</string>
+    <string name="link_key_rejected">La passerelle n\'a pas accepté la clé de ce téléphone. Configurez à nouveau la connexion avec un nouveau code.</string>
+    <string name="link_clock_skew">La passerelle a refusé la requête car l\'horloge de ce téléphone est décalée. Activez la date et l\'heure automatiques.</string>
+    <string name="link_gateway_refused">La passerelle a refusé l\'accès au broker.</string>
+    <string name="link_route_title">Connexion</string>
+    <string name="link_route_auto">Automatique</string>
+    <string name="link_route_direct">Réseau local</string>
+    <string name="link_route_gateway">Passerelle</string>
     <string name="link_set_up_again">Reconfigurer la connexion</string>
     <string name="chip_hidden">Masqués (%1$d)</string>
     <string name="home_save_failed">Impossible d\'enregistrer vos modifications. Vérifiez la connexion et réessayez.</string>

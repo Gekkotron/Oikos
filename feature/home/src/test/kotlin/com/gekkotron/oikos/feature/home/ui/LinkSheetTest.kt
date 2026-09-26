@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.presentation.HomeUiState
 import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.Route
 import com.gekkotron.oikos.transport.TransportMode
 import org.junit.Rule
 import org.junit.Test
@@ -26,14 +29,26 @@ class LinkSheetTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun show(link: LinkState, onSetUpAgain: () -> Unit = {}) = compose.setContent {
-        OikosTheme { HomeScreen(HomeUiState(loading = false, link = link), {}, {}, { _, _ -> }, onSetUpAgain = onSetUpAgain) }
+    private fun show(
+        link: LinkState,
+        onSetUpAgain: () -> Unit = {},
+        route: Route? = null,
+        onRouteChange: (Route) -> Unit = {},
+    ) = compose.setContent {
+        OikosTheme {
+            HomeScreen(
+                HomeUiState(loading = false, link = link), {}, {}, { _, _ -> },
+                onSetUpAgain = onSetUpAgain, route = route, onRouteChange = onRouteChange,
+            )
+        }
     }
+
+    private fun openSheet() = compose.onNodeWithText("Offline").performClick()
 
     @Test
     fun `tapping the pill opens the sheet and set up again calls back`() {
         var called = false
-        show(LinkState.Connected(TransportMode.DEMO)) { called = true }
+        show(LinkState.Connected(TransportMode.DEMO), onSetUpAgain = { called = true })
         compose.onNodeWithText("Demo").performClick()
         compose.onNodeWithText("exploring the demo house", substring = true).assertExists()
         compose.onNodeWithText("Set up connection again").performClick()
@@ -98,5 +113,44 @@ class LinkSheetTest {
         compose.onNodeWithText("Assign rooms").performClick()
         assertTrue(called)
         compose.onNodeWithText("Connected directly to your broker.").assertDoesNotExist()
+    }
+
+    @Test
+    fun `no route row without a gateway`() {
+        show(LinkState.Connected(TransportMode.DIRECT))
+        compose.onNodeWithText("Wi-Fi direct").performClick()
+        compose.onNodeWithText("Automatic").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the route row shows the choice and reports a new one`() {
+        var picked: Route? = null
+        show(LinkState.Connected(TransportMode.GATEWAY), route = Route.AUTO, onRouteChange = { picked = it })
+        compose.onNodeWithText("Gateway").performClick() // the pill; the sheet's "Gateway" option is not shown yet
+        compose.onNodeWithText("Automatic").assertIsSelected()
+        compose.onNodeWithText("Home network").assertIsNotSelected()
+        compose.onNodeWithText("Home network").performClick()
+        assertEquals(Route.DIRECT, picked)
+    }
+
+    @Test
+    fun `gateway refusals explain themselves`() {
+        show(LinkState.Offline(LinkState.Offline.KEY_REJECTED))
+        openSheet()
+        compose.onNodeWithText("didn't accept this phone's key", substring = true).assertExists()
+    }
+
+    @Test
+    fun `a clock refusal suggests automatic time`() {
+        show(LinkState.Offline(LinkState.Offline.CLOCK_SKEW))
+        openSheet()
+        compose.onNodeWithText("automatic date and time", substring = true).assertExists()
+    }
+
+    @Test
+    fun `other gateway refusals have their own text`() {
+        show(LinkState.Offline(LinkState.Offline.GATEWAY_REFUSED))
+        openSheet()
+        compose.onNodeWithText("The gateway refused access to the broker.").assertExists()
     }
 }

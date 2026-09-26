@@ -31,6 +31,7 @@ data object RoomsKey : NavKey
 @Composable
 fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
+    val route by viewModel.route.collectAsStateWithLifecycle()
     val root: NavKey = when (val p = profile) {
         ProfileState.Loading -> return // a few milliseconds at launch; the background is already drawn
         // A direct profile that was just set up first gets the Rooms step (spec §5.2 step 5), on the live source.
@@ -68,6 +69,8 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 HomeRoute(
                     onSetUpAgain = viewModel::setUpAgain,
                     onAssignRooms = { if (backStack.lastOrNull() != RoomsKey) backStack.add(RoomsKey) },
+                    route = route,
+                    onRouteChange = viewModel::setRoute,
                 )
             }
         },

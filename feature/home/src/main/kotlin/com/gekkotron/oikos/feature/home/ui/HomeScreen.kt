@@ -60,10 +60,17 @@ import com.gekkotron.oikos.feature.home.presentation.TapAction
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.transport.Route
 import java.time.LocalTime
 
 @Composable
-fun HomeRoute(onSetUpAgain: () -> Unit = {}, onAssignRooms: () -> Unit = {}, viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeRoute(
+    onSetUpAgain: () -> Unit = {},
+    onAssignRooms: () -> Unit = {},
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send)
@@ -72,6 +79,8 @@ fun HomeRoute(onSetUpAgain: () -> Unit = {}, onAssignRooms: () -> Unit = {}, vie
         onSetUpAgain = onSetUpAgain,
         onCustomize = viewModel::customize,
         onAssignRooms = onAssignRooms,
+        route = route,
+        onRouteChange = onRouteChange,
     )
 }
 
@@ -87,6 +96,8 @@ fun HomeScreen(
     onSetUpAgain: () -> Unit = {},
     onCustomize: (String, List<Area>, UiOverride) -> Unit = { _, _, _ -> },
     onAssignRooms: () -> Unit = {},
+    route: Route? = null,
+    onRouteChange: (Route) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -161,6 +172,8 @@ fun HomeScreen(
     if (linkSheet) {
         LinkSheet(
             state.link,
+            route = route,
+            onRouteChange = onRouteChange,
             onSetUpAgain = { linkSheet = false; onSetUpAgain() },
             onAssignRooms = { linkSheet = false; onAssignRooms() },
             onDismiss = { linkSheet = false },

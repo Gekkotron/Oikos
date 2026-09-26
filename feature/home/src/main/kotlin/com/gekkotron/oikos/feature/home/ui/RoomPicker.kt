@@ -48,8 +48,8 @@ fun RoomPicker(rooms: List<Area>, selectedId: String?, onSelect: (String) -> Uni
     }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Column(Modifier.selectableGroup()) {
-            rooms.forEach { room -> RoomRow(room.name, room.id == selectedId) { onSelect(room.id) } }
-            RoomRow(stringResource(R.string.room_none), selectedId == UNASSIGNED_AREA) { onSelect(UNASSIGNED_AREA) }
+            rooms.forEach { room -> RadioRow(room.name, room.id == selectedId) { onSelect(room.id) } }
+            RadioRow(stringResource(R.string.room_none), selectedId == UNASSIGNED_AREA) { onSelect(UNASSIGNED_AREA) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -70,7 +70,7 @@ fun RoomPicker(rooms: List<Area>, selectedId: String?, onSelect: (String) -> Uni
 }
 
 @Composable
-private fun RoomRow(label: String, selected: Boolean, onClick: () -> Unit) {
+internal fun RadioRow(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
