@@ -170,11 +170,23 @@ class DirectConnectionTesterTest {
     }
 
     @Test
+    fun `a gateway address the SDK cannot use fails with InvalidGateway instead of throwing`() = runBlocking {
+        val tester = DirectConnectionTester(
+            clientId = { "oikos-test-setup" },
+            connectTimeout = 1.seconds,
+            gatewayTimeout = 3.seconds,
+            gatewayApi = { throw IllegalArgumentException("Invalid URL host: \"my host\"") },
+        )
+        val failed = withTimeout(10.seconds) { tester.test(awayDraft()).first { it is TestState.Failed } }
+        assertEquals(TestState.Failed(TestFailure.InvalidGateway), failed)
+    }
+
+    @Test
     fun `gateway links map to test failures`() {
         assertEquals(TestFailure.KeyRejected, gatewayFailure(LinkState.Offline(LinkState.Offline.KEY_REJECTED)))
         assertEquals(TestFailure.ClockSkew, gatewayFailure(LinkState.Offline(LinkState.Offline.CLOCK_SKEW)))
         assertEquals(TestFailure.Rejected, gatewayFailure(LinkState.Offline(LinkState.Offline.REJECTED)))
-        assertEquals(TestFailure.Other("gateway refused"), gatewayFailure(LinkState.Offline(LinkState.Offline.GATEWAY_REFUSED)))
+        assertEquals(TestFailure.GatewayRefused, gatewayFailure(LinkState.Offline(LinkState.Offline.GATEWAY_REFUSED)))
         assertEquals(TestFailure.Unreachable, gatewayFailure(null))
         assertEquals(TestFailure.Unreachable, gatewayFailure(LinkState.Reconnecting(2)))
     }

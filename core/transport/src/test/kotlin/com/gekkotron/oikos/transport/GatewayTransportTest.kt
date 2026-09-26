@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.transport
 
 import com.gekkotron.oikos.transport.testing.FakeGatewayApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -160,6 +161,89 @@ class GatewayTransportTest {
         assertEquals(LinkState.Offline(LinkState.Offline.REJECTED), t.link.value)
         advanceTimeBy(5.minutes)
         assertEquals(1, api.streams.size)
+    }
+
+    @Test
+    fun `an incoming stream that drops is retried until the new topic set is live`() = runTest {
+        val (t, _) = started(setOf("a"))
+        api.streams[0].connect()
+        runCurrent()
+        t.setSubscriptions(setOf("a", "b"))
+        advanceTimeBy(301.milliseconds)
+        runCurrent()
+        assertEquals(2, api.streams.size)
+        api.streams[1].end(IOException("502")) // before it ever connected
+        runCurrent()
+        assertEquals(connected, t.link.value, "the live stream is untouched")
+        assertTrue(api.streams[0].active)
+        advanceTimeBy(999.milliseconds)
+        runCurrent()
+        assertEquals(2, api.streams.size, "the retry waits for the backoff")
+        advanceTimeBy(2.milliseconds)
+        runCurrent()
+        assertEquals(3, api.streams.size)
+        assertEquals(setOf("a", "b"), api.streams[2].topics)
+        assertEquals(connected, t.link.value)
+        api.streams[2].connect()
+        runCurrent()
+        assertFalse(api.streams[0].active, "the old stream is closed after the flip")
+        assertTrue(api.streams[2].active)
+        assertEquals(connected, t.link.value)
+        advanceTimeBy(5.minutes)
+        assertEquals(3, api.streams.size, "nothing more to open once the set is live")
+    }
+
+    @Test
+    fun `a newer topic set supersedes a pending retry`() = runTest {
+        val (t, _) = started(setOf("a"))
+        api.streams[0].connect()
+        runCurrent()
+        t.setSubscriptions(setOf("a", "b"))
+        advanceTimeBy(301.milliseconds)
+        runCurrent()
+        api.streams[1].end(IOException("502"))
+        runCurrent()
+        t.setSubscriptions(setOf("a", "c")) // during the 1 s backoff
+        advanceTimeBy(301.milliseconds)
+        runCurrent()
+        assertEquals(listOf(setOf("a"), setOf("a", "b"), setOf("a", "c")), api.streams.map { it.topics })
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        assertEquals(3, api.streams.size, "the superseded {a,b} retry never runs")
+    }
+
+    @Test
+    fun `a refusal on the incoming stream is applied`() = runTest {
+        val (t, _) = started(setOf("a"))
+        api.streams[0].connect()
+        runCurrent()
+        api.onOpen = { it.end(GatewayRefused(Refusal.ClockSkew)) }
+        t.setSubscriptions(setOf("a", "b"))
+        advanceTimeBy(301.milliseconds)
+        runCurrent()
+        assertEquals(LinkState.Offline(LinkState.Offline.CLOCK_SKEW), t.link.value)
+        assertFalse(api.streams[0].active, "a refusal closes the old stream too: Offline, no retry")
+        assertFailsWith<PublishFailed> { t.publish("x/set", byteArrayOf(), 1, false) }
+        t.setSubscriptions(setOf("a", "b", "c"))
+        advanceTimeBy(5.minutes)
+        assertEquals(2, api.streams.size)
+        assertEquals(LinkState.Offline(LinkState.Offline.CLOCK_SKEW), t.link.value)
+    }
+
+    @Test
+    fun `a stream ended by a stray CancellationException is treated as dropped`() = runTest {
+        val (t, _) = started()
+        api.streams[0].connect()
+        runCurrent()
+        api.streams[0].end(CancellationException("sdk"))
+        runCurrent()
+        assertEquals(LinkState.Reconnecting(1), t.link.value)
+        advanceTimeBy(1.seconds + 1.milliseconds)
+        runCurrent()
+        assertEquals(2, api.streams.size)
+        api.streams[1].connect()
+        runCurrent()
+        assertEquals(connected, t.link.value)
     }
 
     @Test

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -74,11 +75,41 @@ class GatewayTransport(
         api.publish(topic, payload, qos, retain)
     }
 
-    /** The gateway refuses an empty topic list, so nothing opens until the source subscribes. */
+    /**
+     * The gateway refuses an empty topic list, so nothing opens until the source subscribes. An incoming
+     * stream that fails before it connects (dropped, or not connected within the switch timeout) is retried
+     * with [backoff] until the set is live; the live stream keeps serving meanwhile, and its own reconnect
+     * count (in [reconnect]) is left alone. A newer set supersedes a pending retry: the backoff wait ends as
+     * soon as [wanted] moves on, and the collector then takes the newer set. A refusal is applied as for the
+     * live stream (spec §3.4/§6).
+     */
     private suspend fun resubscribe() {
         wanted.filter { it.isNotEmpty() }.debounce(resubscribeDebounce).collect { topics ->
-            if (!stopped && topics != live.value?.topics) open(topics)
+            var attempt = 0
+            while (!stopped && topics != live.value?.topics) {
+                val end = open(topics) ?: return@collect // live now
+                if (stopped) return@collect // closed, or refused meanwhile
+                if (end is GatewayStream.End.Refused) {
+                    refuse(end.reason)
+                    return@collect
+                }
+                attempt++
+                val superseded = withTimeoutOrNull(backoff.delayFor(attempt)) { wanted.first { it != topics } } != null
+                if (superseded) return@collect
+            }
         }
+    }
+
+    /**
+     * Refusal → Offline, no retry. The handover is closed too, which ends any stream still running (an
+     * older topic set that still worked when a newer one was refused): the link says Offline, so nothing
+     * must keep flowing or accept publishes behind it, and the gateway would refuse it on its next
+     * reconnect anyway. Only a new transport (re-onboarding, a network change in the selector) tries again.
+     */
+    private suspend fun refuse(reason: String) {
+        stopped = true
+        overlay.value = LinkState.Offline(reason)
+        handover.close()
     }
 
     private suspend fun reconnect() {
@@ -95,10 +126,7 @@ class GatewayTransport(
                 watch.cancel()
                 if (handover.current.value !== stream) return@coroutineScope // replaced by a new topic set, not dead
                 when (end) {
-                    is GatewayStream.End.Refused -> {
-                        stopped = true
-                        overlay.value = LinkState.Offline(end.reason)
-                    }
+                    is GatewayStream.End.Refused -> refuse(end.reason)
                     GatewayStream.End.Dropped -> {
                         attempt++
                         overlay.value = LinkState.Reconnecting(attempt)
@@ -110,8 +138,13 @@ class GatewayTransport(
         }
     }
 
-    private suspend fun open(topics: Set<String>) {
+    /** @return null once the new stream is live, else how it ended (the handover has disposed it). */
+    private suspend fun open(topics: Set<String>): GatewayStream.End? {
         val stream = GatewayStream(api, topics, scope)
-        if (handover.switchTo(stream)) live.value = stream
+        if (handover.switchTo(stream)) {
+            live.value = stream
+            return null
+        }
+        return stream.end.await()
     }
 }

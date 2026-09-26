@@ -4,12 +4,14 @@ import com.gekkotron.oikos.transport.testing.freePort
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import java.net.ServerSocket
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class TcpProbeTest {
     @Test
@@ -48,6 +50,22 @@ class TcpProbeTest {
         )
         val elapsedMs = measureTimeMillis { assertFalse(probe.reachable()) }
         assertTrue(elapsedMs < 3000, "reachable() took ${elapsedMs}ms, expected well under 3000ms")
+    }
+
+    @Test
+    fun `a connector that throws something unexpected is unreachable, not an uncaught crash`() = runBlocking {
+        val uncaught = CopyOnWriteArrayList<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { _, e -> uncaught += e }
+        try {
+            val probe = TcpProbe("127.0.0.1", 1883, timeout = 5.seconds, connect = { _, _, _ -> throw IllegalStateException("boom") })
+            val elapsedMs = measureTimeMillis { assertFalse(probe.reachable()) }
+            assertTrue(elapsedMs < 2000, "the failure completes the probe at once, took ${elapsedMs}ms")
+            Thread.sleep(100) // let a stray handler invocation on the IO thread land, if any
+            assertTrue(uncaught.isEmpty(), "uncaught: $uncaught")
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+        }
     }
 
     @Test

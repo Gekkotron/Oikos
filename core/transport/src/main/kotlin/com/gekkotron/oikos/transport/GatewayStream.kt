@@ -6,12 +6,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -50,7 +52,10 @@ internal class GatewayStream(
             } catch (e: GatewayRefused) {
                 End.Refused(e.refusal.offlineReason)
             } catch (e: CancellationException) {
-                throw e
+                // Only our own cancellation (close()) is rethrown. A CancellationException the SDK flow ended
+                // with while we are still active is a dropped stream: rethrowing it would leave `end` forever
+                // incomplete and GatewayTransport waiting on it.
+                if (currentCoroutineContext().isActive) End.Dropped else throw e
             } catch (e: Exception) {
                 End.Dropped
             }

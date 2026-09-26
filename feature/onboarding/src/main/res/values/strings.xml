@@ -35,6 +35,8 @@
     <string name="connect_error_other">Connection failed: %1$s</string>
     <string name="connect_error_key_rejected">The gateway didn\'t accept the key in this code. Ask for a new setup code.</string>
     <string name="connect_error_clock">The gateway refused the request because this phone\'s clock is off. Turn on automatic date and time, then retry.</string>
+    <string name="connect_error_gateway_refused">The gateway refused access to the broker. Check the gateway\'s settings for this phone.</string>
+    <string name="connect_error_invalid_gateway">The gateway address in this code is invalid.</string>
     <string name="connect_via_gateway">Connected through the gateway: the broker isn\'t reachable from this network.</string>
     <string name="connect_retry">Retry</string>
     <plurals name="connect_discovering">

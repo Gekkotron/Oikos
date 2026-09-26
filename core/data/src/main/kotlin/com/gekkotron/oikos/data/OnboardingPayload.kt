@@ -5,6 +5,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
+import java.net.URI
+import java.net.URISyntaxException
 
 sealed interface PayloadError {
     data object NotOikosCode : PayloadError
@@ -41,8 +43,7 @@ object OnboardingPayload {
         )
 
         val gateway = (root["gateway"] as? JsonObject)?.let { g ->
-            val url = g.string("url")?.takeIf { it.startsWith("https://") && it.length > "https://".length }
-                ?: return invalid("gateway.url")
+            val url = g.string("url")?.takeIf(::isGatewayUrl) ?: return invalid("gateway.url")
             val key = g.string("key")?.let(::hexToBytes)?.takeIf { it.size == GatewayConfig.KEY_BYTES }
                 ?: return invalid("gateway.key")
             GatewayConfig(url, key, g.string("broker_host")?.takeIf { it.isNotEmpty() })
@@ -61,6 +62,22 @@ object OnboardingPayload {
     /** Absent means false; present but not a JSON boolean means invalid (null). */
     private fun JsonObject.flag(key: String): Boolean? =
         if (key !in this) false else (this[key] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+
+    /**
+     * An https URL with a host and, if given, a port in 1..65535. The gateway SDK (OkHttp's `toHttpUrl()`)
+     * throws on anything less, and a saved profile with such a URL must never reach it. java.net.URI, not
+     * OkHttp: this module has no OkHttp. URI is the stricter of the two on hosts (it leaves `host` null for
+     * a name with an underscore, for instance), so an odd-but-legal host is refused here rather than crashing
+     * later.
+     */
+    private fun isGatewayUrl(url: String): Boolean {
+        val uri = try {
+            URI(url)
+        } catch (e: URISyntaxException) {
+            return false
+        }
+        return uri.scheme == "https" && !uri.host.isNullOrBlank() && (uri.port == -1 || uri.port in 1..65535)
+    }
 
     private fun hexToBytes(hex: String): ByteArray? {
         if (hex.length % 2 != 0 || hex.any { it.digitToIntOrNull(16) == null }) return null

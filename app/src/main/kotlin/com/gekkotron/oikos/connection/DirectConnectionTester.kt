@@ -14,6 +14,7 @@ import com.gekkotron.oikos.transport.GatewayApi
 import com.gekkotron.oikos.transport.GatewayTransport
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.TransportSpec
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +59,18 @@ class DirectConnectionTester(
         }
         // A child scope: a failed attempt must not leave the source's collectors keeping this flow open.
         val attempt = CoroutineScope(coroutineContext + SupervisorJob(coroutineContext[Job]))
-        val transport = GatewayTransport(gatewayApi(gateway.toSpec(draft.local)), attempt)
+        // The gateway client parses the URL as it is built and throws on one it cannot use. This flow runs
+        // in viewModelScope: a throw here would crash onboarding, so it is a failure like any other.
+        val api = try {
+            gatewayApi(gateway.toSpec(draft.local))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            attempt.cancel()
+            send(TestState.Failed(TestFailure.InvalidGateway))
+            return@channelFlow
+        }
+        val transport = GatewayTransport(api, attempt)
         try {
             transport.start()
             // The source's subscriptions open the stream: the gateway refuses an empty topic list.
@@ -138,6 +150,6 @@ internal fun gatewayFailure(link: LinkState?): TestFailure = when ((link as? Lin
     LinkState.Offline.KEY_REJECTED -> TestFailure.KeyRejected
     LinkState.Offline.CLOCK_SKEW -> TestFailure.ClockSkew
     LinkState.Offline.REJECTED -> TestFailure.Rejected
-    LinkState.Offline.GATEWAY_REFUSED -> TestFailure.Other("gateway refused")
+    LinkState.Offline.GATEWAY_REFUSED -> TestFailure.GatewayRefused
     else -> TestFailure.Unreachable
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -56,7 +57,7 @@ internal class Handover(
     private var version = 0L
     private val closed = MutableStateFlow(false)
 
-    /** @return true once [next] is current; false if it failed to start, did not connect in time, or [close] won. */
+    /** @return true once [next] is current; false if it failed to start, went Offline or did not connect in time, or [close] won. */
     suspend fun switchTo(next: ManagedTransport): Boolean = switching.withLock {
         val inbox = Channel<MqttMessage>(Channel.UNLIMITED)
         // Undispatched: subscribed before start(), so the first retained message is already buffered.
@@ -98,6 +99,17 @@ internal class Handover(
         }
     }
 
+    /**
+     * The caller could not even build a transport to switch to (a factory threw). With nothing current the
+     * link would otherwise stay `Connecting` forever; a current transport, or a closed handover, keeps its
+     * own state. The next successful [switchTo] replaces this.
+     */
+    suspend fun failIfIdle() {
+        lock.withLock {
+            if (!closed.value && active == null) _link.value = LinkState.Offline(LinkState.Offline.FAILED)
+        }
+    }
+
     suspend fun setSubscriptions(filters: Set<String>) {
         val targets = lock.withLock {
             subscriptions = filters
@@ -130,14 +142,23 @@ internal class Handover(
         }
     }
 
-    /** Also completes once [old] itself leaves `Connected`: no point waiting out the timeout for [next]
-     *  to connect while the transport we would keep is already dead. */
+    /**
+     * Also completes once [old] itself leaves `Connected`: no point waiting out the timeout for [next]
+     * to connect while the transport we would keep is already dead. And it gives up at once (false) when
+     * [next] goes `Offline`: [next] has already been started, so `Offline` is final for it (a dropped or
+     * refused gateway stream, rejected direct credentials) and waiting out the timeout would only stall.
+     */
     private suspend fun awaitConnected(next: ManagedTransport, old: ManagedTransport): Boolean =
         withTimeoutOrNull(connectTimeout) {
             combine(next.link, closed, old.link) { link, isClosed, oldLink ->
-                isClosed || link is LinkState.Connected || oldLink !is LinkState.Connected
-            }.first { it }
-        } != null
+                when {
+                    isClosed -> true // flip() sees `closed` and declines
+                    link is LinkState.Offline -> false
+                    link is LinkState.Connected || oldLink !is LinkState.Connected -> true
+                    else -> null
+                }
+            }.filterNotNull().first()
+        } ?: false
 
     /** Re-applies when [setSubscriptions] ran meanwhile, so [next] never ends up on an older set. */
     private suspend fun applySubscriptions(next: ManagedTransport) {

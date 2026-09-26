@@ -13,6 +13,12 @@ sealed interface TestFailure {
 
     /** The gateway refused the request as expired: the phone's clock is off. */
     data object ClockSkew : TestFailure
+
+    /** The gateway refused this key access to the broker (a port or destination it does not allow). */
+    data object GatewayRefused : TestFailure
+
+    /** The gateway URL in the setup code cannot be used (the gateway client refused to build on it). */
+    data object InvalidGateway : TestFailure
     data class Other(val message: String) : TestFailure
 }
 

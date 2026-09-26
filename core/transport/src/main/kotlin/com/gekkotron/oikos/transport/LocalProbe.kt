@@ -7,7 +7,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
 import kotlin.time.Duration
@@ -48,10 +47,10 @@ class TcpProbe(
                 try {
                     connect(host, port, millis)
                     true
-                } catch (e: IOException) {
+                } catch (e: Exception) {
+                    // IOException, IllegalArgumentException (a port outside 0..65535), SecurityException…:
+                    // anything thrown here would be uncaught (`detached` has no handler) and crash the process.
                     false
-                } catch (e: IllegalArgumentException) {
-                    false // a port outside 0..65535
                 },
             )
         }

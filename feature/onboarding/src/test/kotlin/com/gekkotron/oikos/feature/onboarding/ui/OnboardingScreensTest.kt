@@ -206,6 +206,26 @@ class OnboardingScreensTest {
     }
 
     @Test
+    fun `a gateway refusal and an invalid gateway address have their own texts`() {
+        var test by mutableStateOf<TestState>(TestState.Failed(TestFailure.GatewayRefused))
+        compose.setContent { OikosTheme { ConnectScreen(test, false, {}, {}, {}) } }
+        compose.onNodeWithText("The gateway refused access to the broker. Check the gateway's settings for this phone.").assertExists()
+        test = TestState.Failed(TestFailure.InvalidGateway)
+        compose.onNodeWithText("The gateway address in this code is invalid.").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "+fr")
+    fun `in French a gateway refusal is translated, never the raw reason`() {
+        var test by mutableStateOf<TestState>(TestState.Failed(TestFailure.GatewayRefused))
+        compose.setContent { OikosTheme { ConnectScreen(test, false, {}, {}, {}) } }
+        compose.onNodeWithText("La passerelle a refusé l'accès au broker. Vérifiez ses réglages pour ce téléphone.").assertExists()
+        compose.onNodeWithText("gateway refused", substring = true).assertDoesNotExist()
+        test = TestState.Failed(TestFailure.InvalidGateway)
+        compose.onNodeWithText("L'adresse de la passerelle dans ce code n'est pas valide.").assertExists()
+    }
+
+    @Test
     fun `secure window sets and clears FLAG_SECURE`() {
         var shown by mutableStateOf(true)
         compose.setContent { if (shown) SecureWindow() }

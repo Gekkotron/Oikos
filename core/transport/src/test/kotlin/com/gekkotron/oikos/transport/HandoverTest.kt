@@ -102,6 +102,24 @@ class HandoverTest {
     }
 
     @Test
+    fun `a next that goes Offline ends the wait at once`() = runTest {
+        val (h, _) = handover()
+        val old = connected()
+        h.switchTo(old)
+        val next = connecting()
+        val switched = async { h.switchTo(next) }
+        runCurrent()
+        assertFalse(switched.isCompleted)
+        next.fake.setLink(LinkState.Offline("x"))
+        runCurrent() // no virtual time advanced: the 15 s timeout is not what ends the wait
+        assertTrue(switched.isCompleted, "a dead next must end the wait without waiting out connectTimeout")
+        assertFalse(switched.await())
+        assertTrue(next.closed)
+        assertFalse(old.closed)
+        assertSame(old, h.current.value)
+    }
+
+    @Test
     fun `a next whose start throws is closed and the current kept`() = runTest {
         val (h, _) = handover()
         val old = connected()

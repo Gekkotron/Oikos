@@ -35,6 +35,8 @@
     <string name="connect_error_other">Échec de la connexion : %1$s</string>
     <string name="connect_error_key_rejected">La passerelle n\'a pas accepté la clé de ce code. Demandez un nouveau code de configuration.</string>
     <string name="connect_error_clock">La passerelle a refusé la requête car l\'horloge de ce téléphone est décalée. Activez la date et l\'heure automatiques, puis réessayez.</string>
+    <string name="connect_error_gateway_refused">La passerelle a refusé l\'accès au broker. Vérifiez ses réglages pour ce téléphone.</string>
+    <string name="connect_error_invalid_gateway">L\'adresse de la passerelle dans ce code n\'est pas valide.</string>
     <string name="connect_via_gateway">Connecté via la passerelle : le broker n\'est pas joignable depuis ce réseau.</string>
     <string name="connect_retry">Réessayer</string>
     <plurals name="connect_discovering">

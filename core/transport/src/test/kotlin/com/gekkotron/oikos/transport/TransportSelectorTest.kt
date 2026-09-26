@@ -33,6 +33,9 @@ class TransportSelectorTest {
     /** Direct candidates are born already rejected when this is true, before ever becoming current. */
     private var directRejectsOnCreate = false
 
+    /** Every gateway factory call throws this (a malformed gateway URL in a saved profile). */
+    private var gatewayFactoryThrows: Throwable? = null
+
     /** The next call to [probe] throws this instead of returning [reachable], then falls back to normal. */
     private var probeThrows: Throwable? = null
 
@@ -46,6 +49,7 @@ class TransportSelectorTest {
                 }
             },
             gateway = {
+                gatewayFactoryThrows?.let { e -> throw e }
                 FakeManagedTransport(it).also { g ->
                     g.fake.setLink(if (gatewayConnects) LinkState.Connected(TransportMode.GATEWAY) else LinkState.Connecting)
                     gateways += g
@@ -82,6 +86,32 @@ class TransportSelectorTest {
     fun `route GATEWAY runs only the gateway`() = runTest {
         val (s, _) = selector(Route.GATEWAY)
         assertTrue(directs.isEmpty())
+        assertEquals(1, gateways.size)
+        assertEquals(LinkState.Connected(TransportMode.GATEWAY), s.link.value)
+    }
+
+    @Test
+    fun `route GATEWAY with a factory that throws does not crash and goes Offline FAILED`() = runTest {
+        gatewayFactoryThrows = IllegalArgumentException("Invalid URL host: \"my host\"")
+        val (s, _) = selector(Route.GATEWAY)
+        advanceTimeBy(5.seconds * 60)
+        assertTrue(gateways.isEmpty())
+        assertEquals(LinkState.Offline(LinkState.Offline.FAILED), s.link.value)
+        s.close()
+        runCurrent()
+        assertEquals(LinkState.Offline(LinkState.Offline.CLOSED), s.link.value)
+    }
+
+    @Test
+    fun `auto with no current and a factory that throws goes Offline FAILED, then recovers on the next trigger`() = runTest {
+        reachable = false
+        gatewayFactoryThrows = IllegalArgumentException("bad url")
+        val (s, _) = selector()
+        assertEquals(LinkState.Offline(LinkState.Offline.FAILED), s.link.value)
+        gatewayFactoryThrows = null
+        network.emit(Unit)
+        advanceTimeBy(1.seconds + 1.milliseconds)
+        runCurrent()
         assertEquals(1, gateways.size)
         assertEquals(LinkState.Connected(TransportMode.GATEWAY), s.link.value)
     }
