@@ -35,5 +35,7 @@ internal fun testFailureText(failure: TestFailure): String = when (failure) {
     TestFailure.Unreachable -> stringResource(R.string.connect_error_unreachable)
     TestFailure.Rejected -> stringResource(R.string.connect_error_rejected)
     TestFailure.Tls -> stringResource(R.string.connect_error_tls)
+    TestFailure.KeyRejected -> stringResource(R.string.connect_error_key_rejected)
+    TestFailure.ClockSkew -> stringResource(R.string.connect_error_clock)
     is TestFailure.Other -> stringResource(R.string.connect_error_other, failure.message)
 }

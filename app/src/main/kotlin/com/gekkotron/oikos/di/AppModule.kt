@@ -16,6 +16,7 @@ import com.gekkotron.oikos.feature.home.presentation.DefaultDispatcher
 import com.gekkotron.oikos.feature.onboarding.ConnectionTester
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.ActiveTransport
+import com.gekkotron.oikos.transport.AthenaGatewayApi
 import com.gekkotron.oikos.transport.MqttTransport
 import dagger.Module
 import dagger.Provides
@@ -92,6 +93,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun connectionTester(profiles: ProfileRepository): ConnectionTester =
-        DirectConnectionTester(clientId = { setupClientIdFor(profiles.installId()) })
+    fun connectionTester(profiles: ProfileRepository, http: OkHttpClient): ConnectionTester =
+        DirectConnectionTester(clientId = { setupClientIdFor(profiles.installId()) }, gatewayApi = { AthenaGatewayApi(it, http) })
 }

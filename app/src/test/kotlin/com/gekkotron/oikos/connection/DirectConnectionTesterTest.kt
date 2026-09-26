@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.connection
 
 import com.gekkotron.oikos.data.ConnectionProfile
+import com.gekkotron.oikos.data.GatewayConfig
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.feature.onboarding.TestFailure
 import com.gekkotron.oikos.feature.onboarding.TestState
@@ -10,7 +11,11 @@ import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.transport.GatewayRefused
+import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.Refusal
 import com.gekkotron.oikos.transport.testing.EmbeddedBroker
+import com.gekkotron.oikos.transport.testing.FakeGatewayApi
 import com.gekkotron.oikos.transport.testing.freePort
 import com.hivemq.client.mqtt.datatypes.MqttQos
 import kotlinx.coroutines.flow.first
@@ -128,4 +133,49 @@ class DirectConnectionTesterTest {
         area = UNASSIGNED_AREA,
         ui = UiOverride(),
     )
+
+    private val kettle = """{"name":"Kettle","unique_id":"kettle","command_topic":"k/set","state_topic":"k/state",
+        "device":{"identifiers":["kettle"],"name":"Kitchen kettle"}}"""
+
+    private fun awayDraft() = ConnectionProfile.Direct(
+        LocalBroker("127.0.0.1", freePort()),
+        gateway = GatewayConfig("https://gw.example", ByteArray(32), "192.168.1.91"),
+    )
+
+    private fun gatewayTester(api: FakeGatewayApi) =
+        DirectConnectionTester(clientId = { "oikos-test-setup" }, connectTimeout = 1.seconds, gatewayTimeout = 3.seconds, gatewayApi = { api })
+
+    @Test
+    fun `an unreachable broker falls back to the gateway when the draft has one`() = runBlocking {
+        val api = FakeGatewayApi().apply {
+            onOpen = { it.connect(); it.message("homeassistant/switch/kettle/config", kettle, retained = true) }
+        }
+        val connected = withTimeout(10.seconds) {
+            gatewayTester(api).test(awayDraft()).first { it is TestState.Connected && it.devices.isNotEmpty() }
+        }
+        assertEquals(TestState.Connected(listOf("Kitchen kettle"), viaGateway = true), connected)
+    }
+
+    @Test
+    fun `a gateway that rejects the key fails with KeyRejected`() = runBlocking {
+        val api = FakeGatewayApi().apply { onOpen = { it.end(GatewayRefused(Refusal.KeyRejected)) } }
+        val failed = withTimeout(10.seconds) { gatewayTester(api).test(awayDraft()).first { it is TestState.Failed } }
+        assertEquals(TestState.Failed(TestFailure.KeyRejected), failed)
+    }
+
+    @Test
+    fun `a gateway that never connects fails as unreachable`() = runBlocking {
+        val failed = withTimeout(10.seconds) { gatewayTester(FakeGatewayApi()).test(awayDraft()).first { it is TestState.Failed } }
+        assertEquals(TestState.Failed(TestFailure.Unreachable), failed)
+    }
+
+    @Test
+    fun `gateway links map to test failures`() {
+        assertEquals(TestFailure.KeyRejected, gatewayFailure(LinkState.Offline(LinkState.Offline.KEY_REJECTED)))
+        assertEquals(TestFailure.ClockSkew, gatewayFailure(LinkState.Offline(LinkState.Offline.CLOCK_SKEW)))
+        assertEquals(TestFailure.Rejected, gatewayFailure(LinkState.Offline(LinkState.Offline.REJECTED)))
+        assertEquals(TestFailure.Other("gateway refused"), gatewayFailure(LinkState.Offline(LinkState.Offline.GATEWAY_REFUSED)))
+        assertEquals(TestFailure.Unreachable, gatewayFailure(null))
+        assertEquals(TestFailure.Unreachable, gatewayFailure(LinkState.Reconnecting(2)))
+    }
 }

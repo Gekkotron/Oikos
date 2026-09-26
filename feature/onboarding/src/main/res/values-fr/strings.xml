@@ -33,6 +33,9 @@
     <string name="connect_error_rejected">Nom d\'utilisateur ou mot de passe refusé.</string>
     <string name="connect_error_tls">La connexion sécurisée a échoué. Vérifiez le port et le réglage TLS.</string>
     <string name="connect_error_other">Échec de la connexion : %1$s</string>
+    <string name="connect_error_key_rejected">La passerelle n\'a pas accepté la clé de ce code. Demandez un nouveau code de configuration.</string>
+    <string name="connect_error_clock">La passerelle a refusé la requête car l\'horloge de ce téléphone est décalée. Activez la date et l\'heure automatiques, puis réessayez.</string>
+    <string name="connect_via_gateway">Connecté via la passerelle : le broker n\'est pas joignable depuis ce réseau.</string>
     <string name="connect_retry">Réessayer</string>
     <plurals name="connect_discovering">
         <item quantity="one">Découverte… %d appareil</item>

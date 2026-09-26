@@ -45,6 +45,9 @@ internal fun ConnectScreen(
             is TestState.Connected -> {
                 val count = test.devices.size
                 Text(pluralStringResource(R.plurals.connect_discovering, count, count), style = OikosTheme.type.display, modifier = announce)
+                if (test.viaGateway) {
+                    Text(stringResource(R.string.connect_via_gateway), style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
+                }
                 if (count == 0) {
                     Text(stringResource(R.string.connect_no_devices), style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
                 }

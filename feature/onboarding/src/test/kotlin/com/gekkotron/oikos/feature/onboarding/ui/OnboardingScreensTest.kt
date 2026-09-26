@@ -191,6 +191,21 @@ class OnboardingScreensTest {
     }
 
     @Test
+    fun `connect says when it went through the gateway`() {
+        compose.setContent { OikosTheme { ConnectScreen(TestState.Connected(listOf("Kettle"), viaGateway = true), false, {}, {}, {}) } }
+        compose.onNodeWithText("Connected through the gateway", substring = true).assertExists()
+    }
+
+    @Test
+    fun `gateway failures have their own texts`() {
+        var test by mutableStateOf<TestState>(TestState.Failed(TestFailure.KeyRejected))
+        compose.setContent { OikosTheme { ConnectScreen(test, false, {}, {}, {}) } }
+        compose.onNodeWithText("didn't accept the key", substring = true).assertExists()
+        test = TestState.Failed(TestFailure.ClockSkew)
+        compose.onNodeWithText("automatic date and time", substring = true).assertExists()
+    }
+
+    @Test
     fun `secure window sets and clears FLAG_SECURE`() {
         var shown by mutableStateOf(true)
         compose.setContent { if (shown) SecureWindow() }
