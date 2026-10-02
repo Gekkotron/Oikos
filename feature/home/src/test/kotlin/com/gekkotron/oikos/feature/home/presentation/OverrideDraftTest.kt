@@ -82,4 +82,12 @@ class OverrideDraftTest {
         val solar = OverrideDraft.from(sensor).copy(energyRole = EnergyRole.SOLAR, energyInvert = true).applyTo(sensor)
         assertEquals(false, solar.energyInvert)
     }
+
+    @Test
+    fun `securityHidden is kept and written`() {
+        val door = card(testEntity("door", Kind.BINARY_SENSOR, "Door", deviceClass = "door", ui = UiOverride(securityHidden = true)))
+        assertTrue(OverrideDraft.from(door).securityHidden)
+        assertEquals(UiOverride(securityHidden = true), OverrideDraft.from(door).applyTo(door))
+        assertEquals(UiOverride(), OverrideDraft.from(door).copy(securityHidden = false).applyTo(door))
+    }
 }

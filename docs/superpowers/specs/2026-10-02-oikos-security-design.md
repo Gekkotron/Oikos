@@ -81,18 +81,19 @@ Home keeps its alarm card. Its sheet uses the shared `AlarmControls`, which brin
 
 | State | Look | Text | Buttons |
 |---|---|---|---|
-| `disarmed` | neutral, mint shield | Disarmed | supported arm modes |
+| `disarmed` | mint (`connected`) tint | Disarmed | supported arm modes |
 | `armed_*` | violet | Armed · Away (etc.) | other arm modes, current one highlighted; Disarm |
 | `arming` | violet, pulsing | Exit delay… | Disarm |
 | `pending` | amber, pulsing | Entry delay… | Disarm |
-| `triggered` | rose, filled card | Alarm triggered | Disarm only, full width |
-| `disarming` | neutral, pulsing | Disarming… | none |
+| `triggered` | rose, filled card | Triggered! | Disarm only, full width |
+| `disarming` | mint (`connected`) tint, pulsing | Disarming… | none |
 | unavailable / no state yet | greyed | Unavailable / — | disabled |
 
 - Arm modes are listed in `AlarmMode` order, filtered by `caps.alarmModes`.
+- A stale panel (a cached value not yet confirmed by live data) is dimmed and announces "Last known value".
 - A pending optimistic command shows the existing `PendingDot`.
 - **Code flow:** tapping an action that needs a code (`codeArmRequired` for arm, `codeDisarmRequired` for Disarm) opens `CodeKeypadSheet`. OK sends the command with the code and closes the sheet. Without a code requirement, the command is sent at once.
-- A rejected code is handled by the alarm system re-publishing its state (Appendix A §A.3). The existing 5 s optimistic rollback and its "Retry" snackbar cover it; there is no dedicated "wrong code" message.
+- A rejected code is handled by the alarm system re-publishing its state (Appendix A §A.3). The command tracker confirms a pending command on any state message, so the re-published state confirms it: the hero silently returns to the previous state and no rollback snackbar appears, and there is no dedicated "wrong code" message. The 5 s "Not confirmed" snackbar with "Retry" only appears when the bridge publishes nothing at all.
 - Pulses respect the system "remove animations" setting.
 
 ### 4.3 Screen (`:feature:security`)
@@ -100,8 +101,8 @@ Home keeps its alarm card. Its sheet uses the shared `AlarmControls`, which brin
 Top to bottom: the status pill (as on Home and Energy), the hero card(s), a summary line, the sensor list, then Recent alerts.
 
 - **Panels:** every visible (`!hidden && !securityHidden`) alarm panel, in user order.
-- **Summary:** counts of active sensors by group, for example "2 open · 1 motion · 1 smoke", or "All clear". "Open" covers contact classes; "motion" covers motion, occupancy and presence; the danger classes are named one by one.
-- **Sensor rows:** icon, name, area, and a state word:
+- **Summary:** counts of active sensors by group, ordered danger groups first, then intrusion, for example "1 smoke · 2 open · 1 motion", or "All clear". "Open" covers contact classes; "motion" covers motion, occupancy and presence; the danger classes are named one by one.
+- **Sensor rows:** icon, name, area, and a state word. A stale row (cached value) is dimmed and announces "Last known value"; it still sorts and counts by its cached value. An active danger row has a rose border and word, and an active intrusion row amber:
   - Open / Closed (contacts);
   - Motion / Clear (motion, occupancy, presence);
   - Smoke / CO / Gas: Detected / Clear;
@@ -150,7 +151,7 @@ Tapping a row opens a small sheet in `:feature:security`: the name, area and sta
   - supported modes: home, away, night;
   - `ARM_*` publishes `arming`, then the armed state after 3 s;
   - `DISARM` with the right code publishes `disarmed`; with a wrong code it re-publishes the current state.
-- A demo switch, "Simulate intrusion", publishes `pending` and then `triggered` after 3 s, but only while the alarm is armed.
+- A demo button entity, "Simulate intrusion", publishes `pending` and then `triggered` after 3 s, but only while the alarm is armed.
 - Binary sensors covering the classes on screen: at least a door, a window, a motion sensor, a smoke detector and a leak sensor, with one starting active.
 
 ## 7. Architecture summary
@@ -161,7 +162,7 @@ Tapping a row opens a small sheet in `:feature:security`: the name, area and sta
 :core:designsystem AlarmActions, AlarmControls, AlarmHero, CodeKeypadSheet, alarm strings (api → :core:model)
 :feature:home      sheet uses AlarmControls; CustomizeSheet "Show on Security"
 :feature:security  SecurityUiBuilder, SecurityViewModel, SecurityScreen, SensorSheet   (new)
-:core:demo         remote-code alarm with delays, intrusion switch, sensor classes
+:core:demo         remote-code alarm with delays, intrusion button, sensor classes
 :app               third tab, generalised selectTab
 ```
 
@@ -186,6 +187,9 @@ Dependencies follow parent §4.1: `:feature:security → :core:source, :core:des
 - **Code in transit.** With `REMOTE_CODE`, the PIN travels in the command payload. In direct mode that is the LAN broker (TLS when configured); away, it goes through the encrypted gateway envelope. It is never logged or cached; the logs viewer must not print alarm command payloads.
 - **Bridge latency.** A bridge slower than 5 s triggers a false rollback snackbar. Appendix A asks for a state publish within 5 s.
 - **Moving the alarm UI** touches `feature:home` imports and strings; the existing Home tests guard against regressions.
+- **Code kept in memory.** The typed code stays in memory inside a not-confirmed command until its Retry snackbar is dismissed, in both view models. It is never persisted.
+- **Code requirement after a cache restore.** The cache strips `code`, so a panel's code requirement is unknown after a restore until the retained config replays. Sends are blocked while the panel is stale, so this is harmless with `REMOTE_CODE`.
+- **JSON-breaking characters.** In `TEXT` format, a `"` or `\` in the code produces invalid JSON through the command template, as in Home Assistant.
 - **Two view models collect `commandFailures`.** Home's view model, still alive under Security on the back stack, also buffers a "not confirmed" event, which then shows when the user returns to Home. This is a known minor.
 
 ## Appendix A — Jeedom bridge contract
@@ -242,6 +246,8 @@ The bridge:
 2. Applies the mode and publishes the resulting state (`arming`, then the armed state).
 3. On a rejected code, **re-publishes the current state**.
 4. Publishes some state **within 5 s** in every case, so the app's optimistic update is confirmed or cleanly rolled back.
+
+Codes containing `"` or `\` break the JSON command template, so use digits or letters only.
 
 ### A.4 Availability (retained)
 

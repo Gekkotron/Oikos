@@ -80,4 +80,13 @@ class UiOverrideTest {
         assertEquals(setOf(EnergyRole.GRID, EnergyRole.BATTERY), EnergyRole.entries.filter { it.signed }.toSet())
         assertEquals(setOf(EnergyRole.WATER), EnergyRole.entries.filterNot { it.power }.toSet())
     }
+
+    @Test
+    fun `securityHidden round-trips and is omitted when false`() {
+        val o = UiOverride(securityHidden = true)
+        val json = UiOverrides.encode(o)
+        assertEquals("""{"securityHidden":true}""", json)
+        assertEquals(o, UiOverrides.decode(json))
+        assertEquals("{}", UiOverrides.encode(UiOverride(securityHidden = false)))
+    }
 }

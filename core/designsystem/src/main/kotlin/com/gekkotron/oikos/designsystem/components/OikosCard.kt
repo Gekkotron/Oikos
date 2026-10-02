@@ -54,6 +54,8 @@ fun OikosCard(
     on: Boolean = false,
     /** A warm border without the "on" gradient: an open door or window (device-icons spec §2). */
     accent: Boolean = false,
+    /** The border colour when [accent] is set; amber by default. Active danger rows pass rose. */
+    accentColor: Color? = null,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
@@ -102,7 +104,7 @@ fun OikosCard(
                 .then(if (c.isDark) Modifier else Modifier.shadow(6.dp, shape, ambientColor = c.shadow, spotColor = c.shadow))
                 .clip(shape)
                 .background(background)
-                .border(1.dp, cardBorderColor(c, on, accent), shape)
+                .border(1.dp, cardBorderColor(c, on, accent, accentColor), shape)
                 .then(clicks)
                 .heightIn(min = OikosDimens.cardMinHeight)
                 .padding(OikosDimens.cardPadding),
@@ -112,8 +114,8 @@ fun OikosCard(
     }
 }
 
-internal fun cardBorderColor(colors: OikosColors, on: Boolean, accent: Boolean): Color = when {
+internal fun cardBorderColor(colors: OikosColors, on: Boolean, accent: Boolean, accentColor: Color? = null): Color = when {
     on -> colors.cardOnBorder
-    accent -> colors.warning.copy(alpha = 0.35f)
+    accent -> (accentColor ?: colors.warning).copy(alpha = 0.35f)
     else -> colors.cardBorder
 }

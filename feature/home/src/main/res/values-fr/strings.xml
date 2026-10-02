@@ -22,16 +22,6 @@
     <string name="value_contact_closed">Fermé</string>
     <string name="value_motion_detected">Mouvement</string>
     <string name="value_motion_clear">Calme</string>
-    <string name="alarm_disarmed">Désarmée</string>
-    <string name="alarm_armed_home">Armée · Maison</string>
-    <string name="alarm_armed_away">Armée · Absent</string>
-    <string name="alarm_armed_night">Armée · Nuit</string>
-    <string name="alarm_armed_vacation">Armée · Vacances</string>
-    <string name="alarm_armed_custom">Armée · Perso</string>
-    <string name="alarm_pending">En attente</string>
-    <string name="alarm_arming">Armement…</string>
-    <string name="alarm_disarming">Désarmement…</string>
-    <string name="alarm_triggered">Déclenchée !</string>
     <string name="mode_off">Arrêt</string>
     <string name="mode_cool">Froid</string>
     <string name="mode_heat">Chaud</string>
@@ -50,13 +40,6 @@
     <string name="sheet_target">Consigne</string>
     <string name="sheet_decrease">Diminuer</string>
     <string name="sheet_increase">Augmenter</string>
-    <string name="sheet_code">Code</string>
-    <string name="sheet_arm_home">Maison</string>
-    <string name="sheet_arm_away">Absent</string>
-    <string name="sheet_arm_night">Nuit</string>
-    <string name="sheet_arm_vacation">Vacances</string>
-    <string name="sheet_arm_custom">Perso</string>
-    <string name="sheet_disarm">Désarmer</string>
     <string name="home_not_confirmed">Non confirmé</string>
     <string name="home_retry">Réessayer</string>
     <string name="home_rejected">Commande refusée : %1$s</string>
@@ -180,4 +163,5 @@
     <string name="search_close">Fermer la recherche</string>
     <string name="search_hint">Rechercher un appareil ou une pièce</string>
     <string name="search_no_match">Aucun appareil ne correspond à « %1$s »</string>
+    <string name="customize_show_on_security">Afficher dans Sécurité</string>
 </resources>

@@ -71,4 +71,13 @@ class AlarmPanelMapperTest {
         assertEquals(Alarm(AlarmState.ARMING), AlarmPanelMapper.predict(Command.Arm(AlarmMode.AWAY), Unknown))
         assertEquals(Alarm(AlarmState.DISARMING), AlarmPanelMapper.predict(Command.Disarm(), Unknown))
     }
+
+    @Test
+    fun `arming without a code sends an empty code`() {
+        val b = bindings(
+            "alarm_control_panel",
+            """{"command_topic":"a/set","code":"REMOTE_CODE","code_arm_required":false,"command_template":"{\"action\":\"{{ action }}\",\"code\":\"{{ code }}\"}"}""",
+        )
+        assertEquals(publishes("""{"action":"ARM_AWAY","code":""}"""), AlarmPanelMapper.encode(b, Command.Arm(AlarmMode.AWAY), Unknown))
+    }
 }

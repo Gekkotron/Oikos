@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.source.discovery
 
 import com.gekkotron.oikos.model.Capabilities
+import com.gekkotron.oikos.model.CodeFormat
 import com.gekkotron.oikos.model.Device
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.Kind
@@ -199,8 +200,18 @@ object DiscoveryParser {
         Kind.ALARM_PANEL -> Capabilities(
             alarmModes = AlarmPanelMapper.supportedModes(b),
             codeArmRequired = AlarmPanelMapper.codeRequired(b, arming = true),
+            codeDisarmRequired = AlarmPanelMapper.codeRequired(b, arming = false),
+            codeFormat = codeFormat(b.str("code")),
         )
         else -> Capabilities()
+    }
+
+    /** `REMOTE_CODE_TEXT` or a literal code with a non-digit gets a text field; anything else the keypad. */
+    private fun codeFormat(code: String?): CodeFormat = when {
+        code == null || code == "REMOTE_CODE" -> CodeFormat.NUMBER
+        code == "REMOTE_CODE_TEXT" -> CodeFormat.TEXT
+        code.all(Char::isDigit) -> CodeFormat.NUMBER
+        else -> CodeFormat.TEXT
     }
 
     /** Resolves `~` in `*_topic` keys and `availability[].topic`, then drops `~`. */

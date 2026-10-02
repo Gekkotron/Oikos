@@ -22,6 +22,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.gekkotron.oikos.AppViewModel
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.feature.energy.ui.EnergyRoute
+import com.gekkotron.oikos.feature.security.ui.SecurityRoute
 import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
 import com.gekkotron.oikos.feature.home.ui.HomeRoute
 import com.gekkotron.oikos.feature.onboarding.ui.OnboardingRoute
@@ -38,6 +39,9 @@ data object RoomsKey : NavKey
 
 @Serializable
 data object EnergyKey : NavKey
+
+@Serializable
+data object SecurityKey : NavKey
 
 /** The saved profile picks the root: Ready → Home; none or locked → onboarding (spec §2). */
 @Composable
@@ -94,6 +98,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<EnergyKey> {
                     EnergyRoute(onOpenHome = { selectTab(backStack, HomeKey) }, windowInsets = tabInsets)
                 }
+                entry<SecurityKey> { SecurityRoute(windowInsets = tabInsets) }
             },
         )
     }

@@ -159,4 +159,18 @@ class CustomizeSheetTest {
             compose.onNodeWithText(label).performScrollTo().assertExists()
         }
     }
+
+    @Test
+    fun `security sensors and alarms get the Show on Security switch`() {
+        show(card(testEntity("mailbox", Kind.BINARY_SENSOR, "Mailbox", deviceClass = "door")))
+        compose.onNodeWithText("Show on Security").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(true, saved.single().securityHidden)
+    }
+
+    @Test
+    fun `other entities have no Show on Security switch`() {
+        show(card(testEntity("lamp", Kind.LIGHT, "Lamp")))
+        compose.onNodeWithText("Show on Security").assertDoesNotExist()
+    }
 }

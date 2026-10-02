@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,7 +18,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -29,9 +27,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,11 +36,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosDimens
+import com.gekkotron.oikos.designsystem.alarm.AlarmControls
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardFormatter
@@ -52,7 +47,6 @@ import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.EffectNames
 import com.gekkotron.oikos.feature.home.presentation.hasColor
 import com.gekkotron.oikos.feature.home.presentation.StepMath
-import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
@@ -76,7 +70,7 @@ internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCus
                 Kind.CLIMATE -> ClimateControls(card, send)
                 Kind.NUMBER -> NumberControls(card, send)
                 Kind.SELECT -> SelectControls(card, send)
-                Kind.ALARM_PANEL -> AlarmControls(card, send)
+                Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
                 else -> Unit
             }
             TextButton(onClick = onCustomize, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_customize)) }
@@ -220,28 +214,4 @@ private fun SelectControls(card: CardUi, onSend: (Command) -> Unit) {
             Text(option, Modifier.padding(start = 12.dp))
         }
     }
-}
-
-@Composable
-private fun AlarmControls(card: CardUi, onSend: (Command) -> Unit) {
-    val caps = card.capabilities
-    var code by rememberSaveable { mutableStateOf("") }
-    if (caps.codeArmRequired) {
-        OutlinedTextField(
-            value = code,
-            onValueChange = { code = it },
-            label = { Text(stringResource(R.string.sheet_code)) },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-    val codeArg = code.ifEmpty { null }
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (mode in AlarmMode.entries.filter { it in caps.alarmModes }) {
-            FilledTonalButton(onClick = { onSend(Command.Arm(mode, codeArg)) }) { Text(stringResource(armLabel(mode))) }
-        }
-    }
-    Button(onClick = { onSend(Command.Disarm(codeArg)) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_disarm)) }
 }

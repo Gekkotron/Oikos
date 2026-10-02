@@ -27,6 +27,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -35,7 +36,8 @@ class DemoBrokerTest {
         "demo_living_lamp", "demo_kitchen_spots", "demo_coffee", "demo_garage_plug", "demo_living_shutter",
         "demo_living_ac", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
         "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_water_heater_power", "demo_ac_power", "demo_front_door", "demo_hallway_motion",
-        "demo_alarm", "demo_water_heater_target", "demo_vacuum_mode", "demo_vacuum_start",
+        "demo_bedroom_window", "demo_kitchen_smoke", "demo_garage_leak",
+        "demo_alarm", "demo_alarm_intrusion", "demo_water_heater_target", "demo_vacuum_mode", "demo_vacuum_start",
         "demo_bedroom_strip", "demo_bedroom_strip_effect_speed", "demo_bedroom_strip_effect_intensity",
     )
 
@@ -85,7 +87,7 @@ class DemoBrokerTest {
     fun `every stateful entity has a known state after settling`() = runTest {
         val h = start()
         val states = h.source.states().first()
-        for (id in allIds - "demo_vacuum_start") {
+        for (id in allIds - setOf("demo_vacuum_start", "demo_alarm_intrusion")) {
             val v = states.getValue(id).value
             assertTrue(v !is StateValue.Unknown && v !is StateValue.Unsupported, "$id is $v")
         }
@@ -127,6 +129,19 @@ class DemoBrokerTest {
         assertEquals("cool", ac.mode)
         assertEquals(StateValue.Numeric(58.0), h.value("demo_water_heater_target"))
         assertEquals(StateValue.Text("turbo"), h.value("demo_vacuum_mode"))
+        assertEquals(StateValue.Alarm(AlarmState.ARMING), h.value("demo_alarm"))
+    }
+
+    @Test
+    fun `a tick inside the echo window is not overwritten by the stale echo`() = runTest {
+        val h = start()
+        h.broker.startTicking(interval = 100.milliseconds)
+        h.source.send("demo_alarm", Command.Arm(AlarmMode.AWAY))
+        advanceTimeBy(150)
+        runCurrent()
+        assertEquals(StateValue.Alarm(AlarmState.ARMED_AWAY), h.value("demo_alarm"))
+        advanceTimeBy(200)
+        runCurrent()
         assertEquals(StateValue.Alarm(AlarmState.ARMED_AWAY), h.value("demo_alarm"))
     }
 

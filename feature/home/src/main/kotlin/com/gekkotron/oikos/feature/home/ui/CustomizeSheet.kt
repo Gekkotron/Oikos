@@ -43,6 +43,7 @@ import com.gekkotron.oikos.feature.home.presentation.OverrideDraft
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.PowerUnits
+import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.designsystem.R as DsR
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
@@ -61,6 +62,7 @@ internal fun CustomizeSheet(
     var areaId by rememberSaveable(card.id) { mutableStateOf(start.areaId) }
     var favorite by rememberSaveable(card.id) { mutableStateOf(start.favorite) }
     var hidden by rememberSaveable(card.id) { mutableStateOf(start.hidden) }
+    var securityHidden by rememberSaveable(card.id) { mutableStateOf(start.securityHidden) }
     var order by rememberSaveable(card.id) { mutableStateOf(start.order) }
     var cardStyle by rememberSaveable(card.id) { mutableStateOf(start.cardStyle) }
     var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
@@ -68,7 +70,7 @@ internal fun CustomizeSheet(
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -97,6 +99,9 @@ internal fun CustomizeSheet(
             )
             SwitchRow(stringResource(R.string.customize_favorite), favorite) { favorite = it }
             SwitchRow(stringResource(R.string.customize_hidden), hidden) { hidden = it }
+            if (card.kind == Kind.ALARM_PANEL || (card.kind == Kind.BINARY_SENSOR && SensorGroup.of(card.deviceClass) != null)) {
+                SwitchRow(stringResource(R.string.customize_show_on_security), !securityHidden) { securityHidden = !it }
+            }
             OutlinedTextField(
                 value = order,
                 onValueChange = { order = it },

@@ -2,10 +2,9 @@ package com.gekkotron.oikos.feature.home.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import com.gekkotron.oikos.designsystem.alarm.alarmLabel
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardValue
-import com.gekkotron.oikos.model.AlarmMode
-import com.gekkotron.oikos.model.AlarmState
 import com.gekkotron.oikos.model.CoverState
 
 private val OPENING_CLASSES = setOf("door", "window", "garage_door", "opening")
@@ -56,25 +55,4 @@ internal fun modeLabel(mode: String): String = when (mode) {
     "dry" -> stringResource(R.string.mode_dry)
     "fan_only" -> stringResource(R.string.mode_fan_only)
     else -> mode.replaceFirstChar { it.uppercase() }
-}
-
-internal fun alarmLabel(state: AlarmState): Int = when (state) {
-    AlarmState.DISARMED -> R.string.alarm_disarmed
-    AlarmState.ARMED_HOME -> R.string.alarm_armed_home
-    AlarmState.ARMED_AWAY -> R.string.alarm_armed_away
-    AlarmState.ARMED_NIGHT -> R.string.alarm_armed_night
-    AlarmState.ARMED_VACATION -> R.string.alarm_armed_vacation
-    AlarmState.ARMED_CUSTOM_BYPASS -> R.string.alarm_armed_custom
-    AlarmState.PENDING -> R.string.alarm_pending
-    AlarmState.ARMING -> R.string.alarm_arming
-    AlarmState.DISARMING -> R.string.alarm_disarming
-    AlarmState.TRIGGERED -> R.string.alarm_triggered
-}
-
-internal fun armLabel(mode: AlarmMode): Int = when (mode) {
-    AlarmMode.HOME -> R.string.sheet_arm_home
-    AlarmMode.AWAY -> R.string.sheet_arm_away
-    AlarmMode.NIGHT -> R.string.sheet_arm_night
-    AlarmMode.VACATION -> R.string.sheet_arm_vacation
-    AlarmMode.CUSTOM_BYPASS -> R.string.sheet_arm_custom
 }

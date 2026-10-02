@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
@@ -48,7 +49,10 @@ class DemoHouse(private val random: Random = Random(7)) {
         doc(ENERGY, obj("solar" to 2140, "grid" to -380, "house" to 1760, "water_heater" to 900, "ac" to 350))
         binarySensor("demo_front_door", "Front door", "Hallway", "demo/hallway/door", "door", "contact", onValue = false, initial = true)
         binarySensor("demo_hallway_motion", "Hallway motion", "Hallway", "demo/hallway/motion", "motion", "occupancy", onValue = true, initial = false)
-        alarm("demo_alarm", "Alarm", "Hallway", "demo/alarm")
+        binarySensor("demo_bedroom_window", "Bedroom window", "Bedroom", "demo/bedroom/window", "window", "contact", onValue = false, initial = false)
+        binarySensor("demo_kitchen_smoke", "Kitchen smoke", "Kitchen", "demo/kitchen/smoke", "smoke", "smoke", onValue = true, initial = false)
+        binarySensor("demo_garage_leak", "Garage leak", "Garage", "demo/garage/leak", "moisture", "water_leak", onValue = true, initial = false)
+        alarm("demo_alarm", "Alarm", "Hallway", ALARM)
         number("demo_water_heater_target", "Water heater target", "Garage", "demo/garage/water_heater")
         vacuum("Living room", "demo/living/vacuum")
         override("demo_outdoor_temperature", """{"cardStyle":"hero_weather"}""")
@@ -76,6 +80,10 @@ class DemoHouse(private val random: Random = Random(7)) {
         return DemoMessage(echo.stateTopic, merged.toString())
     }
 
+    /** The house's current state document for [topic], or null when it has none. Delayed echoes publish this, never a snapshot. */
+    @Synchronized
+    fun current(topic: String): DemoMessage? = docs[topic]?.let { DemoMessage(topic, it.toString()) }
+
     /** One step of live sensor noise: solar and house drift, grid follows, outdoor temperature wobbles. */
     @Synchronized
     fun tick(): List<DemoMessage> {
@@ -90,7 +98,19 @@ class DemoHouse(private val random: Random = Random(7)) {
         )
         val outdoor = docs.getValue(OUTDOOR).number("temperature") + random.nextInt(-1, 2) / 10.0
         docs[OUTDOOR] = obj("temperature" to (outdoor * 10).roundToInt() / 10.0)
-        return listOf(DemoMessage(ENERGY, docs.getValue(ENERGY).toString()), DemoMessage(OUTDOOR, docs.getValue(OUTDOOR).toString()))
+        val alarm = docs.getValue(ALARM)
+        val next = when (alarm.text("state")) {
+            "arming" -> alarm.text("target")
+            "pending" -> "triggered"
+            else -> null
+        }
+        val alarmMessages = if (next != null) {
+            docs[ALARM] = JsonObject(alarm + ("state" to JsonPrimitive(next)))
+            listOf(DemoMessage(ALARM, docs.getValue(ALARM).toString()))
+        } else {
+            emptyList()
+        }
+        return listOf(DemoMessage(ENERGY, docs.getValue(ENERGY).toString()), DemoMessage(OUTDOOR, docs.getValue(OUTDOOR).toString())) + alarmMessages
     }
 
     private fun areas() {
@@ -260,16 +280,33 @@ class DemoHouse(private val random: Random = Random(7)) {
         doc(topic, obj(field to initial))
     }
 
+    /** A remote-code panel like the spec's bridge (security spec Appendix A); delays advance on [tick]. */
     private fun alarm(id: String, device: String, area: String, topic: String) {
         config("alarm_control_panel", id, device, null, area) {
             put("state_topic", topic)
             put("value_template", "{{ value_json.state }}")
             put("command_topic", "$topic/set")
+            put("code", "REMOTE_CODE")
+            put("code_arm_required", false)
+            put("code_disarm_required", true)
+            put("command_template", """{"action":"{{ action }}","code":"{{ code }}"}""")
             putJsonArray("supported_features") { listOf("arm_home", "arm_away", "arm_night").forEach { add(it) } }
         }
         doc(topic, obj("state" to "disarmed"))
-        val states = mapOf("ARM_HOME" to "armed_home", "ARM_AWAY" to "armed_away", "ARM_NIGHT" to "armed_night", "DISARM" to "disarmed")
-        echo("$topic/set", topic) { p -> states[p]?.let { obj("state" to it) } }
+        echo("$topic/set", topic) { p -> alarmCommand(topic, p) }
+        config("button", "demo_alarm_intrusion", device, "Simulate intrusion", area) { put("command_topic", "$topic/intrude") }
+        echo("$topic/intrude", topic) { if (docs.getValue(topic).text("state").startsWith("armed_")) obj("state" to "pending") else null }
+    }
+
+    /** Arming goes through `arming`; disarming needs [DEMO_CODE], and a wrong code republishes the current state. */
+    private fun alarmCommand(topic: String, payload: String): JsonObject? {
+        val command = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull() ?: return null
+        val action = command.text("action")
+        return when {
+            action == "DISARM" -> if (command.text("code") == DEMO_CODE) obj("state" to "disarmed") else obj("state" to docs.getValue(topic).text("state"))
+            action in ARMED -> obj("state" to "arming", "target" to ARMED.getValue(action))
+            else -> null
+        }
     }
 
     private fun number(id: String, device: String, area: String, topic: String) {
@@ -304,6 +341,9 @@ class DemoHouse(private val random: Random = Random(7)) {
     private companion object {
         const val ENERGY = "demo/energy"
         const val OUTDOOR = "demo/outdoor"
+        const val ALARM = "demo/alarm"
+        const val DEMO_CODE = "1234"
+        val ARMED = mapOf("ARM_HOME" to "armed_home", "ARM_AWAY" to "armed_away", "ARM_NIGHT" to "armed_night")
 
         fun onOff(on: Boolean) = if (on) "ON" else "OFF"
 
@@ -317,5 +357,6 @@ class DemoHouse(private val random: Random = Random(7)) {
         }
 
         fun JsonObject.number(key: String): Double = (get(key) as JsonPrimitive).doubleOrNull ?: 0.0
+        fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
     }
 }

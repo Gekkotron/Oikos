@@ -19,6 +19,7 @@ data class OverrideDraft(
     val energyRole: EnergyRole?,
     /** Only kept for a [EnergyRole.signed] role. */
     val energyInvert: Boolean,
+    val securityHidden: Boolean = false,
 ) {
     val orderValid: Boolean
         get() = order.isBlank() || order.trim().let { t -> t.all(Char::isDigit) && t.toIntOrNull()?.let { it in 0..MAX_ORDER } == true }
@@ -41,6 +42,7 @@ data class OverrideDraft(
             cardStyle = cardStyle,
             energyRole = energyRole,
             energyInvert = energyInvert && energyRole?.signed == true,
+            securityHidden = securityHidden,
         )
     }
 
@@ -56,6 +58,7 @@ data class OverrideDraft(
             cardStyle = card.ui.cardStyle,
             energyRole = card.ui.energyRole,
             energyInvert = card.ui.energyInvert,
+            securityHidden = card.ui.securityHidden,
         )
     }
 }
