@@ -39,4 +39,8 @@
     <string name="alarm_code_ok">OK</string>
     <string name="alarm_code_delete">Delete</string>
     <string name="alarm_code_entered">%1$d entered</string>
+    <string name="route_title">Connection</string>
+    <string name="route_auto">Automatic</string>
+    <string name="route_direct">Home network</string>
+    <string name="route_gateway">Gateway</string>
 </resources>

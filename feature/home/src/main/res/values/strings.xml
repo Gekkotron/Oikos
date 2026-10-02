@@ -58,10 +58,6 @@
     <string name="link_key_rejected">The gateway didn\'t accept this phone\'s key. Set up the connection again with a new setup code.</string>
     <string name="link_clock_skew">The gateway refused the request because this phone\'s clock is off. Turn on automatic date and time.</string>
     <string name="link_gateway_refused">The gateway refused access to the broker.</string>
-    <string name="link_route_title">Connection</string>
-    <string name="link_route_auto">Automatic</string>
-    <string name="link_route_direct">Home network</string>
-    <string name="link_route_gateway">Gateway</string>
     <string name="link_set_up_again">Set up connection again</string>
     <string name="chip_hidden">Hidden (%1$d)</string>
     <string name="home_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>

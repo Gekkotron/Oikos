@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -16,11 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.components.RoutePicker
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.Route
@@ -46,18 +45,6 @@ internal fun LinkSheet(
             if (route != null) RoutePicker(route, onRouteChange)
             OutlinedButton(onClick = onAssignRooms, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_assign_rooms)) }
             OutlinedButton(onClick = onSetUpAgain, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_set_up_again)) }
-        }
-    }
-}
-
-@Composable
-private fun RoutePicker(selected: Route, onSelect: (Route) -> Unit) {
-    Column {
-        Text(stringResource(R.string.link_route_title), style = OikosTheme.type.label, modifier = Modifier.semantics { heading() })
-        Column(Modifier.selectableGroup()) {
-            RadioRow(stringResource(R.string.link_route_auto), selected == Route.AUTO) { onSelect(Route.AUTO) }
-            RadioRow(stringResource(R.string.link_route_direct), selected == Route.DIRECT) { onSelect(Route.DIRECT) }
-            RadioRow(stringResource(R.string.link_route_gateway), selected == Route.GATEWAY) { onSelect(Route.GATEWAY) }
         }
     }
 }

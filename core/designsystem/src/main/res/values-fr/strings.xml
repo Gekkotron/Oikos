@@ -39,4 +39,8 @@
     <string name="alarm_code_ok">OK</string>
     <string name="alarm_code_delete">Effacer</string>
     <string name="alarm_code_entered">%1$d saisis</string>
+    <string name="route_title">Connexion</string>
+    <string name="route_auto">Automatique</string>
+    <string name="route_direct">Réseau local</string>
+    <string name="route_gateway">Passerelle</string>
 </resources>
