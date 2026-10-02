@@ -30,7 +30,7 @@ All icons are drawn on a **24 × 24 grid** and rendered at 24 dp on cards.
 
 - **Doors, windows, garage doors:** the moving part is filled with the open accent when open and the closed accent when closed. Unknown state (no value yet) uses the neutral color, drawn closed.
 - **Shutters:** no accent. The curtain level is the state, and the card keeps its existing "on" style when open (`HomeUiBuilder.isOn`).
-- **Lights and switches:** the bulb or plug surface fills with the open accent when on; neutral when off.
+- **Lights and switches:** the bulb or plug surface fills with the open accent when on; neutral when off. On a Warm Minimal on-card (espresso background) the dark amber would vanish, so there the lit surface uses the card's content color instead.
 - **Card border for open contacts:** `OikosCard` gets an `accent: Boolean` parameter that draws the border in `warning` at alpha 0.35 (the "on" border without the on gradient). `EntityCard` sets it for door, window and garage-door contacts that are open.
 
 ### 2.1 Shutter geometry
