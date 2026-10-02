@@ -102,7 +102,8 @@ Top to bottom: the status pill (as on Home and Energy), the hero card(s), a summ
 
 - **Panels:** every visible (`!hidden && !securityHidden`) alarm panel, in user order.
 - **Summary:** counts of active sensors by group, ordered danger groups first, then intrusion, for example "1 smoke · 2 open · 1 motion", or "All clear". "Open" covers contact classes; "motion" covers motion, occupancy and presence; the danger classes are named one by one.
-- **Sensor rows:** icon, name, area, and a state word. A stale row (cached value) is dimmed and announces "Last known value"; it still sorts and counts by its cached value. An active danger row has a rose border and word, and an active intrusion row amber:
+- **Sections:** sensors are grouped under headers in this order: Openings, Motion, Fire (smoke, CO, gas), Water (leak), Other (SOS, vibration, tamper). Empty sections are left out; each section keeps the order below.
+- **Sensor tiles:** two per row, the same height, so many statuses fit at a glance. Line 1: icon and name; line 2: area and a state word. Long names and areas are cut with an ellipsis, never the state word. A stale row (cached value) is dimmed and announces "Last known value"; it still sorts and counts by its cached value. An active danger row has a rose border and word, and an active intrusion row amber:
   - Open / Closed (contacts);
   - Motion / Clear (motion, occupancy, presence);
   - Smoke / CO / Gas: Detected / Clear;
@@ -117,10 +118,10 @@ Top to bottom: the status pill (as on Home and Energy), the hero card(s), a summ
   2. Inactive rows.
   3. Unavailable rows, greyed, with "Unavailable".
 
-  Within a group, rows are sorted by area display name, then entity name.
+  Within a group, rows are sorted by area display name, then entity name. Tiles fill left to right, so the first active sensor of a section is top-left.
 - **Recent alerts:** a header and the empty state "Alerts will appear here once push notifications are set up."
 - **Empty cases:**
-  - No panel: a small card reading "No alarm panel. Publish an MQTT `alarm_control_panel` to see it here."
+  - No panel: a slim one-line card (no card minimum height) reading "No alarm panel. Publish an MQTT `alarm_control_panel` to see it here."
   - No sensors: "No security sensors."
   - Neither: one combined empty state.
 - **Accessibility:**

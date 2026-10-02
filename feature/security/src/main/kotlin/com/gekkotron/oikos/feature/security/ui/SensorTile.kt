@@ -1,10 +1,9 @@
 package com.gekkotron.oikos.feature.security.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +16,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.OikosCard
@@ -30,31 +30,36 @@ import com.gekkotron.oikos.feature.security.presentation.GroupCount
 import com.gekkotron.oikos.feature.security.presentation.SensorRow
 import com.gekkotron.oikos.model.SensorGroup
 
+/** A half-width tile: icon and name, then room and state. Long names and rooms are cut, never the state. */
 @Composable
-internal fun SensorRowCard(row: SensorRow, onClick: () -> Unit) {
+internal fun SensorTile(row: SensorRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = activeColor(row)
     val staleText = stringResource(R.string.security_stale)
     OikosCard(
-        Modifier
-            .fillMaxWidth()
+        modifier
             .testTag("sensor-${row.id}")
             .alpha(if (!row.available) 0.55f else if (row.stale) 0.6f else 1f)
             .then(if (row.stale) Modifier.semantics { stateDescription = staleText } else Modifier),
         accent = row.available && row.active == true,
         accentColor = if (row.group.danger) OikosTheme.colors.heat else null,
         onClick = onClick,
+        minHeight = 0.dp,
     ) {
-        Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SensorIcon(row, accent)
-            Column(Modifier.weight(1f)) {
-                Text(row.name, style = OikosTheme.type.body)
-                Text(row.areaName ?: stringResource(R.string.security_unassigned), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
-            }
-            Text(stateWord(row), style = OikosTheme.type.body, color = accent ?: OikosTheme.colors.content)
+            Text(row.name, style = OikosTheme.type.body, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                row.areaName ?: stringResource(R.string.security_unassigned),
+                style = OikosTheme.type.label,
+                color = OikosTheme.colors.contentMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(stateWord(row), style = OikosTheme.type.body, color = accent ?: OikosTheme.colors.content, maxLines = 1)
         }
     }
 }
@@ -69,7 +74,7 @@ private fun activeColor(row: SensorRow): Color? {
 @Composable
 private fun SensorIcon(row: SensorRow, accent: Color?) {
     val open = if (row.active == true) 1f else 0f
-    val m = Modifier.size(28.dp)
+    val m = Modifier.size(22.dp)
     when (row.deviceClass) {
         "window" -> WindowIcon(open, accent, m)
         "garage_door" -> GarageIcon(open, accent, m)

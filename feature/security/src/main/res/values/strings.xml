@@ -39,4 +39,9 @@
     <plurals name="security_count_vibration"><item quantity="one">%1$d vibration</item><item quantity="other">%1$d vibrations</item></plurals>
     <plurals name="security_count_tamper"><item quantity="one">%1$d tamper</item><item quantity="other">%1$d tampers</item></plurals>
     <string name="security_stale">Last known value</string>
+    <string name="security_section_fire">Fire</string>
+    <string name="security_section_water">Water</string>
+    <string name="security_section_openings">Openings</string>
+    <string name="security_section_motion">Motion</string>
+    <string name="security_section_other">Other</string>
 </resources>
