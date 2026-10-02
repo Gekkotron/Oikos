@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -130,7 +132,7 @@ internal fun SettingsTopBar(title: String, onBack: () -> Unit) {
         title = { Text(title, style = OikosTheme.type.display) },
         navigationIcon = {
             IconButton(onClick = onBack, modifier = Modifier.semantics { contentDescription = backLabel }) {
-                Text("←", style = OikosTheme.type.cardValue)
+                Text("←", style = OikosTheme.type.cardValue, modifier = Modifier.clearAndSetSemantics {})
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = OikosTheme.colors.content, navigationIconContentColor = OikosTheme.colors.content),
@@ -148,14 +150,14 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun NavRow(title: String, summary: String?, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).clickable(onClick = onClick).padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).clickable(role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = OikosTheme.type.body)
             if (summary != null) Text(summary, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
         }
-        Text("›", style = OikosTheme.type.cardValue, color = OikosTheme.colors.contentMuted)
+        Text("›", style = OikosTheme.type.cardValue, color = OikosTheme.colors.contentMuted, modifier = Modifier.clearAndSetSemantics {})
     }
 }
 

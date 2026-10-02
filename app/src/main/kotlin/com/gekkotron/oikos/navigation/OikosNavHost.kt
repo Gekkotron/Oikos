@@ -62,6 +62,11 @@ internal fun push(stack: MutableList<NavKey>, key: NavKey) {
     if (stack.lastOrNull() != key) stack.add(key)
 }
 
+/** Pops [key] only while it is on top, and never the last entry (a double tap on a back arrow pops once). */
+internal fun pop(stack: MutableList<NavKey>, key: NavKey) {
+    if (stack.size > 1 && stack.lastOrNull() == key) stack.removeAt(stack.lastIndex)
+}
+
 /** The saved profile picks the root: Ready → Home; none or locked → onboarding (spec §2). */
 @Composable
 fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
@@ -102,7 +107,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                     RoomsRoute(onDone = {
                         // First run: finishing flips the root to Home, which replaces this entry. From Home: pop back.
                         viewModel.finishRooms()
-                        if (backStack.size > 1) backStack.removeLastOrNull()
+                        pop(backStack, RoomsKey)
                     })
                 }
                 entry<HomeKey> {
@@ -120,17 +125,17 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         onSetUpAgain = viewModel::setUpAgain,
                         onOpenRooms = { push(backStack, RoomOrderKey) },
                         onOpenLicences = { push(backStack, LicencesKey) },
-                        onBack = { backStack.removeLastOrNull() },
+                        onBack = { pop(backStack, SettingsKey) },
                     )
                 }
                 entry<RoomOrderKey> {
-                    RoomOrderRoute(onAssignRooms = { push(backStack, RoomsKey) }, onBack = { backStack.removeLastOrNull() })
+                    RoomOrderRoute(onAssignRooms = { push(backStack, RoomsKey) }, onBack = { pop(backStack, RoomOrderKey) })
                 }
                 entry<LicencesKey> {
                     val context = LocalContext.current
                     LicencesRoute(
                         loadJson = { context.resources.openRawResource(R.raw.aboutlibraries).bufferedReader().use { it.readText() } },
-                        onBack = { backStack.removeLastOrNull() },
+                        onBack = { pop(backStack, LicencesKey) },
                     )
                 }
                 entry<EnergyKey> {

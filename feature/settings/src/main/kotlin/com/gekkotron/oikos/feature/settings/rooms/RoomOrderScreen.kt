@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.settings.rooms
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -115,11 +115,12 @@ fun RoomOrderScreen(
                             )
                         },
                     ) {
-                        IconButton(
-                            onClick = {},
-                            modifier = Modifier
+                        Box(
+                            Modifier
+                                .size(OikosDimens.minTouch)
                                 .draggableHandle(onDragStopped = { onCommit(list.map { it.id }) })
                                 .clearAndSetSemantics { testTag = "drag-handle-${room.id}" },
+                            contentAlignment = Alignment.Center,
                         ) {
                             StaticIcon(OikosGlyph.DRAG_HANDLE, modifier = Modifier.size(24.dp))
                         }

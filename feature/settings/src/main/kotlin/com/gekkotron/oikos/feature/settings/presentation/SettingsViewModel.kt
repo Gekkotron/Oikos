@@ -22,7 +22,12 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state) { theme, profile ->
         SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUi())
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        // Seeded from the live values so the radio does not show System for a frame.
+        SettingsUi(preferences.theme.value ?: ThemePreference.SYSTEM, ConnectionSummary.from(profiles.state.value)),
+    )
 
     fun setTheme(theme: ThemePreference) {
         viewModelScope.launch { preferences.setTheme(theme) }
