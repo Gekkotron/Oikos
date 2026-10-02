@@ -23,13 +23,24 @@ internal fun selectTab(stack: MutableList<NavKey>, key: NavKey) {
     }
 }
 
+/**
+ * A new root (onboarding finished, "set up again") replaces the whole stack. The same root keeps it, so a
+ * stack restored after rotation or a theme change stays on the Energy tab instead of jumping back to Home.
+ */
+internal fun resetToRoot(stack: MutableList<NavKey>, root: NavKey) {
+    if (stack.firstOrNull() == root) return
+    stack.add(root)
+    stack.removeAll { it != root }
+}
+
 internal fun showsTabBar(top: NavKey?): Boolean = top == HomeKey || top == EnergyKey
 
 @Composable
 internal fun MainTabBar(selected: NavKey?, onSelect: (NavKey) -> Unit) {
     val colors = OikosTheme.colors
     val itemColors = NavigationBarItemDefaults.colors(
-        selectedIconColor = colors.content,
+        // The icon sits on the indicator pill; the label sits below it, on the bar.
+        selectedIconColor = colors.chipSelectedContent,
         selectedTextColor = colors.content,
         unselectedIconColor = colors.contentMuted,
         unselectedTextColor = colors.contentMuted,

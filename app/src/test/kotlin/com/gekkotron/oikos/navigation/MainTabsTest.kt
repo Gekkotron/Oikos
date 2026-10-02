@@ -46,4 +46,21 @@ class MainTabsTest {
         compose.onNodeWithText("Energy").performClick()
         assertEquals(listOf<NavKey>(EnergyKey), picked)
     }
+
+    @Test
+    fun `a restored stack on the same root is kept`() {
+        val stack = mutableListOf<NavKey>(HomeKey, EnergyKey)
+        resetToRoot(stack, HomeKey)
+        assertEquals(listOf<NavKey>(HomeKey, EnergyKey), stack)
+    }
+
+    @Test
+    fun `a new root replaces the whole stack`() {
+        val stack = mutableListOf<NavKey>(OnboardingKey)
+        resetToRoot(stack, HomeKey)
+        assertEquals(listOf<NavKey>(HomeKey), stack)
+        val tabs = mutableListOf<NavKey>(HomeKey, EnergyKey)
+        resetToRoot(tabs, OnboardingKey)
+        assertEquals(listOf<NavKey>(OnboardingKey), tabs)
+    }
 }

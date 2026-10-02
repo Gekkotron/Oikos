@@ -55,12 +55,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     // stores. Disposing the whole NavDisplay instead (key(root)) never pops anything, and the stale
     // ViewModels come back the next time the same root is shown.
     val backStack = rememberNavBackStack(root)
-    LaunchedEffect(root) {
-        if (backStack.toList() != listOf(root)) {
-            backStack.add(root)
-            backStack.removeAll { it != root }
-        }
-    }
+    LaunchedEffect(root) { resetToRoot(backStack, root) }
     val top = backStack.lastOrNull()
     val tabs = showsTabBar(top)
     // The bar owns the bottom inset on the main tabs; their own Scaffolds then only pad top and sides.
