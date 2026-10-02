@@ -31,12 +31,32 @@ data class SensorRow(
 
 data class GroupCount(val group: SensorGroup, val count: Int)
 
+/** The tab's sensor sections, danger first; the enum order is the screen order. */
+enum class SensorSection {
+    FIRE, WATER, OPENINGS, MOTION, OTHER,
+    ;
+
+    companion object {
+        fun of(group: SensorGroup): SensorSection = when (group) {
+            SensorGroup.SMOKE, SensorGroup.CO, SensorGroup.GAS -> FIRE
+            SensorGroup.LEAK -> WATER
+            SensorGroup.OPENING -> OPENINGS
+            SensorGroup.MOTION -> MOTION
+            SensorGroup.SOS, SensorGroup.VIBRATION, SensorGroup.TAMPER -> OTHER
+        }
+    }
+}
+
+/** [rows] keep the tab order (active first); a section is never empty. */
+data class SectionUi(val section: SensorSection, val rows: List<SensorRow>)
+
 /** [loading] is true only before the first build, so the empty state never flashes. */
 data class SecurityUi(
     val link: LinkState = LinkState.Connecting,
     val panels: List<PanelUi> = emptyList(),
     val summary: List<GroupCount> = emptyList(),
     val sensors: List<SensorRow> = emptyList(),
+    val sections: List<SectionUi> = emptyList(),
     val loading: Boolean = true,
 ) {
     fun panel(id: String): PanelUi? = panels.firstOrNull { it.id == id }

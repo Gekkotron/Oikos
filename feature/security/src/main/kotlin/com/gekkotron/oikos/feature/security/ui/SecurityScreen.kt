@@ -2,11 +2,14 @@ package com.gekkotron.oikos.feature.security.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -46,6 +50,7 @@ import com.gekkotron.oikos.feature.security.R
 import com.gekkotron.oikos.feature.security.presentation.SecurityEvent
 import com.gekkotron.oikos.feature.security.presentation.SecurityUi
 import com.gekkotron.oikos.feature.security.presentation.SecurityViewModel
+import com.gekkotron.oikos.feature.security.presentation.SensorSection
 import com.gekkotron.oikos.model.Command
 
 @Composable
@@ -116,8 +121,8 @@ fun SecurityScreen(
                 else -> {
                     if (state.panels.isEmpty()) {
                         item(key = "no-panel") {
-                            OikosCard(Modifier.fillMaxWidth()) {
-                                Text(stringResource(R.string.security_no_panel), style = OikosTheme.type.body, modifier = Modifier.padding(16.dp))
+                            OikosCard(Modifier.fillMaxWidth(), minHeight = 0.dp) {
+                                Text(stringResource(R.string.security_no_panel), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
                             }
                         }
                     }
@@ -135,7 +140,23 @@ fun SecurityScreen(
                     if (state.sensors.isEmpty()) {
                         item(key = "no-sensors") { Text(stringResource(R.string.security_no_sensors), style = OikosTheme.type.body) }
                     }
-                    items(state.sensors, key = { "sensor-${it.id}" }) { row -> SensorRowCard(row, onClick = { sheetId = row.id }) }
+                    state.sections.forEach { section ->
+                        item(key = "section-${section.section}") {
+                            Text(
+                                sectionTitle(section.section),
+                                style = OikosTheme.type.label,
+                                color = OikosTheme.colors.contentMuted,
+                                modifier = Modifier.padding(top = 8.dp).semantics { heading() },
+                            )
+                        }
+                        // Two tiles a row, the same height, in tab order (active first, top-left).
+                        items(section.rows.chunked(2), key = { "sensors-${it.first().id}" }) { pair ->
+                            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap)) {
+                                pair.forEach { row -> SensorTile(row, onClick = { sheetId = row.id }, Modifier.weight(1f).fillMaxHeight()) }
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
                     item(key = "alerts") {
                         Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(stringResource(R.string.security_alerts), style = OikosTheme.type.label)
@@ -152,3 +173,14 @@ fun SecurityScreen(
         SensorSheet(sheetRow, onHide = { onSetHidden(sheetRow.id, true); sheetId = null }, onDismiss = { sheetId = null })
     }
 }
+
+@Composable
+private fun sectionTitle(section: SensorSection): String = stringResource(
+    when (section) {
+        SensorSection.FIRE -> R.string.security_section_fire
+        SensorSection.WATER -> R.string.security_section_water
+        SensorSection.OPENINGS -> R.string.security_section_openings
+        SensorSection.MOTION -> R.string.security_section_motion
+        SensorSection.OTHER -> R.string.security_section_other
+    },
+)

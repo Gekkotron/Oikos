@@ -101,4 +101,18 @@ class SecurityScreenTest {
         compose.onNodeWithText("Unavailable").assertExists()
         compose.onNodeWithText("—").assertExists()
     }
+
+    @Test
+    fun `sections head their tiles, and a tile shows name, room and state`() {
+        show(
+            ui(
+                listOf(sensor("smoke", "smoke", "Kitchen smoke"), sensor("garage_door", "garage_door", "Garage door", area = "garage")),
+                listOf(on("smoke", false), on("garage_door", true)),
+            ),
+        )
+        compose.onNodeWithText("Fire").assertExists()
+        compose.onNodeWithText("Openings").assertExists()
+        compose.onNodeWithText("Motion").assertDoesNotExist()
+        compose.onNode(hasText("Garage door") and hasText("Garage") and hasText("Open")).assertExists()
+    }
 }

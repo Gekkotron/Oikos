@@ -36,6 +36,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosColors
 import com.gekkotron.oikos.designsystem.OikosDimens
@@ -61,6 +62,8 @@ fun OikosCard(
     onLongClick: (() -> Unit)? = null,
     /** Read by TalkBack as the long-press action ("Customize", "Controls"). */
     onLongClickLabel: String? = null,
+    /** Dense lists (Security tiles) go lower; still a minimum, so large font scales grow the card. */
+    minHeight: Dp = OikosDimens.cardMinHeight,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = OikosTheme.colors
@@ -106,7 +109,7 @@ fun OikosCard(
                 .background(background)
                 .border(1.dp, cardBorderColor(c, on, accent, accentColor), shape)
                 .then(clicks)
-                .heightIn(min = OikosDimens.cardMinHeight)
+                .heightIn(min = minHeight)
                 .padding(OikosDimens.cardPadding),
             verticalArrangement = Arrangement.SpaceBetween,
             content = content,

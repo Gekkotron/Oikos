@@ -39,7 +39,9 @@ object SecurityUiBuilder {
             .sortedWith(compareBy<SensorRow>({ rank(it) }, { it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))
         val counts = sensors.filter { it.available && it.active == true }.groupingBy { it.group }.eachCount()
         val summary = SensorGroup.entries.mapNotNull { g -> counts[g]?.let { GroupCount(g, it) } }
-        return SecurityUi(link, panels, summary, sensors, loading = false)
+        val bySection = sensors.groupBy { SensorSection.of(it.group) }
+        val sections = SensorSection.entries.mapNotNull { sec -> bySection[sec]?.let { SectionUi(sec, it) } }
+        return SecurityUi(link, panels, summary, sensors, sections, loading = false)
     }
 
     /** 0 active danger, 1 active intrusion, 2 inactive or unknown, 3 unavailable. */
