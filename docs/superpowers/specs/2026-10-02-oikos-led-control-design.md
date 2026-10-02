@@ -114,7 +114,7 @@ A section header uses the existing sheet label style. Availability is handled as
 
 - A square `Canvas`: a sweep gradient over the hue circle, under a radial gradient from white at the centre to transparent at the rim, so the centre is saturation 0 and the rim saturation 1.
 - Hue 0° is at the top and increases clockwise; saturation is the distance from the centre over the radius, clamped to 1.
-- A ring marker sits at the current colour (`state.color`, or the centre when null). Dragging or tapping moves the marker locally; the command is sent once, on release.
+- A ring marker sits at the current colour (`state.color`, or the centre when null). A tap anywhere, or a drag that starts within 32 dp of the marker, moves it locally; the command is sent once, on release. A drag that starts elsewhere is left to the sheet's scroll, so scrolling across the wheel never picks a colour.
 - The geometry is a pure `WheelMath`: `hsAt(point, size): Hs` and `pointOf(hs, size): Offset`, unit-tested without Compose.
 - Semantics: content description "Color" (the app's English strings use US spelling) and a state description such as "Hue 210°, saturation 80 %". Adjusting the colour with TalkBack gestures is out of scope.
 - Size: the sheet width minus padding, capped at 280 dp.

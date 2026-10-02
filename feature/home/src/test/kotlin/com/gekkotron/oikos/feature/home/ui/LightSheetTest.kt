@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.ThemeChoice
@@ -74,7 +75,7 @@ class LightSheetTest {
         compose.onNodeWithText("Effect").assertExists()
         compose.onNodeWithText("Fire 1d").assertIsSelected()
         compose.onNodeWithText("Rainbow").assertIsNotSelected().performClick()
-        assertEquals("strip" to Command.TurnOn(effect = "rainbow"), sends.last())
+        assertEquals(listOf<Pair<String, Command>>("strip" to Command.TurnOn(effect = "rainbow")), sends.toList())
     }
 
     @Test
@@ -111,5 +112,28 @@ class LightSheetTest {
         show()
         compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
         compose.onNodeWithContentDescription("Color").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a swipe that starts away from the marker scrolls the sheet instead of picking a color`() {
+        show()
+        compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
+        // The marker sits lower-left (hue 208°); start at the bottom centre and swipe up across the wheel.
+        compose.onNodeWithContentDescription("Color").performScrollTo().performTouchInput {
+            swipe(Offset(width / 2f, height - 2f), Offset(width / 2f, 2f), durationMillis = 300)
+        }
+        assertTrue(sends.none { (it.second as? Command.TurnOn)?.color != null }, "$sends")
+    }
+
+    @Test
+    fun `dragging the marker picks a color on release`() {
+        show()
+        compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Color").performScrollTo().performTouchInput {
+            val (mx, my) = WheelMath.pointOf(Hs(208.0, 0.78), width.toFloat())
+            swipe(Offset(mx, my), Offset(width / 2f, 2f), durationMillis = 300)
+        }
+        val color = sends.mapNotNull { (it.second as? Command.TurnOn)?.color }.single()
+        assertTrue(color.hue < 5.0 || color.hue > 355.0, "hue ${color.hue}")
     }
 }
