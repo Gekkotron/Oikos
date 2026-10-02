@@ -80,6 +80,10 @@ class DemoHouse(private val random: Random = Random(7)) {
         return DemoMessage(echo.stateTopic, merged.toString())
     }
 
+    /** The house's current state document for [topic], or null when it has none. Delayed echoes publish this, never a snapshot. */
+    @Synchronized
+    fun current(topic: String): DemoMessage? = docs[topic]?.let { DemoMessage(topic, it.toString()) }
+
     /** One step of live sensor noise: solar and house drift, grid follows, outdoor temperature wobbles. */
     @Synchronized
     fun tick(): List<DemoMessage> {

@@ -60,7 +60,8 @@ class DemoBroker(
         val echo = house.onCommand(topic, payload.decodeToString()) ?: return
         scope.launch {
             delay(echoDelay)
-            receive(echo.topic, echo.payload.encodeToByteArray(), retain = true)
+            val latest = house.current(echo.topic) ?: echo
+            receive(latest.topic, latest.payload.encodeToByteArray(), retain = true)
         }
     }
 

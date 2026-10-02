@@ -27,6 +27,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -129,6 +130,19 @@ class DemoBrokerTest {
         assertEquals(StateValue.Numeric(58.0), h.value("demo_water_heater_target"))
         assertEquals(StateValue.Text("turbo"), h.value("demo_vacuum_mode"))
         assertEquals(StateValue.Alarm(AlarmState.ARMING), h.value("demo_alarm"))
+    }
+
+    @Test
+    fun `a tick inside the echo window is not overwritten by the stale echo`() = runTest {
+        val h = start()
+        h.broker.startTicking(interval = 100.milliseconds)
+        h.source.send("demo_alarm", Command.Arm(AlarmMode.AWAY))
+        advanceTimeBy(150)
+        runCurrent()
+        assertEquals(StateValue.Alarm(AlarmState.ARMED_AWAY), h.value("demo_alarm"))
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(StateValue.Alarm(AlarmState.ARMED_AWAY), h.value("demo_alarm"))
     }
 
     @Test
