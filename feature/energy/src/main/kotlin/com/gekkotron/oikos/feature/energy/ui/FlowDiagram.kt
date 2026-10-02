@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -56,6 +58,9 @@ import java.util.Locale
 private val NODE = 44.dp
 private val DASH = 6.dp
 
+/** Space between an edge's end and a bubble. */
+private val EDGE_GAP = 3.dp
+
 /** Bubble width: the circle plus room for its value and a short consumer name. */
 private val BUBBLE = 88.dp
 
@@ -73,6 +78,8 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
             while (true) withInfiniteAnimationFrameNanos { seconds.doubleValue = (it - start) / 1e9 }
         }
     }
+    // The solar bubble's height with its labels, in px; 0 until measured.
+    val solarHeight = remember { mutableIntStateOf(0) }
     val colors = OikosTheme.colors
     BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(FlowLayout.ASPECT)) {
         val w = maxWidth
@@ -82,13 +89,19 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
                 val house = positions["house"] ?: return@Canvas
                 val hub = Offset(house.first * size.width, house.second * size.height)
                 val dash = DASH.toPx()
+                val clearance = (NODE / 2 + EDGE_GAP).toPx()
                 state.diagram.filter { it.kind != NodeKind.HOUSE && it.kind != NodeKind.WATER }.forEach { n ->
                     val p = positions[n.id] ?: return@forEach
                     val at = Offset(p.first * size.width, p.second * size.height)
+                    // Solar sits above the house: its edge starts under its value and name, not through them.
+                    val below = if (n.kind != NodeKind.SOLAR) null else {
+                        val bubble = solarHeight.intValue.takeIf { it > 0 }?.toFloat() ?: NODE.toPx()
+                        at.y - NODE.toPx() / 2 + bubble + EDGE_GAP.toPx()
+                    }
+                    val edge = FlowLayout.edge(at, hub, clearance, below)
                     // Drawn in the direction energy travels, so the dash moves with it.
-                    val (from, to) = if (n.flow == Flow.OUT) hub to at else at to hub
-                    val control = Offset((from.x + to.x) / 2, if (n.kind == NodeKind.SOLAR) (from.y + to.y) / 2 else from.y)
-                    val path = Path().apply { moveTo(from.x, from.y); quadraticTo(control.x, control.y, to.x, to.y) }
+                    val e = if (n.flow == Flow.OUT) edge.reversed() else edge
+                    val path = Path().apply { moveTo(e.start.x, e.start.y); cubicTo(e.c1.x, e.c1.y, e.c2.x, e.c2.y, e.end.x, e.end.y) }
                     val idle = n.flow == Flow.IDLE
                     val offset = if (animate && !idle) -FlowLayout.dashCycle(seconds.doubleValue, FlowLayout.speed(n.value)) * 2 * dash else 0f
                     drawPath(
@@ -104,7 +117,8 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
             state.diagram.filter { it.kind != NodeKind.MORE }.forEach { n ->
                 val p = positions[n.id] ?: return@forEach
                 // Touch only: the cards below are the accessible way into the same details (the diagram is one sentence).
-                NodeBubble(n, locale, Modifier.placeBubble(p, w, h).clickable { onNode(n) })
+                val measure = if (n.kind == NodeKind.SOLAR) Modifier.onSizeChanged { solarHeight.intValue = it.height } else Modifier
+                NodeBubble(n, locale, Modifier.placeBubble(p, w, h).then(measure).clickable { onNode(n) })
             }
         }
         state.diagram.firstOrNull { it.kind == NodeKind.MORE }?.let { more ->

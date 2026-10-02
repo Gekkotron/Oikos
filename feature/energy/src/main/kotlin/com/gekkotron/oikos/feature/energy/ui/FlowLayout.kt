@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.energy.ui
 
+import androidx.compose.ui.geometry.Offset
 import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import com.gekkotron.oikos.feature.energy.presentation.Flow
 import com.gekkotron.oikos.feature.energy.presentation.NodeKind
@@ -37,6 +38,30 @@ internal object FlowLayout {
             }
             arc.forEachIndexed { i, n -> slots.getOrNull(i)?.let { put(n.id, it) } }
         }
+    }
+
+    /** A cubic edge, node → house; [reversed] for energy flowing out, so its shape never depends on the direction. */
+    data class Edge(val start: Offset, val c1: Offset, val c2: Offset, val end: Offset) {
+        fun reversed() = Edge(end, c2, c1, start)
+    }
+
+    /**
+     * The edge between a node and the house [hub], kept [clearance] px from both circle centres so it never
+     * runs through or along a bubble. A side node joins the house side to side at circle-centre height, clear of
+     * the labels under each circle; a node above (solar) passes [below], the bottom of its labels, instead.
+     */
+    fun edge(node: Offset, hub: Offset, clearance: Float, below: Float? = null): Edge {
+        if (below != null) {
+            val start = Offset(node.x, below)
+            val end = Offset(hub.x, hub.y - clearance)
+            val midY = (start.y + end.y) / 2
+            return Edge(start, Offset(start.x, midY), Offset(end.x, midY), end)
+        }
+        val side = if (node.x < hub.x) 1f else -1f
+        val start = Offset(node.x + side * clearance, node.y)
+        val end = Offset(hub.x - side * clearance, hub.y)
+        val midX = (start.x + end.x) / 2
+        return Edge(start, Offset(midX, start.y), Offset(midX, end.y), end)
     }
 
     /** 0 at 10 W, 1 at 10 kW and above, on a log scale. */
