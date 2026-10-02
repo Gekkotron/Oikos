@@ -39,6 +39,7 @@
     <string name="mode_dry">Sec</string>
     <string name="mode_fan_only">Ventilation</string>
     <string name="sheet_power">Alimentation</string>
+    <string name="sheet_effect">Effet</string>
     <string name="sheet_brightness">Luminosité</string>
     <string name="sheet_open">Ouvrir</string>
     <string name="sheet_stop">Stop</string>

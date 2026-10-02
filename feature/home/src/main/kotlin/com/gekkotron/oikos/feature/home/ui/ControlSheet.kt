@@ -3,6 +3,8 @@ package com.gekkotron.oikos.feature.home.ui
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -47,6 +49,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardFormatter
 import com.gekkotron.oikos.feature.home.presentation.CardUi
+import com.gekkotron.oikos.feature.home.presentation.EffectNames
 import com.gekkotron.oikos.feature.home.presentation.StepMath
 import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.Command
@@ -56,7 +59,8 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ControlSheet(card: CardUi, onSend: (Command) -> Unit, onCustomize: () -> Unit, onDismiss: () -> Unit) {
+internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCustomize: () -> Unit, onDismiss: () -> Unit) {
+    val send: (Command) -> Unit = { onSend(card.id, it) }
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -67,11 +71,11 @@ internal fun ControlSheet(card: CardUi, onSend: (Command) -> Unit, onCustomize: 
             Text(cardValueText(card.value), style = OikosTheme.type.body)
             when (card.kind) {
                 Kind.LIGHT -> LightControls(card, onSend)
-                Kind.COVER -> CoverControls(card, onSend)
-                Kind.CLIMATE -> ClimateControls(card, onSend)
-                Kind.NUMBER -> NumberControls(card, onSend)
-                Kind.SELECT -> SelectControls(card, onSend)
-                Kind.ALARM_PANEL -> AlarmControls(card, onSend)
+                Kind.COVER -> CoverControls(card, send)
+                Kind.CLIMATE -> ClimateControls(card, send)
+                Kind.NUMBER -> NumberControls(card, send)
+                Kind.SELECT -> SelectControls(card, send)
+                Kind.ALARM_PANEL -> AlarmControls(card, send)
                 else -> Unit
             }
             TextButton(onClick = onCustomize, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_customize)) }
@@ -79,12 +83,14 @@ internal fun ControlSheet(card: CardUi, onSend: (Command) -> Unit, onCustomize: 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LightControls(card: CardUi, onSend: (Command) -> Unit) {
+private fun LightControls(card: CardUi, onSend: (String, Command) -> Unit) {
     val light = card.state as? StateValue.Light
+    val send: (Command) -> Unit = { onSend(card.id, it) }
     Row(Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.sheet_power), Modifier.weight(1f))
-        Switch(checked = light?.on == true, onCheckedChange = { onSend(if (it) Command.TurnOn() else Command.TurnOff) })
+        Switch(checked = light?.on == true, onCheckedChange = { send(if (it) Command.TurnOn() else Command.TurnOff) })
     }
     if (card.capabilities.brightness) {
         var value by remember(light?.brightness) { mutableFloatStateOf((light?.brightness ?: 255).toFloat()) }
@@ -93,8 +99,28 @@ private fun LightControls(card: CardUi, onSend: (Command) -> Unit) {
             value = value,
             onValueChange = { value = it },
             valueRange = 1f..255f,
-            onValueChangeFinished = { onSend(Command.TurnOn(brightness = value.roundToInt())) },
+            onValueChangeFinished = { send(Command.TurnOn(brightness = value.roundToInt())) },
         )
+    }
+    if (card.capabilities.effects.isNotEmpty()) {
+        Text(stringResource(R.string.sheet_effect))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (effect in card.capabilities.effects) {
+                FilterChip(
+                    selected = light?.effect == effect,
+                    onClick = { send(Command.TurnOn(effect = effect)) },
+                    label = { Text(EffectNames.label(effect)) },
+                )
+            }
+        }
+    }
+    for (companion in card.companions) {
+        Text(companion.name)
+        when (companion.kind) {
+            Kind.NUMBER -> NumberControls(companion) { onSend(companion.id, it) }
+            Kind.SELECT -> SelectControls(companion) { onSend(companion.id, it) }
+            else -> Unit
+        }
     }
 }
 

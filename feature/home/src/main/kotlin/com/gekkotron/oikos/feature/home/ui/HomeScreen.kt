@@ -182,7 +182,7 @@ fun HomeScreen(
     if (sheetCard != null) {
         ControlSheet(
             sheetCard,
-            onSend = { onSend(sheetCard.id, it) },
+            onSend = onSend,
             onCustomize = { sheetId = null; customizeId = sheetCard.id },
             onDismiss = { sheetId = null },
         )

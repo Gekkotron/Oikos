@@ -39,6 +39,7 @@
     <string name="mode_dry">Dry</string>
     <string name="mode_fan_only">Fan</string>
     <string name="sheet_power">Power</string>
+    <string name="sheet_effect">Effect</string>
     <string name="sheet_brightness">Brightness</string>
     <string name="sheet_open">Open</string>
     <string name="sheet_stop">Stop</string>
