@@ -7,8 +7,8 @@ data class Rgb(val r: Int, val g: Int, val b: Int) {
 }
 
 sealed interface Command {
-    /** [brightness] is 0..255. */
-    data class TurnOn(val brightness: Int? = null, val color: Rgb? = null) : Command {
+    /** [brightness] is 0..255; [color] carries no brightness; [effect] is one of the light's `effects`. */
+    data class TurnOn(val brightness: Int? = null, val color: Hs? = null, val effect: String? = null) : Command {
         init {
             require(brightness == null || brightness in 0..255) { "brightness must be 0..255" }
         }
