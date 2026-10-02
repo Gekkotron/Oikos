@@ -36,6 +36,7 @@ object ColorMath {
         if (xy.y <= 0.0) return Hs(0.0, 0.0)
         val bigX = xy.x / xy.y
         val bigZ = (1 - xy.x - xy.y) / xy.y
+        if (!bigX.isFinite() || !bigZ.isFinite()) return Hs(0.0, 0.0)
         val r = (3.2406 * bigX - 1.5372 - 0.4986 * bigZ).coerceAtLeast(0.0)
         val g = (-0.9689 * bigX + 1.8758 + 0.0415 * bigZ).coerceAtLeast(0.0)
         val b = (0.0557 * bigX - 0.2040 + 1.0570 * bigZ).coerceAtLeast(0.0)
@@ -64,7 +65,7 @@ object ColorMath {
     private fun unitToHs(r: Double, g: Double, b: Double): Hs {
         val max = maxOf(r, g, b)
         val d = max - minOf(r, g, b)
-        if (max <= 0.0 || d <= 0.0) return Hs(0.0, 0.0)
+        if (!max.isFinite() || !d.isFinite() || max <= 0.0 || d <= 0.0) return Hs(0.0, 0.0)
         val h = when (max) {
             r -> 60 * (((g - b) / d) % 6)
             g -> 60 * ((b - r) / d + 2)

@@ -181,4 +181,11 @@ class LightMapperTest {
         val templated = bindings("light", """{"command_topic":"l/set","effect_command_topic":"l/fx/set","effect_command_template":"FX:{{ value }}"}""")
         assertEquals(publishes("l/set" to "ON", "l/fx/set" to "FX:rainbow"), LightMapper.encode(templated, Command.TurnOn(effect = "rainbow"), Unknown))
     }
+
+    @Test
+    fun `non-finite colour numbers are ignored, not thrown`() {
+        val prev = Light(true, 200, "solid", Hs(10.0, 1.0))
+        assertEquals(Decoded.Ignored, LightMapper.decode(zigled, "z/leds", """{"color":{"h":"Infinity","s":50}}""", Unknown))
+        assertEquals(Decoded.State(prev.copy(on = false)), LightMapper.decode(zigled, "z/leds", """{"state":"OFF","color":{"x":"NaN","y":0.3}}""", prev))
+    }
 }

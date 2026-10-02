@@ -31,7 +31,7 @@ object LightMapper : KindMapper {
 
     /** `{x,y}`, then `{h|hue, s|saturation}` (s in 0..100), then `{r,g,b}`; null when none is complete. */
     private fun colorOf(o: JsonObject): Hs? {
-        fun num(vararg keys: String) = keys.firstNotNullOfOrNull { (o[it] as? JsonPrimitive)?.doubleOrNull }
+        fun num(vararg keys: String) = keys.firstNotNullOfOrNull { (o[it] as? JsonPrimitive)?.doubleOrNull?.takeIf(Double::isFinite) }
         val x = num("x")
         val y = num("y")
         if (x != null && y != null) return ColorMath.xyToHs(ColorMath.Xy(x, y))

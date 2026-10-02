@@ -1,6 +1,10 @@
 package com.gekkotron.oikos.feature.home.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.down
+import androidx.compose.ui.test.moveTo
+import androidx.compose.ui.test.up
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
@@ -50,7 +54,7 @@ class LightSheetTest {
             capabilities = Capabilities(brightness = true, colorModes = setOf("xy"), effects = listOf("solid", "fire_1d", "rainbow")),
         ),
         testEntity("speed", Kind.NUMBER, "Effect speed", deviceId = "zl", partOf = "strip", capabilities = Capabilities(min = 0.0, max = 255.0, step = 1.0)),
-        testEntity("lamp", Kind.LIGHT, "Lamp", capabilities = Capabilities(brightness = true)),
+        testEntity("lamp", Kind.LIGHT, "Lamp", capabilities = Capabilities(brightness = true, colorModes = setOf("color_temp"))),
     ).associateBy { it.uniqueId }
     private val states = mapOf(
         "strip" to EntityState("strip", StateValue.Light(true, 120, "fire_1d", Hs(208.0, 0.78))),
@@ -135,5 +139,32 @@ class LightSheetTest {
         }
         val color = sends.mapNotNull { (it.second as? Command.TurnOn)?.color }.single()
         assertTrue(color.hue < 5.0 || color.hue > 355.0, "hue ${color.hue}")
+    }
+
+    @Test
+    fun `a colour echo arriving mid-drag does not replace the dragged colour`() {
+        val strip = mutableStateOf(states.getValue("strip"))
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(entities, states + ("strip" to strip.value), emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
+                    now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
+        val wheel = compose.onNodeWithContentDescription("Color").performScrollTo()
+        wheel.performTouchInput {
+            val (mx, my) = WheelMath.pointOf(Hs(208.0, 0.78), width.toFloat())
+            down(Offset(mx, my))
+            moveTo(Offset(mx, my - 40f))
+            moveTo(Offset(width / 2f, 2f))
+        }
+        strip.value = EntityState("strip", StateValue.Light(true, 120, "fire_1d", Hs(120.0, 0.5)))
+        compose.waitForIdle()
+        wheel.performTouchInput { up() }
+        val color = sends.mapNotNull { (it.second as? Command.TurnOn)?.color }.single()
+        assertTrue(color.hue < 5.0 || color.hue > 355.0, "sent ${color.hue}, expected the dragged red")
     }
 }

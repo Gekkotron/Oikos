@@ -110,7 +110,7 @@ object HomeUiBuilder {
 
     private fun hasLightSheet(entity: Entity, companions: List<CardUi>): Boolean {
         val caps = entity.capabilities
-        return caps.brightness || caps.effects.isNotEmpty() || caps.colorModes.isNotEmpty() || companions.isNotEmpty()
+        return caps.brightness || caps.effects.isNotEmpty() || caps.hasColor || companions.isNotEmpty()
     }
 
     private fun card(

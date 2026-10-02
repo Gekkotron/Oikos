@@ -302,4 +302,10 @@ class HomeUiBuilderTest {
         assertTrue(byId.getValue("rgb").hasSheet)
         assertFalse(byId.getValue("plain").hasSheet)
     }
+
+    @Test
+    fun `colour temperature alone is not a colour`() {
+        val all = listOf(testEntity("ambiance", Kind.LIGHT, "Ambiance", capabilities = Capabilities(colorModes = setOf("color_temp")))).associateBy { it.uniqueId }
+        assertFalse(HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US).cards.single().hasSheet)
+    }
 }

@@ -54,4 +54,9 @@ class ColorMathTest {
     fun `degenerate xy falls back to white`() {
         assertEquals(Hs(0.0, 0.0), ColorMath.xyToHs(ColorMath.Xy(0.3, 0.0)))
     }
+
+    @Test
+    fun `a vanishing y falls back to white instead of NaN`() {
+        assertEquals(Hs(0.0, 0.0), ColorMath.xyToHs(ColorMath.Xy(0.3, 1e-320)))
+    }
 }

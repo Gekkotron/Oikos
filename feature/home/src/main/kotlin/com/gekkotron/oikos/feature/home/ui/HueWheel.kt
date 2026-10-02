@@ -45,7 +45,9 @@ private val SWEEP = List(13) { i -> Color.hsv(((i * 30 + 90) % 360).toFloat(), 1
 @Composable
 internal fun HueWheel(color: Hs?, onPick: (Hs) -> Unit, modifier: Modifier = Modifier) {
     var picked by remember { mutableStateOf(color ?: Hs(0.0, 0.0)) }
-    LaunchedEffect(color) { if (color != null) picked = color }
+    // While a drag is in progress the finger owns the marker: a state echo must not move it, nor be what is sent.
+    var dragging by remember { mutableStateOf(false) }
+    LaunchedEffect(color) { if (color != null && !dragging) picked = color }
     val pick by rememberUpdatedState(onPick)
     val description = stringResource(R.string.sheet_color)
     val state = stringResource(R.string.sheet_color_state, picked.hue.roundToInt() % 360, (picked.saturation * 100).roundToInt())
@@ -67,11 +69,18 @@ internal fun HueWheel(color: Hs?, onPick: (Hs) -> Unit, modifier: Modifier = Mod
                         val (mx, my) = WheelMath.pointOf(picked, size.width.toFloat())
                         if ((down.position - Offset(mx, my)).getDistance() > MARKER_GRAB.toPx()) return@awaitEachGesture
                         down.consume()
-                        val finished = drag(down.id) { change ->
-                            picked = WheelMath.hsAt(change.position.x, change.position.y, size.width.toFloat())
-                            change.consume()
+                        dragging = true
+                        var last = picked
+                        val finished = try {
+                            drag(down.id) { change ->
+                                last = WheelMath.hsAt(change.position.x, change.position.y, size.width.toFloat())
+                                picked = last
+                                change.consume()
+                            }
+                        } finally {
+                            dragging = false
                         }
-                        if (finished) pick(picked)
+                        if (finished) pick(last)
                     }
                 },
         ) {

@@ -50,6 +50,7 @@ import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardFormatter
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.EffectNames
+import com.gekkotron.oikos.feature.home.presentation.hasColor
 import com.gekkotron.oikos.feature.home.presentation.StepMath
 import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.Command
@@ -122,7 +123,7 @@ private fun LightControls(card: CardUi, onSend: (String, Command) -> Unit) {
             else -> Unit
         }
     }
-    if (card.capabilities.colorModes.isNotEmpty()) {
+    if (card.capabilities.hasColor) {
         Text(stringResource(R.string.sheet_color))
         HueWheel(light?.color, onPick = { send(Command.TurnOn(color = it)) })
     }
