@@ -42,7 +42,9 @@ class DemoHouse(private val random: Random = Random(7)) {
         sensor("demo_solar_power", "Solar production", null, "Garage", ENERGY, "solar", "power", "W")
         sensor("demo_grid_power", "Grid", null, "Garage", ENERGY, "grid", "power", "W")
         sensor("demo_house_power", "House consumption", null, "Garage", ENERGY, "house", "power", "W")
-        doc(ENERGY, obj("solar" to 2140, "grid" to -380, "house" to 1760))
+        sensor("demo_water_heater_power", "Water heater", null, "Garage", ENERGY, "water_heater", "power", "W")
+        sensor("demo_ac_power", "Air conditioner power", null, "Living room", ENERGY, "ac", "power", "W")
+        doc(ENERGY, obj("solar" to 2140, "grid" to -380, "house" to 1760, "water_heater" to 900, "ac" to 350))
         binarySensor("demo_front_door", "Front door", "Hallway", "demo/hallway/door", "door", "contact", onValue = false, initial = true)
         binarySensor("demo_hallway_motion", "Hallway motion", "Hallway", "demo/hallway/motion", "motion", "occupancy", onValue = true, initial = false)
         alarm("demo_alarm", "Alarm", "Hallway", "demo/alarm")
@@ -54,6 +56,8 @@ class DemoHouse(private val random: Random = Random(7)) {
         override("demo_solar_power", """{"energyRole":"solar"}""")
         override("demo_grid_power", """{"energyRole":"grid"}""")
         override("demo_house_power", """{"energyRole":"house"}""")
+        override("demo_water_heater_power", """{"energyRole":"consumer"}""")
+        override("demo_ac_power", """{"energyRole":"consumer"}""")
     }
 
     /** Configs first, then overrides and areas, then state: the order a real broker replays retained messages. */
@@ -77,7 +81,12 @@ class DemoHouse(private val random: Random = Random(7)) {
         val energy = docs.getValue(ENERGY)
         val solar = (energy.number("solar") + random.nextInt(-150, 151)).coerceIn(0.0, 4200.0)
         val house = (energy.number("house") + random.nextInt(-120, 121)).coerceIn(300.0, 3500.0)
-        docs[ENERGY] = obj("solar" to solar.roundToInt(), "grid" to (house - solar).roundToInt(), "house" to house.roundToInt())
+        val heater = (energy.number("water_heater") + random.nextInt(-60, 61)).coerceIn(0.0, 1500.0)
+        val ac = (energy.number("ac") + random.nextInt(-40, 41)).coerceIn(0.0, 800.0)
+        docs[ENERGY] = obj(
+            "solar" to solar.roundToInt(), "grid" to (house - solar).roundToInt(), "house" to house.roundToInt(),
+            "water_heater" to heater.roundToInt(), "ac" to ac.roundToInt(),
+        )
         val outdoor = docs.getValue(OUTDOOR).number("temperature") + random.nextInt(-1, 2) / 10.0
         docs[OUTDOOR] = obj("temperature" to (outdoor * 10).roundToInt() / 10.0)
         return listOf(DemoMessage(ENERGY, docs.getValue(ENERGY).toString()), DemoMessage(OUTDOOR, docs.getValue(OUTDOOR).toString()))

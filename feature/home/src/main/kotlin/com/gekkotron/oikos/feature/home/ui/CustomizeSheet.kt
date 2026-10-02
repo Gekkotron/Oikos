@@ -42,6 +42,8 @@ import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.oikos.feature.home.presentation.OverrideDraft
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.EnergyRole
+import com.gekkotron.oikos.model.PowerUnits
+import com.gekkotron.oikos.designsystem.R as DsR
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
 
@@ -62,10 +64,11 @@ internal fun CustomizeSheet(
     var order by rememberSaveable(card.id) { mutableStateOf(start.order) }
     var cardStyle by rememberSaveable(card.id) { mutableStateOf(start.cardStyle) }
     var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
+    var energyInvert by rememberSaveable(card.id) { mutableStateOf(start.energyInvert) }
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -119,6 +122,13 @@ internal fun CustomizeSheet(
                         FilterChip(selected = energyRole == role, onClick = { energyRole = role }, label = { Text(energyLabel(role)) })
                     }
                 }
+                val role = energyRole
+                if (role != null && role.power && PowerUnits.factor(card.unit) == null) {
+                    Text(stringResource(R.string.customize_energy_unit_hint), style = OikosTheme.type.label, color = OikosTheme.colors.warning)
+                }
+                if (role?.signed == true) {
+                    SwitchRow(stringResource(R.string.customize_energy_invert), energyInvert) { energyInvert = it }
+                }
             }
             Button(
                 onClick = { onSave(newRooms, draft.applyTo(card)); onDismiss() },
@@ -151,10 +161,12 @@ private fun ChipRow(content: @Composable () -> Unit) {
 @Composable
 private fun energyLabel(role: EnergyRole): String = stringResource(
     when (role) {
-        EnergyRole.SOLAR -> R.string.energy_solar
-        EnergyRole.GRID -> R.string.energy_grid
-        EnergyRole.HOUSE -> R.string.energy_house
-        EnergyRole.WATER_HEATER -> R.string.energy_water_heater
-        EnergyRole.WATER -> R.string.energy_water
+        EnergyRole.SOLAR -> DsR.string.energy_solar
+        EnergyRole.GRID -> DsR.string.energy_grid
+        EnergyRole.GRID_EXPORT -> DsR.string.energy_grid_export
+        EnergyRole.BATTERY -> DsR.string.energy_battery
+        EnergyRole.HOUSE -> DsR.string.energy_house
+        EnergyRole.CONSUMER -> DsR.string.energy_consumer
+        EnergyRole.WATER -> DsR.string.energy_water
     },
 )

@@ -6,12 +6,6 @@
     <string name="chip_all">All</string>
     <string name="chip_favorites">Favourites</string>
     <string name="area_unassigned">Unassigned</string>
-    <string name="pill_connecting">Connecting…</string>
-    <string name="pill_direct">Wi-Fi direct</string>
-    <string name="pill_gateway">Gateway</string>
-    <string name="pill_demo">Demo</string>
-    <string name="pill_reconnecting">Reconnecting…</string>
-    <string name="pill_offline">Offline</string>
     <string name="card_description">%1$s, %2$s, %3$s</string>
     <string name="value_none">—</string>
     <string name="value_on">On</string>
@@ -63,7 +57,6 @@
     <string name="home_not_confirmed">Not confirmed</string>
     <string name="home_retry">Retry</string>
     <string name="home_rejected">Command refused: %1$s</string>
-    <string name="link_details">Connection details</string>
     <string name="link_direct">Connected directly to your broker.</string>
     <string name="link_gateway">Connected through the gateway.</string>
     <string name="link_demo">You\'re exploring the demo house. Nothing leaves this phone.</string>
@@ -104,11 +97,8 @@
     <string name="customize_style_hero">Header temperature</string>
     <string name="customize_energy">Energy role</string>
     <string name="customize_energy_none">None</string>
-    <string name="energy_solar">Solar</string>
-    <string name="energy_grid">Grid</string>
-    <string name="energy_house">House</string>
-    <string name="energy_water_heater">Water heater</string>
-    <string name="energy_water">Water</string>
+    <string name="customize_energy_invert">Invert sign</string>
+    <string name="customize_energy_unit_hint">Needs a power unit (W, kW)</string>
     <string name="customize_save">Save</string>
     <string name="customize_reset">Reset to defaults</string>
     <string name="room_none">No room</string>

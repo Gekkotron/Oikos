@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="energy_title">Énergie</string>
+    <string name="energy_live">En direct</string>
+    <string name="energy_live_self">En direct · autoconsommation %1$d %%</string>
+    <string name="energy_empty">Appuyez longuement sur un capteur de puissance dans Accueil et choisissez un rôle énergie.</string>
+    <string name="energy_go_home">Aller à l\'accueil</string>
+    <string name="energy_check_sign">Vérifiez le signe du réseau ou de la batterie</string>
+    <string name="energy_more">+%1$d</string>
+    <string name="energy_more_action">Afficher les %1$d consommateurs</string>
+    <string name="energy_consumers_title">Tous les consommateurs</string>
+    <string name="energy_unknown">—</string>
+    <string name="energy_unavailable">Indisponible</string>
+    <string name="energy_stale">Dernière valeur connue</string>
+    <string name="energy_spoken_kw">%1$s kilowatts</string>
+    <string name="energy_spoken_w">%1$s watts</string>
+    <string name="energy_cd_solar">Solaire %1$s vers la maison.</string>
+    <string name="energy_cd_house">La maison consomme %1$s.</string>
+    <string name="energy_cd_grid_in">Import de %1$s depuis le réseau.</string>
+    <string name="energy_cd_grid_out">Export de %1$s vers le réseau.</string>
+    <string name="energy_cd_battery_in">La batterie fournit %1$s.</string>
+    <string name="energy_cd_battery_out">La batterie se charge à %1$s.</string>
+    <string name="energy_cd_consumer">%1$s %2$s.</string>
+    <string name="energy_cd_water">Eau %1$s.</string>
+</resources>

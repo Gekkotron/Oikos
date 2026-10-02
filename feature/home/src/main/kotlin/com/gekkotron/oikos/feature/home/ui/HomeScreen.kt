@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.ChipItem
+import com.gekkotron.oikos.designsystem.components.LinkPill
 import com.gekkotron.oikos.designsystem.components.RoomChips
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
@@ -69,6 +70,7 @@ fun HomeRoute(
     onAssignRooms: () -> Unit = {},
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
+    windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -81,6 +83,7 @@ fun HomeRoute(
         onAssignRooms = onAssignRooms,
         route = route,
         onRouteChange = onRouteChange,
+        windowInsets = windowInsets,
     )
 }
 

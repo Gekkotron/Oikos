@@ -54,7 +54,7 @@ Rules:
 - **Older apps.** `OikosJson` already sets `coerceInputValues`. An older app that reads `consumer`, `battery` or `grid_export` treats the entity as having no role and does not crash.
 - **Several entities on one summed role.** Two `solar` inverters, for example, are added up into one node labelled with the role name ("Solar"), not with an entity name.
 - **Eligible entities** are `Kind.SENSOR` with `StateValue.Numeric`.
-  - **Power units** come from `Entity.unit`: `W` × 1, `kW` × 1000, `MW` × 1 000 000, case-insensitive.
+  - **Power units** come from `Entity.unit`: `W` × 1 and `kW` × 1000 (case-insensitive), `mW` × 0.001 and `MW` × 1 000 000 (exact case, since they differ only by case).
   - **Other units** make a power role count as **unknown** (§3), and the Customize sheet shows "Needs a power unit (W, kW)".
   - **`water`** accepts any unit and shows it as is.
 - **Consumer labels.** A consumer node shows the entity's effective name (override name, then entity name) and a generic duotone "plug" glyph.
@@ -63,13 +63,13 @@ Rules:
 
 Notation: all values are in watts, after inversion and unit conversion. **S** is solar, **G** is grid (G = Σgrid − Σgrid_export), **B** is battery and **H** is house.
 
-- **Inputs.** A role with no entity contributes nothing, and its node is hidden. A role whose entities include one that is unknown, unsupported, unavailable or has a bad unit is **unknown**. A stale value still counts as known (it is dimmed, §5).
+- **Inputs.** A role with no entity contributes nothing, and its node is hidden. A role whose entities include one that is unknown, unsupported, unavailable or has a bad unit is **unknown**. A derived house is never shown as unavailable: an unavailable input (an inverter offline at night) only makes it unknown ("—"). A stale value still counts as known (it is dimmed, §5).
 - **House.**
   - If any `house` entity exists, H = Σhouse.
   - Otherwise, **H = S + G + B**, computed only when every present input among S, G and B is known; else H is unknown.
   - If at least one of S, G or B is present, the house node is shown. If none is, and there is no `house` entity, the house node still shows if consumers exist, with value "—"; otherwise the screen is empty (§5).
 - **Negative derived house.** A derived H < 0 (a sign mistake, for example) is shown as 0, with a one-line hint "Check the grid or battery sign".
-- **Self-consumption** = (S − export) / S, where export = max(0, −G). It appears in the subtitle only when S ≥ 50 W and both S and G are known. If there is no grid entity, export is 0.
+- **Self-consumption** = (S − export) / S, where export = max(0, −G), rounded down to a whole percent. It appears in the subtitle only when S ≥ 50 W and both S and G are known. If there is no grid entity, export is 0.
   - Example (this house): S = 3200, G = −400 → H = 2800, self-consumption (3200 − 400) / 3200 = 87 %.
 - **Consumers** are not used to compute H. If Σconsumers > H, nothing is corrected; each consumer simply shows its own value.
 
@@ -102,7 +102,7 @@ Water has no edge. Its node is drawn with a dashed outline.
 - With 4 or more, the arc shows the 2 largest, then a **"+N" node** whose value is the sum of the rest. Tapping it opens `ConsumersSheet`, which lists every consumer with its value.
 - **Order:** `UiOverride.order` first when set, then power from high to low. The power order is recomputed **at most every 5 s**, so nodes do not jump around with every message. Values update live; only the order is throttled.
 
-**Value labels** use the existing Home formatting: kW with one decimal at ≥ 1000 W, otherwise W. The grid label adds ↙ for import and ↗ for export.
+**Value labels** use the locale's number format: kW with one decimal at ≥ 1000 W, otherwise W. The grid label adds ↙ for import and ↗ for export.
 
 ## 5. Screen, states and navigation
 
@@ -144,8 +144,8 @@ New module **`:feature:energy`**, laid out like `:feature:home`:
 
 | File | Role |
 |---|---|
-| `presentation/EnergyModels.kt` | `EnergyUiState(nodes, edges, selfConsumption, hint, empty, link)`, `EnergyNode(id, role, label, watts, display, status)`, `EnergyEdge(from, to, watts, direction)` |
-| `presentation/EnergyFlowBuilder.kt` | pure object: `build(entities, states, link, locale, now) → EnergyUiState`; §2–§4 maths, the overflow fold and the throttled order (the last order and its time are passed in and returned) |
+| `presentation/EnergyModels.kt` | `EnergyUiState(loading, empty, diagram, cards, consumers, selfConsumption, hint, link, order)`, `EnergyNode(id, kind, name, value, unit, flow, status, count)`, `ConsumerOrder(ids, atMillis)`; edges are implied: every drawn node except house and water has one edge to the house, in the direction of its `flow` |
+| `presentation/EnergyFlowBuilder.kt` | pure object: `build(entities, states, link, nowMillis, previous: ConsumerOrder?) → EnergyUiState`; §2–§4 maths, the overflow fold and the throttled order (the last order and its time are passed in and returned) |
 | `presentation/EnergyViewModel.kt` | `combine(source.entities, source.states(), source.link)` → builder, `conflate()`, `flowOn(Default)`, `stateIn(WhileSubscribed(5 s))`, the same as `HomeViewModel` |
 | `ui/FlowDiagram.kt` | Canvas: node positions, edges with an animated dash, glyphs, labels, reduced motion |
 | `ui/EnergyScreen.kt` | `EnergyRoute`, header, diagram, cards, empty state |
@@ -155,8 +155,8 @@ Other changes:
 
 | Module | Change |
 |---|---|
-| `:core:model` | the new `EnergyRole` entries and the `water_heater` alias; `UiOverride.energyInvert` |
-| `:core:designsystem` | a "plug" duotone glyph if no existing one fits; the solar, grid, battery, house and water glyphs in the same style |
+| `:core:model` | the new `EnergyRole` entries and the `water_heater` alias; `UiOverride.energyInvert`; `PowerUnits.factor` |
+| `:core:designsystem` | the sun, pylon, battery and house duotone glyphs (plug and drop already exist); `LinkPill` and the energy role strings move here from `:feature:home` |
 | `:core:demo` | tagged demo entities (solar, signed grid, two consumers, water) so previews and the demo mode show a full diagram |
 | `:feature:home` | the Customize sheet roles, the invert switch and the unit hint; `OverrideDraft` carries `energyInvert` |
 | `:app` | `EnergyKey`, the `NavigationBar` scaffold, the module dependency |

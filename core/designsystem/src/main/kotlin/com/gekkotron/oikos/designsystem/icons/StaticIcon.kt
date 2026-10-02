@@ -27,6 +27,10 @@ enum class OikosGlyph(private val parts: List<Part>) {
     SLIDER(listOf(line("M4 8h16M4 16h16"), area("M10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM18 16a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"))),
     LIST(listOf(line("M9 7h11M9 12h11M9 17h11M5 7h1M5 12h1M5 17h1"))),
     PLAY(listOf(area("M8 5.5v13l10.5-6.5z"))),
+    SUN(listOf(area("M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"), line("M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"))),
+    HOUSE(listOf(area("M4 11 12 4l8 7v9H4z"), line("M10 20v-5h4v5"))),
+    PYLON(listOf(line("M12 3 7 21M12 3l5 18M5 7h14M8.5 12h7M9 7l6 5M15 7l-6 5M7.6 18h8.8"))),
+    BATTERY(listOf(area("M5 7h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"), line("M20.5 10.5v3M8 12h6"))),
     DOT(listOf(area("M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"))),
     ;
 

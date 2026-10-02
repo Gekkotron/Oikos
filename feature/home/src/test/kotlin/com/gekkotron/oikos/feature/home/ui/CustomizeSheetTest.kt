@@ -125,4 +125,38 @@ class CustomizeSheetTest {
         show(card(testEntity("power", Kind.SENSOR, deviceClass = "power")), fontScale = 2f)
         compose.onNodeWithText("Reset to defaults").performScrollTo().assertExists()
     }
+
+    @Test
+    fun `invert switch shows for grid and battery only and is saved`() {
+        show(card(testEntity("power", Kind.SENSOR, deviceClass = "power", unit = "W")))
+        compose.onNodeWithText("Reset to defaults").performScrollTo()
+        compose.onNodeWithText("Solar").performScrollTo().performClick()
+        compose.onNodeWithText("Invert sign").assertDoesNotExist()
+        compose.onNodeWithText("Battery").performScrollTo().performClick()
+        compose.onNodeWithText("Invert sign").assertExists()
+        compose.onNodeWithText("Grid").performScrollTo().performClick()
+        compose.onNodeWithText("Invert sign").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(UiOverride(energyRole = EnergyRole.GRID, energyInvert = true), saved.single())
+    }
+
+    @Test
+    fun `power role on a non power unit shows the unit hint`() {
+        show(card(testEntity("temp", Kind.SENSOR, deviceClass = "temperature", unit = "°C")))
+        compose.onNodeWithText("Reset to defaults").performScrollTo()
+        compose.onNodeWithText("Needs a power unit (W, kW)").assertDoesNotExist()
+        compose.onNodeWithText("Solar").performScrollTo().performClick()
+        compose.onNodeWithText("Needs a power unit (W, kW)").assertExists()
+        compose.onNodeWithText("Water").performScrollTo().performClick()
+        compose.onNodeWithText("Needs a power unit (W, kW)").assertDoesNotExist()
+    }
+
+    @Test
+    fun `every role is offered`() {
+        show(card(testEntity("power", Kind.SENSOR, deviceClass = "power", unit = "W")))
+        compose.onNodeWithText("Reset to defaults").performScrollTo()
+        for (label in listOf("Solar", "Grid", "Grid export", "Battery", "House", "Consumer", "Water")) {
+            compose.onNodeWithText(label).performScrollTo().assertExists()
+        }
+    }
 }

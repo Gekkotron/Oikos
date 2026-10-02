@@ -1,7 +1,9 @@
 package com.gekkotron.oikos.model
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
 /** Retained JSON on `oikos/ui/<unique_id>`. */
 @Serializable
@@ -14,15 +16,29 @@ data class UiOverride(
     val cardStyle: String? = null,
     val favorite: Boolean = false,
     val energyRole: EnergyRole? = null,
+    /** Flips the sign of a [EnergyRole.signed] entity; meters and HA integrations differ (energy spec §2). */
+    val energyInvert: Boolean = false,
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 enum class EnergyRole {
     @SerialName("solar") SOLAR,
     @SerialName("grid") GRID,
+    @SerialName("grid_export") GRID_EXPORT,
+    @SerialName("battery") BATTERY,
     @SerialName("house") HOUSE,
-    @SerialName("water_heater") WATER_HEATER,
+
+    /** `water_heater` is this role's name from before the energy screen (energy spec §2). */
+    @SerialName("consumer") @JsonNames("water_heater") CONSUMER,
     @SerialName("water") WATER,
+    ;
+
+    /** Its sign means a direction and can be flipped by [UiOverride.energyInvert]. */
+    val signed: Boolean get() = this == GRID || this == BATTERY
+
+    /** Its value must be a power ([PowerUnits]). */
+    val power: Boolean get() = this != WATER
 }
 
 object UiOverrides {
