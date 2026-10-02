@@ -29,6 +29,8 @@ object HomeUiBuilder {
         link: LinkState,
         locale: Locale,
         labels: LabelText = LabelText { null },
+        /** Non-blank: search every room, hidden devices included, instead of [selected]. */
+        query: String = "",
     ): HomeUiState {
         val names = entities.mapValues { (_, e) -> displayName(e, labels) }
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
@@ -50,7 +52,11 @@ object HomeUiBuilder {
         }
         val effective = selected.takeIf { s -> chips.any { it.filter == s } } ?: RoomFilter.All
 
-        val shown = if (effective == RoomFilter.Hidden) hidden else grid.filter { matches(it, effective) }
+        val shown = when {
+            query.isNotBlank() -> standalone.filter { SearchMatch.matches(query, names.getValue(it.uniqueId), it.deviceName, areaNames[it.area]) }
+            effective == RoomFilter.Hidden -> hidden
+            else -> grid.filter { matches(it, effective) }
+        }
         val cards = shown
             .sortedWith(
                 compareBy<Entity>(
@@ -71,6 +77,7 @@ object HomeUiBuilder {
             cards = cards,
             rooms = areas.filter { it.id != UNASSIGNED_AREA },
             hiddenCount = hidden.size,
+            query = query,
         )
     }
 

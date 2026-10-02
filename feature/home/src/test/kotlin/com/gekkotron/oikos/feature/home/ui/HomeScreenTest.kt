@@ -45,6 +45,9 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.TransportMode
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.test.performTextInput
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -271,5 +274,37 @@ class HomeScreenTest {
         }
         compose.onNodeWithTag("hero").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
         assertEquals("Customize", compose.onNodeWithTag("hero").fetchSemanticsNode().config[SemanticsActions.OnLongClick].label)
+    }
+
+    private fun showSearchable() = compose.setContent {
+        OikosTheme(ThemeChoice.NIGHT_GLASS) {
+            var query by remember { mutableStateOf("") }
+            HomeScreen(
+                state = HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US, query = query),
+                onSelect = {}, onTap = {}, onSend = { _, _ -> },
+                onSearch = { query = it },
+            )
+        }
+    }
+
+    @Test
+    fun `search filters the cards and closing restores the chips`() {
+        showSearchable()
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("coffee")
+        compose.onNodeWithText("Coffee machine").assertExists()
+        compose.onNodeWithText("Floor lamp").assertDoesNotExist()
+        compose.onNodeWithText("Kitchen").assertDoesNotExist() // the chips row is replaced by the field
+        compose.onNodeWithContentDescription("Close search").performClick()
+        compose.onNodeWithText("Floor lamp").assertExists()
+        compose.onNodeWithText("Kitchen").assertExists()
+    }
+
+    @Test
+    fun `no match says so`() {
+        showSearchable()
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("zzz")
+        compose.onNodeWithText("No device matches “zzz”").assertExists()
     }
 }

@@ -173,4 +173,8 @@
     <string name="entity_label_led_indication">LED indication</string>
     <string name="home_waiting_connection">Waiting for the connection</string>
     <string name="card_stale">Last known value</string>
+    <string name="search_open">Search devices</string>
+    <string name="search_close">Close search</string>
+    <string name="search_hint">Search a device or room</string>
+    <string name="search_no_match">No device matches “%1$s”</string>
 </resources>

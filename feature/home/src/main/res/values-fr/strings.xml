@@ -173,4 +173,8 @@
     <string name="entity_label_led_indication">Indication LED</string>
     <string name="home_waiting_connection">En attente de la connexion</string>
     <string name="card_stale">Dernière valeur connue</string>
+    <string name="search_open">Rechercher un appareil</string>
+    <string name="search_close">Fermer la recherche</string>
+    <string name="search_hint">Rechercher un appareil ou une pièce</string>
+    <string name="search_no_match">Aucun appareil ne correspond à « %1$s »</string>
 </resources>

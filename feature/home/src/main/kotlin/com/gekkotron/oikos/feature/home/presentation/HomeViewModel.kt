@@ -43,10 +43,10 @@ class HomeViewModel @Inject constructor(
         source.entities,
         source.states(),
         source.areas,
-        savedState.getStateFlow(KEY_FILTER, RoomFilter.All.key),
+        combine(savedState.getStateFlow(KEY_FILTER, RoomFilter.All.key), savedState.getStateFlow(KEY_QUERY, ""), ::Pair),
         source.link,
-    ) { entities, states, areas, key, link ->
-        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels)
+    ) { entities, states, areas, (key, query), link ->
+        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels, query)
         // The selected chip may no longer exist (its last card was unhidden, its area emptied…); build()
         // already falls back to All for this state, but the saved key must follow, or a stale "hidden"
         // key comes back to life and jumps the screen back there as soon as something is hidden again.
@@ -82,6 +82,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Home search; blank ends it. */
+    fun search(query: String) {
+        savedState[KEY_QUERY] = query
+    }
+
     fun select(filter: RoomFilter) {
         savedState[KEY_FILTER] = filter.key
     }
@@ -106,5 +111,6 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val KEY_FILTER = "home.filter"
+        const val KEY_QUERY = "home.query"
     }
 }

@@ -1,5 +1,17 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.input.ImeAction
+import com.gekkotron.oikos.designsystem.icons.OikosGlyph
+import com.gekkotron.oikos.designsystem.icons.StaticIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -84,6 +96,7 @@ fun HomeRoute(
         route = route,
         onRouteChange = onRouteChange,
         windowInsets = windowInsets,
+        onSearch = viewModel::search,
     )
 }
 
@@ -101,8 +114,12 @@ fun HomeScreen(
     onAssignRooms: () -> Unit = {},
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
+    onSearch: (String) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
+    var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
+    val closeSearch = { searching = false; onSearch("") }
+    BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
@@ -129,8 +146,15 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }) }
-                item(key = "chips", span = { GridItemSpan(maxLineSpan) }) { HomeChips(state, onSelect) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }) }
+                item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
+                    if (searching) SearchField(state.query, onSearch, onClose = closeSearch) else HomeChips(state, onSelect)
+                }
+                if (searching && state.query.isNotBlank() && state.cards.isEmpty()) {
+                    item(key = "no-match", span = { GridItemSpan(maxLineSpan) }) {
+                        Text(stringResource(R.string.search_no_match, state.query.trim()), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
+                    }
+                }
                 if (state.loading) {
                     item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
                         Text(stringResource(R.string.home_discovering), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
@@ -185,10 +209,11 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
+    val searchLabel = stringResource(R.string.search_open)
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(greeting(now), style = OikosTheme.type.display, modifier = Modifier.weight(1f))
@@ -215,8 +240,36 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Un
             }
         }
         Spacer(Modifier.height(8.dp))
-        LinkPill(state.link, onClick = onPillClick)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LinkPill(state.link, onClick = onPillClick)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onSearchClick) {
+                StaticIcon(OikosGlyph.SEARCH, modifier = Modifier.size(24.dp).semantics { contentDescription = searchLabel })
+            }
+        }
     }
+}
+
+/** Replaces the room chips while searching (Home search). */
+@Composable
+private fun SearchField(query: String, onSearch: (String) -> Unit, onClose: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    OutlinedTextField(
+        value = query,
+        onValueChange = onSearch,
+        placeholder = { Text(stringResource(R.string.search_hint)) },
+        leadingIcon = { StaticIcon(OikosGlyph.SEARCH, modifier = Modifier.size(20.dp)) },
+        trailingIcon = {
+            val closeLabel = stringResource(R.string.search_close)
+            IconButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = closeLabel }) {
+                StaticIcon(OikosGlyph.CLOSE, modifier = Modifier.size(20.dp))
+            }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        modifier = Modifier.fillMaxWidth().focusRequester(focus),
+    )
 }
 
 @Composable

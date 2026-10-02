@@ -97,6 +97,8 @@ data class HomeUiState(
     /** Rooms the override sheet can pick from: every area except Unassigned. */
     val rooms: List<Area> = emptyList(),
     val hiddenCount: Int = 0,
+    /** The Home search text; blank when not searching. */
+    val query: String = "",
 ) {
     fun card(id: String): CardUi? = cards.firstOrNull { it.id == id } ?: hero?.takeIf { it.id == id }
 }

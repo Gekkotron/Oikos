@@ -234,4 +234,30 @@ class HomeUiBuilderTest {
         )
         assertEquals(listOf("Meter Pression", "Meter Puissance"), s.cards.map { it.name })
     }
+
+    @Test
+    fun `a query searches every room, hidden devices included`() {
+        val all = listOf(
+            testEntity("lamp", Kind.LIGHT, "Floor lamp", area = "living"),
+            testEntity("spots", Kind.LIGHT, "Kitchen spots", area = "kitchen"),
+            testEntity("old", Kind.LIGHT, "Old lamp", area = "garage", ui = UiOverride(hidden = true)),
+            testEntity("plug", Kind.SWITCH, "Plug", area = "garage"),
+        ).associateBy { it.uniqueId }
+        val s = HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.Area("kitchen"), link, Locale.US, query = "lamp")
+        assertEquals(listOf("lamp", "old"), s.cards.map { it.id })
+        assertTrue(s.cards.single { it.id == "old" }.hidden)
+        assertEquals("lamp", s.query)
+    }
+
+    @Test
+    fun `a query matches the room name`() {
+        val all = listOf(testEntity("plug", Kind.SWITCH, "Plug", area = "garage"), testEntity("lamp", Kind.LIGHT, "Lamp", area = "living")).associateBy { it.uniqueId }
+        assertEquals(listOf("plug"), HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US, query = "garage").cards.map { it.id })
+    }
+
+    @Test
+    fun `no match gives no cards`() {
+        val all = listOf(testEntity("lamp", Kind.LIGHT, "Lamp", area = "living")).associateBy { it.uniqueId }
+        assertTrue(HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US, query = "zzz").cards.isEmpty())
+    }
 }

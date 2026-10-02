@@ -185,4 +185,14 @@ class HomeViewModelTest {
         vm.tap(lamp)
         assertEquals(listOf<Pair<String, Command>>("lamp" to Command.TurnOff), source.sent)
     }
+
+    @Test
+    fun `search query filters and survives recreation`() = runTest(dispatcher) {
+        val handle = SavedStateHandle()
+        HomeViewModel(source, handle, dispatcher).search("shut")
+        val recreated = HomeViewModel(source, handle, dispatcher)
+        backgroundScope.launch { recreated.state.collect {} }
+        assertEquals("shut", recreated.state.value.query)
+        assertEquals(listOf("shutter"), recreated.state.value.cards.map { it.id })
+    }
 }
