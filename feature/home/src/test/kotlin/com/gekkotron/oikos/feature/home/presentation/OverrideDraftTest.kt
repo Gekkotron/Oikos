@@ -5,6 +5,7 @@ import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
 import org.junit.Test
@@ -14,9 +15,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class OverrideDraftTest {
+    // A device Energy or Security already shows is only on Home through search.
     private fun card(entity: Entity, labels: LabelText = LabelText { null }): CardUi =
-        HomeUiBuilder.build(mapOf(entity.uniqueId to entity), emptyMap(), listOf(Area("kitchen", "Kitchen")), RoomFilter.All, LinkState.Connecting, Locale.US, labels)
-            .card(entity.uniqueId)!!
+        HomeUiBuilder.build(
+            mapOf(entity.uniqueId to entity), emptyMap(), listOf(Area("kitchen", "Kitchen")), RoomFilter.All, LinkState.Connecting, Locale.US, labels,
+            query = if (entity.ui.hidden || Placement.onHome(entity.kind, entity.deviceClass, entity.ui)) "" else entity.name,
+        ).card(entity.uniqueId)!!
 
     // Area comes from suggested_area: no explicit override.
     private val suggested = card(testEntity("lamp", Kind.LIGHT, "Lamp", area = "kitchen"))
@@ -81,6 +85,14 @@ class OverrideDraftTest {
         assertEquals(true, grid.energyInvert)
         val solar = OverrideDraft.from(sensor).copy(energyRole = EnergyRole.SOLAR, energyInvert = true).applyTo(sensor)
         assertEquals(false, solar.energyInvert)
+    }
+
+    @Test
+    fun `homePinned is kept and written`() {
+        val door = card(testEntity("door", Kind.BINARY_SENSOR, "Door", deviceClass = "door", ui = UiOverride(homePinned = true)))
+        assertTrue(OverrideDraft.from(door).homePinned)
+        assertEquals(UiOverride(homePinned = true), OverrideDraft.from(door).applyTo(door))
+        assertEquals(UiOverride(), OverrideDraft.from(door).copy(homePinned = false).applyTo(door))
     }
 
     @Test

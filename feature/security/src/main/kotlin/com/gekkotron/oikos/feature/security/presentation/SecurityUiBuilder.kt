@@ -4,6 +4,7 @@ import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
@@ -13,7 +14,8 @@ import com.gekkotron.oikos.transport.LinkState
 object SecurityUiBuilder {
     fun build(entities: Map<String, Entity>, states: Map<String, EntityState>, areas: List<Area>, link: LinkState): SecurityUi {
         val areaNames = areas.associate { it.id to it.name }
-        val visible = entities.values.filter { !it.ui.hidden && !it.ui.securityHidden && it.partOf == null }
+        // Hidden on Home still shows here: only securityHidden takes an entity off Security.
+        val visible = entities.values.filter { it.partOf == null && Placement.onSecurity(it.kind, it.deviceClass, it.ui) }
         val panels = visible.filter { it.kind == Kind.ALARM_PANEL }
             .sortedWith(compareBy<Entity>({ it.ui.order ?: Int.MAX_VALUE }, { it.name.lowercase() }, { it.uniqueId }))
             .map { e ->

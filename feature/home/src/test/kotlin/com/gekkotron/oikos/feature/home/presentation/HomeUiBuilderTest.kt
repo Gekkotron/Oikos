@@ -4,6 +4,7 @@ import com.gekkotron.oikos.feature.home.testEntity
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Capabilities
 import com.gekkotron.oikos.model.CoverState
+import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
@@ -204,6 +205,39 @@ class HomeUiBuilderTest {
         assertEquals(listOf("cover"), s.cards.map { it.id })
         assertEquals(0, s.hiddenCount)
         assertFalse(s.chips.any { it.filter == RoomFilter.Hidden })
+    }
+
+    @Test
+    fun `devices Energy or Security already shows stay off Home, its chips and Hidden`() {
+        val s = build(
+            testEntity("lamp", Kind.LIGHT, area = "living"),
+            testEntity("grid", Kind.SENSOR, area = "garage", deviceClass = "power", ui = UiOverride(energyRole = EnergyRole.GRID)),
+            testEntity("door", Kind.BINARY_SENSOR, area = "kitchen", deviceClass = "door"),
+            testEntity("alarm", Kind.ALARM_PANEL, area = "kitchen"),
+        )
+        assertEquals(listOf("lamp"), s.cards.map { it.id })
+        assertEquals(listOf(RoomFilter.All, RoomFilter.Area("living")), s.chips.map { it.filter })
+        assertEquals(0, s.hiddenCount)
+    }
+
+    @Test
+    fun `a pinned or security-hidden device comes back to Home, a non-security binary sensor never left`() {
+        val s = build(
+            testEntity("door", Kind.BINARY_SENSOR, deviceClass = "door", ui = UiOverride(homePinned = true)),
+            testEntity("window", Kind.BINARY_SENSOR, deviceClass = "window", ui = UiOverride(securityHidden = true)),
+            testEntity("fault", Kind.BINARY_SENSOR, deviceClass = "problem"),
+            testEntity("grid", Kind.SENSOR, deviceClass = "power", ui = UiOverride(energyRole = EnergyRole.GRID, homePinned = true)),
+        )
+        assertEquals(setOf("door", "window", "fault", "grid"), s.cards.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `a query still finds devices that live elsewhere`() {
+        val all = listOf(
+            testEntity("door", Kind.BINARY_SENSOR, "Front door", deviceClass = "door"),
+            testEntity("lamp", Kind.LIGHT, "Lamp"),
+        ).associateBy { it.uniqueId }
+        assertEquals(listOf("door"), HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US, query = "door").cards.map { it.id })
     }
 
     @Test

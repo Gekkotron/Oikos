@@ -16,6 +16,7 @@ import com.gekkotron.oikos.feature.home.testEntity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
 import org.junit.Rule
 import org.junit.Test
@@ -29,7 +30,7 @@ class EntityCardIconTest {
 
     @Test
     fun `an open door card keeps its description and the icon adds no semantics`() {
-        val door = testEntity("door", Kind.BINARY_SENSOR, "Front door", deviceClass = "door")
+        val door = testEntity("door", Kind.BINARY_SENSOR, "Front door", deviceClass = "door", ui = UiOverride(homePinned = true))
         val card = HomeUiBuilder.build(
             mapOf("door" to door), mapOf("door" to EntityState("door", StateValue.OnOff(true))),
             emptyList(), RoomFilter.All, LinkState.Connecting, Locale.US,

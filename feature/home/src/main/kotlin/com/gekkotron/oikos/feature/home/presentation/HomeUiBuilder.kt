@@ -5,6 +5,7 @@ import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.transport.LinkState
@@ -41,7 +42,8 @@ object HomeUiBuilder {
         fun companionsOf(e: Entity): List<CardUi> = if (e.kind != Kind.LIGHT) emptyList() else children[e.uniqueId].orEmpty()
             .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList()) }
             .sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id }))
-        val visible = standalone.filterNot { it.ui.hidden }
+        // What Energy or Security already shows stays off Home unless pinned; search still finds it.
+        val visible = standalone.filter { Placement.onHome(it.kind, it.deviceClass, it.ui) }
         val hidden = standalone.filter { it.ui.hidden }
         val hero = visible.filter { it.ui.cardStyle == HERO_WEATHER }.minByOrNull { it.uniqueId }
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }

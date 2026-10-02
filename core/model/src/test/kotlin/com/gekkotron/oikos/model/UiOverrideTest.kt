@@ -17,6 +17,7 @@ class UiOverrideTest {
         val o = UiOverride(
             name = "Lampe salon", area = "salon", hidden = true, order = 3,
             cardStyle = "hero_weather", favorite = true, energyRole = EnergyRole.CONSUMER, energyInvert = true,
+            homePinned = true,
         )
         val json = UiOverrides.encode(o)
         assertEquals(o, UiOverrides.decode(json))

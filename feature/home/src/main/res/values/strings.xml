@@ -75,6 +75,7 @@
     <string name="customize_room">Room</string>
     <string name="customize_favorite">Favourite</string>
     <string name="customize_hidden">Hide from Home</string>
+    <string name="customize_show_on_home">Show on Home</string>
     <string name="customize_order">Position</string>
     <string name="customize_order_hint">Lower numbers come first. Leave empty for automatic.</string>
     <string name="customize_order_error">Enter a whole number from 0 to 9999.</string>

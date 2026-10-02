@@ -75,6 +75,7 @@
     <string name="customize_room">Pièce</string>
     <string name="customize_favorite">Favori</string>
     <string name="customize_hidden">Masquer de l\'accueil</string>
+    <string name="customize_show_on_home">Afficher sur l\'accueil</string>
     <string name="customize_order">Position</string>
     <string name="customize_order_hint">Les plus petits nombres passent en premier. Laissez vide pour l\'ordre automatique.</string>
     <string name="customize_order_error">Saisissez un nombre entier de 0 à 9999.</string>
