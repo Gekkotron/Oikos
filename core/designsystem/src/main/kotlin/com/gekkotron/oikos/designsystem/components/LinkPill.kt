@@ -1,4 +1,4 @@
-package com.gekkotron.oikos.feature.home.ui
+package com.gekkotron.oikos.designsystem.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -8,14 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import com.gekkotron.oikos.designsystem.components.PillTone
-import com.gekkotron.oikos.designsystem.components.StatusPill
-import com.gekkotron.oikos.feature.home.R
+import com.gekkotron.oikos.designsystem.R
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.TransportMode
 
+/** The broker connection status; [onClick] null shows it as a plain status (the Energy header). */
 @Composable
-internal fun LinkPill(link: LinkState, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LinkPill(link: LinkState, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val (label, tone) = when (link) {
         LinkState.Connecting -> R.string.pill_connecting to PillTone.WARNING
         is LinkState.Connected -> when (link.mode) {
@@ -26,12 +25,17 @@ internal fun LinkPill(link: LinkState, onClick: () -> Unit, modifier: Modifier =
         is LinkState.Reconnecting -> R.string.pill_reconnecting to PillTone.WARNING
         is LinkState.Offline -> R.string.pill_offline to PillTone.OFFLINE
     }
+    val clickLabel = stringResource(R.string.link_details)
     StatusPill(
         stringResource(label),
         tone,
-        modifier
-            .minimumInteractiveComponentSize()
-            .clip(CircleShape)
-            .clickable(onClickLabel = stringResource(R.string.link_details), role = Role.Button, onClick = onClick),
+        if (onClick == null) {
+            modifier
+        } else {
+            modifier
+                .minimumInteractiveComponentSize()
+                .clip(CircleShape)
+                .clickable(onClickLabel = clickLabel, role = Role.Button, onClick = onClick)
+        },
     )
 }

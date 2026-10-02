@@ -42,6 +42,7 @@ import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.oikos.feature.home.presentation.OverrideDraft
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.EnergyRole
+import com.gekkotron.oikos.designsystem.R as DsR
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
 
@@ -151,10 +152,10 @@ private fun ChipRow(content: @Composable () -> Unit) {
 @Composable
 private fun energyLabel(role: EnergyRole): String = stringResource(
     when (role) {
-        EnergyRole.SOLAR -> R.string.energy_solar
-        EnergyRole.GRID -> R.string.energy_grid
-        EnergyRole.HOUSE -> R.string.energy_house
+        EnergyRole.SOLAR -> DsR.string.energy_solar
+        EnergyRole.GRID -> DsR.string.energy_grid
+        EnergyRole.HOUSE -> DsR.string.energy_house
         EnergyRole.WATER_HEATER -> R.string.energy_water_heater
-        EnergyRole.WATER -> R.string.energy_water
+        EnergyRole.WATER -> DsR.string.energy_water
     },
 )

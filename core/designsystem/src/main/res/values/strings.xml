@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pill_connecting">Connecting…</string>
+    <string name="pill_direct">Wi-Fi direct</string>
+    <string name="pill_gateway">Gateway</string>
+    <string name="pill_demo">Demo</string>
+    <string name="pill_reconnecting">Reconnecting…</string>
+    <string name="pill_offline">Offline</string>
+    <string name="link_details">Connection details</string>
+    <string name="energy_solar">Solar</string>
+    <string name="energy_grid">Grid</string>
+    <string name="energy_grid_export">Grid export</string>
+    <string name="energy_battery">Battery</string>
+    <string name="energy_house">House</string>
+    <string name="energy_consumer">Consumer</string>
+    <string name="energy_water">Water</string>
+</resources>
