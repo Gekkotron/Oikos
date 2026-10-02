@@ -122,6 +122,10 @@ private fun LightControls(card: CardUi, onSend: (String, Command) -> Unit) {
             else -> Unit
         }
     }
+    if (card.capabilities.colorModes.isNotEmpty()) {
+        Text(stringResource(R.string.sheet_color))
+        HueWheel(light?.color, onPick = { send(Command.TurnOn(color = it)) })
+    }
 }
 
 @Composable

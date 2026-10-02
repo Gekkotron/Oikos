@@ -40,6 +40,8 @@
     <string name="mode_fan_only">Ventilation</string>
     <string name="sheet_power">Alimentation</string>
     <string name="sheet_effect">Effet</string>
+    <string name="sheet_color">Couleur</string>
+    <string name="sheet_color_state">Teinte %1$d°, saturation %2$d %%</string>
     <string name="sheet_brightness">Luminosité</string>
     <string name="sheet_open">Ouvrir</string>
     <string name="sheet_stop">Stop</string>

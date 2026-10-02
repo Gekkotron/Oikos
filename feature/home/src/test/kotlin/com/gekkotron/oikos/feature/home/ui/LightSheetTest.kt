@@ -1,9 +1,12 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -30,6 +33,7 @@ import org.robolectric.annotation.Config
 import java.time.LocalTime
 import java.util.Locale
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h914dp")
@@ -88,5 +92,24 @@ class LightSheetTest {
         compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
         compose.onNodeWithText("Brightness").assertExists()
         compose.onNodeWithText("Effect").assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping the wheel sends a color`() {
+        show()
+        compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Color").performScrollTo().performTouchInput { click(Offset(width / 2f, 1f)) }
+        val (id, command) = sends.last()
+        assertEquals("strip", id)
+        val color = (command as Command.TurnOn).color!!
+        assertTrue(color.hue < 2.0 || color.hue > 358.0, "hue ${color.hue}")
+        assertTrue(color.saturation > 0.95, "saturation ${color.saturation}")
+    }
+
+    @Test
+    fun `no wheel without a color mode`() {
+        show()
+        compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Color").assertDoesNotExist()
     }
 }
