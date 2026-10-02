@@ -26,4 +26,11 @@
     <string name="settings_version">Oikos %1$s</string>
     <string name="settings_notice">Copyright 2026 Gekkotron. Oikos inclut les polices Inter et Fraunces, sous licence SIL Open Font License 1.1.</string>
     <string name="settings_licences">Licences open source</string>
+    <string name="rooms_order_hint">Faites glisser pour changer l\'ordre des pièces sur l\'accueil.</string>
+    <string name="rooms_unassigned">Non assigné</string>
+    <string name="rooms_drag">Faire glisser %1$s</string>
+    <string name="rooms_move_up">Monter</string>
+    <string name="rooms_move_down">Descendre</string>
+    <string name="rooms_save_failed">Impossible d\'enregistrer l\'ordre. Vérifiez la connexion.</string>
+    <string name="rooms_assign">Attribuer les pièces</string>
 </resources>
