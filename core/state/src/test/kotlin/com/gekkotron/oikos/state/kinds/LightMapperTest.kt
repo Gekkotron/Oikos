@@ -159,4 +159,26 @@ class LightMapperTest {
         assertEquals(Light(false, 200, "solid", Hs(10.0, 1.0)), LightMapper.predict(Command.TurnOff, prev))
         assertNull(LightMapper.predict(Command.TurnOn(), Unknown).let { (it as Light).effect })
     }
+
+    private val fancy = bindings(
+        "light",
+        """{"state_topic":"l/state","command_topic":"l/set","effect_state_topic":"l/fx","effect_command_topic":"l/fx/set",
+           "effect_list":["solid","rainbow"],"rgb_state_topic":"l/rgb","rgb_command_topic":"l/rgb/set"}""",
+    )
+
+    @Test
+    fun `default schema decodes effect and rgb state topics`() {
+        assertEquals(setOf("l/state", "l/fx", "l/rgb"), LightMapper.stateTopics(fancy))
+        assertEquals(Decoded.State(Light(true, null, "rainbow")), LightMapper.decode(fancy, "l/fx", "rainbow", Light(true, null)))
+        assertEquals(Decoded.State(Light(true, null, null, Hs(240.0, 1.0))), LightMapper.decode(fancy, "l/rgb", "0,0,255", Light(true, null)))
+        assertEquals(Decoded.Ignored, LightMapper.decode(fancy, "l/rgb", "0,0", Light(true, null)))
+        assertEquals(Decoded.Ignored, LightMapper.decode(fancy, "l/rgb", "0,0,300", Light(true, null)))
+    }
+
+    @Test
+    fun `default schema effect command`() {
+        assertEquals(publishes("l/set" to "ON", "l/fx/set" to "rainbow"), LightMapper.encode(fancy, Command.TurnOn(effect = "rainbow"), Unknown))
+        val templated = bindings("light", """{"command_topic":"l/set","effect_command_topic":"l/fx/set","effect_command_template":"FX:{{ value }}"}""")
+        assertEquals(publishes("l/set" to "ON", "l/fx/set" to "FX:rainbow"), LightMapper.encode(templated, Command.TurnOn(effect = "rainbow"), Unknown))
+    }
 }

@@ -64,7 +64,7 @@ object LightMapper : KindMapper {
 
     override fun stateTopics(b: MqttBindings): Set<String> =
         if (isJson(b)) setOfNotNull(b.str("state_topic"))
-        else setOfNotNull(b.str("state_topic"), b.str("brightness_state_topic"))
+        else setOfNotNull(b.str("state_topic"), b.str("brightness_state_topic"), b.str("effect_state_topic"), b.str("rgb_state_topic"))
 
     override fun decode(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded =
         if (isJson(b)) decodeJson(b, payload, previous) else decodeDefault(b, topic, payload, previous)
@@ -109,6 +109,21 @@ object LightMapper : KindMapper {
                 true
             }
         }
+        if (topic == b.str("effect_state_topic")) {
+            parts.part(renderIncoming(b, "effect_value_template", payload)) { v ->
+                val effect = v.asPayloadString()?.takeIf { it.isNotEmpty() } ?: return@part false
+                light = light.copy(effect = effect)
+                true
+            }
+        }
+        if (topic == b.str("rgb_state_topic")) {
+            parts.part(renderIncoming(b, "rgb_value_template", payload)) { v ->
+                val channels = v.asPayloadString()?.split(',')?.map { it.trim().toIntOrNull() }
+                if (channels == null || channels.size != 3 || channels.any { it == null || it !in 0..255 }) return@part false
+                light = light.copy(color = ColorMath.rgbToHs(Rgb(channels[0]!!, channels[1]!!, channels[2]!!)))
+                true
+            }
+        }
         return parts.result(light)
     }
 
@@ -131,6 +146,9 @@ object LightMapper : KindMapper {
         val brightnessOnly = brightness != null && brightnessTopic != null && b.str("on_command_type") == "brightness"
         if (!brightnessOnly) messages += outgoing(b, topic, if (on) b.str("payload_on", "ON") else b.str("payload_off", "OFF"))
         if (brightness != null && brightnessTopic != null) messages += outgoing(b, brightnessTopic, fromByte(brightness, scale(b)).toString())
+        turnOn?.effect?.let { effect ->
+            (publish(b, "effect_command_topic", "effect_command_template", effect) as? Encoded.Publish)?.let { messages += it.messages }
+        }
         turnOn?.color?.let { hs ->
             val c = ColorMath.hsToRgb(hs)
             b.str("rgb_command_topic")?.let { messages += outgoing(b, it, "${c.r},${c.g},${c.b}") }
