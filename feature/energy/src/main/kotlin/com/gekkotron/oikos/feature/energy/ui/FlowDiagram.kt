@@ -1,12 +1,6 @@
 package com.gekkotron.oikos.feature.energy.ui
 
 import android.provider.Settings
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,11 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -41,6 +38,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
@@ -57,14 +56,23 @@ import java.util.Locale
 private val NODE = 44.dp
 private val DASH = 6.dp
 
+/** Bubble width: the circle plus room for its value and a short consumer name. */
+private val BUBBLE = 88.dp
+
 @Composable
 internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Unit, modifier: Modifier = Modifier) {
     val positions = remember(state.diagram) { FlowLayout.positions(state.diagram) }
     val description = energyDescription(state, locale)
-    val animate = animationsEnabled()
-    val phase by rememberInfiniteTransition(label = "flow").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(1_000, easing = LinearEasing), RepeatMode.Restart), label = "dash",
-    )
+    // A frame clock runs only while some edge actually moves; the time is read in the draw phase, so frames
+    // redraw the Canvas without recomposing.
+    val animate = animationsEnabled() && state.diagram.any { it.flow != Flow.IDLE }
+    val seconds = remember { mutableDoubleStateOf(0.0) }
+    if (animate) {
+        LaunchedEffect(Unit) {
+            val start = withInfiniteAnimationFrameNanos { it }
+            while (true) withInfiniteAnimationFrameNanos { seconds.doubleValue = (it - start) / 1e9 }
+        }
+    }
     val colors = OikosTheme.colors
     BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(FlowLayout.ASPECT)) {
         val w = maxWidth
@@ -82,7 +90,7 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
                     val control = Offset((from.x + to.x) / 2, if (n.kind == NodeKind.SOLAR) (from.y + to.y) / 2 else from.y)
                     val path = Path().apply { moveTo(from.x, from.y); quadraticTo(control.x, control.y, to.x, to.y) }
                     val idle = n.flow == Flow.IDLE
-                    val offset = if (animate && !idle) -phase * 2 * dash * FlowLayout.speed(n.value) else 0f
+                    val offset = if (animate && !idle) -FlowLayout.dashCycle(seconds.doubleValue, FlowLayout.speed(n.value)) * 2 * dash else 0f
                     drawPath(
                         path,
                         color = edgeColor(n.kind, colors).copy(alpha = if (idle) 0.25f else 0.9f),
@@ -95,7 +103,7 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
             }
             state.diagram.filter { it.kind != NodeKind.MORE }.forEach { n ->
                 val p = positions[n.id] ?: return@forEach
-                NodeBubble(n, locale, Modifier.place(p, w, h))
+                NodeBubble(n, locale, Modifier.placeBubble(p, w, h))
             }
         }
         state.diagram.firstOrNull { it.kind == NodeKind.MORE }?.let { more ->
@@ -119,15 +127,23 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
 private fun Modifier.place(p: Pair<Float, Float>, w: Dp, h: Dp): Modifier =
     offset(x = w * p.first - NODE / 2, y = h * p.second - NODE / 2)
 
+/** A [BUBBLE]-wide bubble whose circle is centred on [p], whatever the width of its labels. */
+private fun Modifier.placeBubble(p: Pair<Float, Float>, w: Dp, h: Dp): Modifier =
+    offset(x = w * p.first - BUBBLE / 2, y = h * p.second - NODE / 2).width(BUBBLE)
+
 @Composable
-private fun NodeBubble(n: EnergyNode, locale: Locale, modifier: Modifier) {
+internal fun NodeBubble(n: EnergyNode, locale: Locale, modifier: Modifier) {
     val colors = OikosTheme.colors
     Column(modifier.alpha(statusAlpha(n.status)), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier.size(NODE).background(edgeColor(n.kind, colors).copy(alpha = 0.18f), CircleShape).border(1.dp, edgeColor(n.kind, colors), CircleShape),
             contentAlignment = Alignment.Center,
         ) { StaticIcon(glyph(n.kind), modifier = Modifier.size(22.dp)) }
-        Text(nodeValueText(n, locale), style = OikosTheme.type.label, color = colors.content, modifier = Modifier.padding(top = 2.dp))
+        Text(nodeValueText(n, locale), style = OikosTheme.type.label, color = colors.content, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+        // Consumers share one glyph, so the arc names them (spec §2).
+        if (n.kind == NodeKind.CONSUMER && n.name != null) {
+            Text(n.name, style = OikosTheme.type.label, color = colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        }
     }
 }
 

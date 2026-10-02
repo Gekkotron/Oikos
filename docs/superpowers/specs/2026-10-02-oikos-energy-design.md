@@ -54,7 +54,7 @@ Rules:
 - **Older apps.** `OikosJson` already sets `coerceInputValues`. An older app that reads `consumer`, `battery` or `grid_export` treats the entity as having no role and does not crash.
 - **Several entities on one summed role.** Two `solar` inverters, for example, are added up into one node labelled with the role name ("Solar"), not with an entity name.
 - **Eligible entities** are `Kind.SENSOR` with `StateValue.Numeric`.
-  - **Power units** come from `Entity.unit`: `W` × 1, `kW` × 1000, `MW` × 1 000 000, case-insensitive.
+  - **Power units** come from `Entity.unit`: `W` × 1 and `kW` × 1000 (case-insensitive), `mW` × 0.001 and `MW` × 1 000 000 (exact case, since they differ only by case).
   - **Other units** make a power role count as **unknown** (§3), and the Customize sheet shows "Needs a power unit (W, kW)".
   - **`water`** accepts any unit and shows it as is.
 - **Consumer labels.** A consumer node shows the entity's effective name (override name, then entity name) and a generic duotone "plug" glyph.
@@ -63,7 +63,7 @@ Rules:
 
 Notation: all values are in watts, after inversion and unit conversion. **S** is solar, **G** is grid (G = Σgrid − Σgrid_export), **B** is battery and **H** is house.
 
-- **Inputs.** A role with no entity contributes nothing, and its node is hidden. A role whose entities include one that is unknown, unsupported, unavailable or has a bad unit is **unknown**. A stale value still counts as known (it is dimmed, §5).
+- **Inputs.** A role with no entity contributes nothing, and its node is hidden. A role whose entities include one that is unknown, unsupported, unavailable or has a bad unit is **unknown**. A derived house is never shown as unavailable: an unavailable input (an inverter offline at night) only makes it unknown ("—"). A stale value still counts as known (it is dimmed, §5).
 - **House.**
   - If any `house` entity exists, H = Σhouse.
   - Otherwise, **H = S + G + B**, computed only when every present input among S, G and B is known; else H is unknown.

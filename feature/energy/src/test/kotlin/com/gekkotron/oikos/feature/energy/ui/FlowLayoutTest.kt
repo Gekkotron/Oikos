@@ -42,4 +42,16 @@ class FlowLayoutTest {
         val mid = FlowLayout.strokeDp(1_000.0, Flow.IN)
         assertTrue(mid > 1f && mid < 6f)
     }
+
+    @Test
+    fun `the dash cycle is continuous at any speed`() {
+        for (speed in listOf(0.5f, 1.5f, 1.77f, 2f)) {
+            for (t in listOf(1.0, 7.0, 60.0, 3_600.0)) {
+                val before = FlowLayout.dashCycle(t - 0.001, speed)
+                val after = FlowLayout.dashCycle(t + 0.001, speed)
+                val step = ((after - before) % 1f + 1f) % 1f
+                assertTrue(step < 0.01f, "speed $speed jumps by $step at t=$t")
+            }
+        }
+    }
 }

@@ -15,7 +15,9 @@ import com.gekkotron.oikos.designsystem.ThemeChoice
 import com.gekkotron.oikos.feature.energy.energyEntity
 import com.gekkotron.oikos.feature.energy.numeric
 import com.gekkotron.oikos.feature.energy.presentation.EnergyFlowBuilder
+import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import com.gekkotron.oikos.feature.energy.presentation.EnergyUiState
+import com.gekkotron.oikos.feature.energy.presentation.NodeKind
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -87,13 +89,13 @@ class EnergyScreenTest {
         show(state(four, houseStates + numeric("ev", 3000.0) + numeric("pump", 50.0)))
         compose.onNodeWithContentDescription("Show all 4 consumers").performClick()
         compose.onNodeWithText("All consumers").assertExists()
-        compose.onNodeWithTag("consumers-sheet-pump").assertExists()
+        compose.onNodeWithTag("consumers-sheet-consumer:pump").assertExists()
     }
 
     @Test
     fun `cards list every node`() {
         show(state(house, houseStates))
-        for (id in listOf("solar", "grid", "house", "heater", "ac")) {
+        for (id in listOf("solar", "grid", "house", "consumer:heater", "consumer:ac")) {
             compose.onNodeWithTag("energy-card-$id").performScrollTo().assertExists()
         }
     }
@@ -104,5 +106,15 @@ class EnergyScreenTest {
         show(s)
         compose.onNodeWithText("Check the grid or battery sign").assertExists()
         assertTrue(s.hint != null)
+    }
+
+    @Test
+    fun `consumer bubbles show the consumer name`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                NodeBubble(EnergyNode("consumer:heater", NodeKind.CONSUMER, name = "Water heater", value = 1700.0), Locale.US, androidx.compose.ui.Modifier)
+            }
+        }
+        compose.onNodeWithText("Water heater").assertExists()
     }
 }

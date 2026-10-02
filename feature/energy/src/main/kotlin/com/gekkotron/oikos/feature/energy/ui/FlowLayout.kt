@@ -45,6 +45,12 @@ internal object FlowLayout {
 
     fun strokeDp(watts: Double?, flow: Flow): Float = if (flow == Flow.IDLE) 1f else 1f + 5f * level(watts)
 
+    /**
+     * Where an edge is in its dash cycle (0..1) after [seconds] of animation. Driven by a continuous clock, so
+     * the dash never jumps at a fractional [speed] (a 0..1 phase that restarts each second would).
+     */
+    fun dashCycle(seconds: Double, speed: Float): Float = ((seconds * speed) % 1.0).toFloat()
+
     /** Dash cycles per second: 0.5 at 10 W to 2 at 10 kW. */
     fun speed(watts: Double?): Float = 0.5f + 1.5f * level(watts)
 }

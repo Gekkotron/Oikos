@@ -16,6 +16,9 @@ object EnergyFlowBuilder {
     const val SELF_CONSUMPTION_MIN_W = 50.0
     const val ARC_SLOTS = 3
 
+    /** Consumer node ids never collide with the fixed role ids ("house", "solar"…), whatever the entity's unique id. */
+    const val CONSUMER_PREFIX = "consumer:"
+
     /** One role's value in watts (null = unknown) and its worst status. */
     private data class Reading(val watts: Double?, val status: NodeStatus)
 
@@ -45,7 +48,9 @@ object EnergyFlowBuilder {
                     inputs.isNotEmpty() -> {
                         val total = if (inputs.any { it.watts == null }) null else inputs.sumOf { it.watts!! }
                         if (total != null && total < 0) hint = EnergyHint.CHECK_SIGN
-                        Reading(total?.coerceAtLeast(0.0), worst(inputs.map { it.status }))
+                        // An unavailable input (an inverter offline at night) leaves the house unknown, not
+                        // unavailable: the house itself still has power.
+                        Reading(total?.coerceAtLeast(0.0), worst(inputs.map { if (it.status == NodeStatus.UNAVAILABLE) NodeStatus.LIVE else it.status }))
                     }
                     consumerEntities.isNotEmpty() -> Reading(null, NodeStatus.LIVE)
                     else -> null
@@ -56,7 +61,7 @@ object EnergyFlowBuilder {
         val consumerNodes = consumerEntities.associate { e ->
             val r = sum(listOf(e), states)!!
             val w = r.watts?.coerceAtLeast(0.0)
-            e.uniqueId to EnergyNode(e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status)
+            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status)
         }
         val fresh = rank(consumerEntities, consumerNodes)
         val order = if (previous != null && nowMillis - previous.atMillis < REORDER_MS && previous.ids.toSet() == fresh.toSet()) {

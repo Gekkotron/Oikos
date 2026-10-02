@@ -48,13 +48,13 @@ class EnergyViewModelTest {
     fun `the consumer order is carried between updates and throttled`() = runTest(dispatcher) {
         val vm = EnergyViewModel(source, dispatcher) { now }
         backgroundScope.launch { vm.state.collect {} }
-        assertEquals(listOf("heater", "ac"), vm.state.value.consumers.map { it.id })
+        assertEquals(listOf("consumer:heater", "consumer:ac"), vm.state.value.consumers.map { it.id })
         now = 1_000
         source.stateMap.value += "ac" to numeric("ac", 2500.0)
-        assertEquals(listOf("heater", "ac"), vm.state.value.consumers.map { it.id })
-        assertEquals(2500.0, vm.state.value.node("ac")!!.value)
+        assertEquals(listOf("consumer:heater", "consumer:ac"), vm.state.value.consumers.map { it.id })
+        assertEquals(2500.0, vm.state.value.node("consumer:ac")!!.value)
         now = 6_000
         source.stateMap.value += "heater" to numeric("heater", 1600.0)
-        assertEquals(listOf("ac", "heater"), vm.state.value.consumers.map { it.id })
+        assertEquals(listOf("consumer:ac", "consumer:heater"), vm.state.value.consumers.map { it.id })
     }
 }

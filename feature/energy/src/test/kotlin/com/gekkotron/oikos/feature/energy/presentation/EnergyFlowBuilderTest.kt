@@ -52,7 +52,7 @@ class EnergyFlowBuilderTest {
         assertEquals(Flow.IN, s.node("solar")!!.flow)
         assertEquals(87, s.selfConsumption)
         assertNull(s.hint)
-        assertEquals(listOf("solar", "grid", "house", "heater", "ac"), s.diagram.map { it.id })
+        assertEquals(listOf("solar", "grid", "house", "consumer:heater", "consumer:ac"), s.diagram.map { it.id })
     }
 
     @Test
@@ -148,15 +148,15 @@ class EnergyFlowBuilderTest {
     fun `below 10 W an edge is idle`() {
         val s = build(house, listOf(numeric("grid", 5.0), numeric("solar", 3200.0), numeric("ac", 9.0), numeric("heater", 1700.0)))
         assertEquals(Flow.IDLE, s.node("grid")!!.flow)
-        assertEquals(Flow.IDLE, s.node("ac")!!.flow)
-        assertEquals(Flow.OUT, s.node("heater")!!.flow)
+        assertEquals(Flow.IDLE, s.node("consumer:ac")!!.flow)
+        assertEquals(Flow.OUT, s.node("consumer:heater")!!.flow)
     }
 
     @Test
     fun `negative consumer is clamped`() {
         val s = build(house, houseStates.filterNot { it.uniqueId == "ac" } + numeric("ac", -3.0))
-        assertEquals(0.0, s.node("ac")!!.value)
-        assertEquals(Flow.IDLE, s.node("ac")!!.flow)
+        assertEquals(0.0, s.node("consumer:ac")!!.value)
+        assertEquals(Flow.IDLE, s.node("consumer:ac")!!.flow)
     }
 
     @Test
@@ -164,19 +164,19 @@ class EnergyFlowBuilderTest {
         val s = build(house, listOf(numeric("grid", -400.0, stale = true), numeric("solar", 3200.0), numeric("ac", 600.0, available = false), numeric("heater", 1700.0)))
         assertEquals(NodeStatus.STALE, s.node("grid")!!.status)
         assertEquals(NodeStatus.STALE, s.node("house")!!.status)
-        assertEquals(NodeStatus.UNAVAILABLE, s.node("ac")!!.status)
-        assertNull(s.node("ac")!!.value)
+        assertEquals(NodeStatus.UNAVAILABLE, s.node("consumer:ac")!!.status)
+        assertNull(s.node("consumer:ac")!!.value)
     }
 
     @Test
     fun `four consumers fold into two and more`() {
         val four = house + energyEntity("ev", EnergyRole.CONSUMER, name = "EV") + energyEntity("pump", EnergyRole.CONSUMER, name = "Pump")
         val s = build(four, houseStates + numeric("ev", 3000.0) + numeric("pump", 50.0))
-        assertEquals(listOf("ev", "heater", "more"), s.diagram.filter { it.kind == NodeKind.CONSUMER || it.kind == NodeKind.MORE }.map { it.id })
+        assertEquals(listOf("consumer:ev", "consumer:heater", "more"), s.diagram.filter { it.kind == NodeKind.CONSUMER || it.kind == NodeKind.MORE }.map { it.id })
         val more = s.node("more")!!
         assertEquals(2, more.count)
         assertEquals(650.0, more.value)
-        assertEquals(listOf("ev", "heater", "ac", "pump"), s.consumers.map { it.id })
+        assertEquals(listOf("consumer:ev", "consumer:heater", "consumer:ac", "consumer:pump"), s.consumers.map { it.id })
         assertEquals(4, s.cards.count { it.kind == NodeKind.CONSUMER })
     }
 
@@ -187,16 +187,16 @@ class EnergyFlowBuilderTest {
             energyEntity("heater", EnergyRole.CONSUMER),
         )
         val s = build(ordered, listOf(numeric("ac", 10.0), numeric("heater", 2000.0)))
-        assertEquals(listOf("ac", "heater"), s.consumers.map { it.id })
+        assertEquals(listOf("consumer:ac", "consumer:heater"), s.consumers.map { it.id })
     }
 
     @Test
     fun `order is throttled for five seconds`() {
         val first = build(house, houseStates, now = 0)
-        assertEquals(listOf("heater", "ac"), first.consumers.map { it.id })
+        assertEquals(listOf("consumer:heater", "consumer:ac"), first.consumers.map { it.id })
         val swapped = houseStates.filterNot { it.uniqueId == "ac" } + numeric("ac", 2500.0)
-        assertEquals(listOf("heater", "ac"), build(house, swapped, now = 4_999, previous = first.order).consumers.map { it.id })
-        assertEquals(listOf("ac", "heater"), build(house, swapped, now = 5_000, previous = first.order).consumers.map { it.id })
+        assertEquals(listOf("consumer:heater", "consumer:ac"), build(house, swapped, now = 4_999, previous = first.order).consumers.map { it.id })
+        assertEquals(listOf("consumer:ac", "consumer:heater"), build(house, swapped, now = 5_000, previous = first.order).consumers.map { it.id })
     }
 
     @Test
@@ -204,7 +204,7 @@ class EnergyFlowBuilderTest {
         val first = build(house, houseStates, now = 0)
         val fewer = house.filterNot { it.uniqueId == "heater" }
         val s = build(fewer, houseStates, now = 1_000, previous = first.order)
-        assertEquals(listOf("ac"), s.consumers.map { it.id })
+        assertEquals(listOf("consumer:ac"), s.consumers.map { it.id })
         assertEquals(1_000, s.order!!.atMillis)
     }
 
@@ -224,6 +224,22 @@ class EnergyFlowBuilderTest {
     fun `consumers alone still show a house node`() {
         val s = build(listOf(energyEntity("ac", EnergyRole.CONSUMER)), listOf(numeric("ac", 300.0)))
         assertNull(s.node("house")!!.value)
-        assertTrue(s.diagram.any { it.id == "ac" })
+        assertTrue(s.diagram.any { it.id == "consumer:ac" })
+    }
+
+    @Test
+    fun `unavailable solar leaves the derived house unknown, not unavailable`() {
+        val s = build(house, listOf(numeric("grid", 900.0), numeric("solar", 0.0, available = false), numeric("ac", 300.0), numeric("heater", 0.0)))
+        assertEquals(NodeStatus.UNAVAILABLE, s.node("solar")!!.status)
+        assertNull(s.node("house")!!.value)
+        assertEquals(NodeStatus.LIVE, s.node("house")!!.status)
+    }
+
+    @Test
+    fun `a consumer whose unique id is a role id does not collide`() {
+        val s = build(listOf(energyEntity("grid", EnergyRole.GRID), energyEntity("house", EnergyRole.CONSUMER, name = "House plug")), listOf(numeric("grid", 500.0), numeric("house", 200.0)))
+        assertEquals(s.cards.size, s.cards.map { it.id }.toSet().size)
+        assertEquals(500.0, s.node("house")!!.value)
+        assertEquals(200.0, s.node("consumer:house")!!.value)
     }
 }

@@ -20,4 +20,11 @@ class PowerUnitsTest {
         assertNull(PowerUnits.factor("°C"))
         assertNull(PowerUnits.factor("VA"))
     }
+
+    @Test
+    fun `milliwatts and megawatts are told apart by case`() {
+        assertEquals(0.001, PowerUnits.factor("mW"))
+        assertEquals(1_000_000.0, PowerUnits.factor("MW"))
+        assertNull(PowerUnits.factor("mw"))
+    }
 }
