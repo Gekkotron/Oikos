@@ -58,7 +58,7 @@ object AlarmPanelMapper : KindMapper {
             else -> return Encoded.NotSupported("alarm panel cannot $command")
         }
         codeProblem(b, code, arming)?.let { return Encoded.NotSupported(it) }
-        return publish(b, "command_topic", "command_template", action, mapOf("action" to action, "code" to code))
+        return publish(b, "command_topic", "command_template", action, mapOf("action" to action, "code" to code.orEmpty()))
     }
 
     private fun codeProblem(b: MqttBindings, given: String?, arming: Boolean): String? {

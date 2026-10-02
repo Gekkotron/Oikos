@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.source.discovery
 
 import com.gekkotron.oikos.model.AlarmMode
+import com.gekkotron.oikos.model.CodeFormat
 import com.gekkotron.oikos.model.Device
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.state.mqtt.MqttBindings
@@ -315,5 +316,20 @@ class DiscoveryParserTest {
         assertEquals(listOf("solid", "rainbow"), withTopic.capabilities.effects)
         val without = single("homeassistant/light/z/config", """{"command_topic":"z/set","effect_list":["solid"],"unique_id":"z"}""").entity
         assertEquals(emptyList(), without.capabilities.effects)
+    }
+
+    @Test
+    fun `alarm code flags and format`() {
+        fun caps(json: String) = single("homeassistant/alarm_control_panel/a/config", json).entity.capabilities
+        val remote = caps("""{"cmd_t":"c","code":"REMOTE_CODE","code_arm_required":false}""")
+        assertEquals(false, remote.codeArmRequired)
+        assertEquals(true, remote.codeDisarmRequired)
+        assertEquals(CodeFormat.NUMBER, remote.codeFormat)
+        assertEquals(CodeFormat.TEXT, caps("""{"cmd_t":"c","code":"REMOTE_CODE_TEXT"}""").codeFormat)
+        assertEquals(CodeFormat.NUMBER, caps("""{"cmd_t":"c","code":"0420"}""").codeFormat)
+        assertEquals(CodeFormat.TEXT, caps("""{"cmd_t":"c","code":"s3cret"}""").codeFormat)
+        val none = caps("""{"cmd_t":"c"}""")
+        assertEquals(false, none.codeArmRequired)
+        assertEquals(false, none.codeDisarmRequired)
     }
 }
