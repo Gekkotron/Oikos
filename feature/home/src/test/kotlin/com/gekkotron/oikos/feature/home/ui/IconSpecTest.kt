@@ -80,4 +80,10 @@ class IconSpecTest {
         assertEquals(IconSpec.Static(OikosGlyph.LIST, false), spec(Kind.SELECT, null))
         assertEquals(IconSpec.Static(OikosGlyph.PLAY, false), spec(Kind.BUTTON, null))
     }
+
+    @Test
+    fun `an unavailable shutter keeps its last position but stops moving`() {
+        assertEquals(IconSpec.Shutter(0.4f, null), spec(Kind.COVER, StateValue.Cover(CoverState.CLOSING, 40), available = false))
+        assertEquals(IconSpec.Shutter(null, null), spec(Kind.COVER, StateValue.Cover(CoverState.OPENING), available = false))
+    }
 }

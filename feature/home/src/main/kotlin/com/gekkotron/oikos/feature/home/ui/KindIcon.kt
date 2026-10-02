@@ -1,7 +1,6 @@
 package com.gekkotron.oikos.feature.home.ui
 
 import android.provider.Settings
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -13,6 +12,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -47,7 +47,7 @@ internal sealed interface IconSpec {
 internal val IconSpec.openContact: Boolean get() = this is IconSpec.Swing && open == true
 
 internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
-    Kind.COVER -> shutter(card.value as? CardValue.Cover)
+    Kind.COVER -> shutter(card.value as? CardValue.Cover, card.available)
     Kind.BINARY_SENSOR -> swingShape(card.deviceClass)
         ?.let { IconSpec.Swing(it, if (card.available) (card.value as? CardValue.Contact)?.on else null) }
         ?: IconSpec.Static(binaryGlyph(card.deviceClass), on = false)
@@ -61,7 +61,8 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.BUTTON -> IconSpec.Static(OikosGlyph.PLAY, on = false)
 }
 
-private fun shutter(v: CardValue.Cover?): IconSpec.Shutter {
+/** An unavailable cover keeps its last known position (closed could misreport it) but stops moving. */
+private fun shutter(v: CardValue.Cover?, available: Boolean): IconSpec.Shutter {
     val target = when {
         v == null -> null
         v.position != null -> v.position.coerceIn(0, 100) / 100f
@@ -69,7 +70,8 @@ private fun shutter(v: CardValue.Cover?): IconSpec.Shutter {
         v.state == CoverState.CLOSED -> 0f
         else -> null
     }
-    return IconSpec.Shutter(target, v?.state?.takeIf { it == CoverState.OPENING || it == CoverState.CLOSING })
+    val moving = v?.state?.takeIf { available && (it == CoverState.OPENING || it == CoverState.CLOSING) }
+    return IconSpec.Shutter(target, moving)
 }
 
 private fun swingShape(deviceClass: String?) = when (deviceClass) {
@@ -99,6 +101,13 @@ internal const val DRIFT_FULL_MS = 8000
 private val SWING_EASING = CubicBezierEasing(0.3f, 0.7f, 0.2f, 1f)
 private val SHUTTER_EASING = CubicBezierEasing(0.45f, 0f, 0.55f, 1f)
 
+/** Whether the spec carries a real state; a cached card has none until live data arrives. */
+private fun IconSpec.known(): Boolean = when (this) {
+    is IconSpec.Shutter -> target != null
+    is IconSpec.Swing -> open != null
+    is IconSpec.Static -> true
+}
+
 private fun IconSpec.target(): Float? = when (this) {
     is IconSpec.Shutter -> target
     is IconSpec.Swing -> if (open == true) 1f else 0f
@@ -114,8 +123,15 @@ private fun IconSpec.target(): Float? = when (this) {
 @Composable
 internal fun rememberIconProgress(spec: IconSpec, animate: Boolean): State<Float> {
     val progress = remember { Animatable(spec.target() ?: 0f) }
+    val settled = remember { BooleanArray(1) { spec.known() } }
     LaunchedEffect(spec, animate) {
         val target = spec.target()
+        // The first real state after a cold start (cached card, no state yet) is drawn at once, like a first composition.
+        if (!settled[0] && spec.known()) {
+            settled[0] = true
+            if (target != null) progress.snapTo(target)
+            if (spec !is IconSpec.Shutter || spec.moving == null) return@LaunchedEffect
+        }
         if (!animate) {
             if (target != null) progress.snapTo(target)
             return@LaunchedEffect
@@ -150,12 +166,8 @@ internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
     when (spec) {
         is IconSpec.Shutter -> ShutterIcon(progress, m)
         is IconSpec.Swing -> {
-            val target = when (spec.open) {
-                true -> c.warning
-                false -> c.connected
-                null -> neutral
-            }
-            val accent by animateColorAsState(target, tween(if (animate) SWING_MS else 0), label = "contact-accent")
+            // Follows the swing itself, mint closed to amber open: it snaps when the swing snaps, and a theme switch never fades.
+            val accent = if (spec.open == null) neutral else lerp(c.connected, c.warning, progress)
             when (spec.shape) {
                 SwingShape.DOOR -> DoorIcon(progress, accent, m)
                 SwingShape.WINDOW -> WindowIcon(progress, accent, m)

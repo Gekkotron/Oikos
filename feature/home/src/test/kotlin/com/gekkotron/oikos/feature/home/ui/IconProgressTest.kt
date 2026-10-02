@@ -105,4 +105,20 @@ class IconProgressTest {
         advance(4000)
         assertEquals(0.7f, drawn)
     }
+
+    @Test
+    fun `the first known state after a cold start draws at once, without a swing`() {
+        start(IconSpec.Swing(SwingShape.DOOR, null)) // cached card, no state yet
+        change(IconSpec.Swing(SwingShape.DOOR, true))
+        advance(48)
+        assertEquals(1f, drawn)
+    }
+
+    @Test
+    fun `the first known position after a cold start draws at once, without rolling`() {
+        start(IconSpec.Shutter(null, null))
+        change(IconSpec.Shutter(0.8f, null))
+        advance(48)
+        assertEquals(0.8f, drawn)
+    }
 }
