@@ -23,7 +23,6 @@ import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.feature.home.presentation.TapAction
-import com.gekkotron.oikos.model.CoverState
 
 @Composable
 internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -34,7 +33,7 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
     val offText = stringResource(R.string.value_off)
     val staleText = stringResource(R.string.card_stale)
     val toggle = card.tap == TapAction.TOGGLE
-    val moving = (card.value as? CardValue.Cover)?.state?.takeIf { it == CoverState.OPENING || it == CoverState.CLOSING }
+    val icon = iconSpec(card)
     OikosCard(
         modifier = modifier
             .testTag("card-${card.id}")
@@ -45,13 +44,14 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
                 if (card.stale) stateDescription = staleText
             },
         on = card.on,
+        accent = icon.openContact,
         enabled = card.available,
         onClick = if (card.tap != TapAction.NONE) onClick else null,
         onLongClick = onLongClick,
         onLongClickLabel = stringResource(if (card.hasSheet) R.string.action_controls else R.string.action_customize),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            KindGlyph(card.kind, card.deviceClass, moving)
+            KindIcon(icon)
             Spacer(Modifier.weight(1f))
             if (card.pending) PendingDot()
         }

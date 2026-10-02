@@ -1,20 +1,34 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import android.provider.Settings
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import kotlin.math.abs
-import kotlin.math.roundToInt
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.icons.DoorIcon
+import com.gekkotron.oikos.designsystem.icons.GarageIcon
 import com.gekkotron.oikos.designsystem.icons.OikosGlyph
+import com.gekkotron.oikos.designsystem.icons.ShutterIcon
+import com.gekkotron.oikos.designsystem.icons.StaticIcon
+import com.gekkotron.oikos.designsystem.icons.WindowIcon
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Kind
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 internal enum class SwingShape { DOOR, WINDOW, GARAGE }
 
@@ -123,4 +137,39 @@ internal fun rememberIconProgress(spec: IconSpec, animate: Boolean): State<Float
         }
     }
     return progress.asState()
+}
+
+/** The card icon, decorative: hidden from TalkBack, the card's own description carries the state. */
+@Composable
+internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
+    val animate = animationsEnabled()
+    val progress by rememberIconProgress(spec, animate)
+    val c = OikosTheme.colors
+    val neutral = LocalContentColor.current
+    val m = modifier.clearAndSetSemantics { }
+    when (spec) {
+        is IconSpec.Shutter -> ShutterIcon(progress, m)
+        is IconSpec.Swing -> {
+            val target = when (spec.open) {
+                true -> c.warning
+                false -> c.connected
+                null -> neutral
+            }
+            val accent by animateColorAsState(target, tween(if (animate) SWING_MS else 0), label = "contact-accent")
+            when (spec.shape) {
+                SwingShape.DOOR -> DoorIcon(progress, accent, m)
+                SwingShape.WINDOW -> WindowIcon(progress, accent, m)
+                SwingShape.GARAGE -> GarageIcon(progress, accent, m)
+            }
+        }
+        // Warm Minimal's on-card is espresso: its dark amber would vanish, so a lit glyph uses the card's content color there.
+        is IconSpec.Static -> StaticIcon(spec.glyph, if (spec.on) (if (c.isDark) c.warning else neutral) else null, m)
+    }
+}
+
+@Composable
+private fun animationsEnabled(): Boolean {
+    if (LocalInspectionMode.current) return true
+    val resolver = LocalContext.current.contentResolver
+    return remember { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f }
 }
