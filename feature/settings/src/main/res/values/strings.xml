@@ -28,7 +28,6 @@
     <string name="settings_licences">Open-source licences</string>
     <string name="rooms_order_hint">Drag to change the order of the room chips on Home.</string>
     <string name="rooms_unassigned">Unassigned</string>
-    <string name="rooms_drag">Drag to reorder %1$s</string>
     <string name="rooms_move_up">Move up</string>
     <string name="rooms_move_down">Move down</string>
     <string name="rooms_save_failed">Couldn\'t save the order. Check the connection.</string>

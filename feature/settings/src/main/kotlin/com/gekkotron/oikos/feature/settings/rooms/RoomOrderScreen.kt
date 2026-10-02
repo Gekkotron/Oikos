@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import com.gekkotron.oikos.designsystem.icons.OikosGlyph
 import com.gekkotron.oikos.designsystem.icons.StaticIcon
 import com.gekkotron.oikos.feature.settings.R
 import com.gekkotron.oikos.feature.settings.ui.SettingsTopBar
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -52,12 +54,13 @@ fun RoomOrderRoute(onAssignRooms: () -> Unit, onBack: () -> Unit, viewModel: Roo
     val snackbar = remember { SnackbarHostState() }
     var resetKey by remember { mutableIntStateOf(0) }
     val failed = stringResource(R.string.rooms_save_failed)
+    val scope = rememberCoroutineScope()
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
                 RoomOrderEvent.SaveFailed -> {
                     resetKey++ // the source rolled back to an equal list, so state alone would not re-emit
-                    snackbar.showSnackbar(failed)
+                    scope.launch { snackbar.showSnackbar(failed) } // never block the collector: the next failure must reset too
                 }
             }
         }
