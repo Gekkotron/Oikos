@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="security_title">Sécurité</string>
+    <string name="security_all_clear">Tout est calme</string>
+    <string name="security_no_panel">Aucune centrale d\'alarme. Publiez un alarm_control_panel MQTT pour la voir ici.</string>
+    <string name="security_no_sensors">Aucun capteur de sécurité.</string>
+    <string name="security_empty">Ni centrale d\'alarme ni capteur de sécurité pour l\'instant. Publiez un alarm_control_panel MQTT, ou appairez des capteurs de porte, de mouvement, de fumée ou de fuite.</string>
+    <string name="security_alerts">Alertes récentes</string>
+    <string name="security_alerts_empty">Les alertes apparaîtront ici une fois les notifications push configurées.</string>
+    <string name="security_show">Afficher dans Sécurité</string>
+    <string name="security_hide_hint">Pour le réafficher, passez par Personnaliser sur l\'Accueil.</string>
+    <string name="security_unassigned">Sans pièce</string>
+    <string name="security_unavailable">Indisponible</string>
+    <string name="security_unknown">—</string>
+    <string name="security_open">Ouvert</string>
+    <string name="security_closed">Fermé</string>
+    <string name="security_motion">Mouvement</string>
+    <string name="security_clear">RAS</string>
+    <string name="security_detected">Détecté</string>
+    <string name="security_leak">Fuite</string>
+    <string name="security_dry">Sec</string>
+    <string name="security_sos">SOS</string>
+    <string name="security_ok">OK</string>
+    <string name="security_vibration">Vibration</string>
+    <string name="security_still">Immobile</string>
+    <string name="security_tampered">Sabotage</string>
+    <string name="security_not_confirmed">Non confirmé</string>
+    <string name="security_retry">Réessayer</string>
+    <string name="security_rejected">Refusé : %1$s</string>
+    <string name="security_save_failed">Enregistrement impossible. Vérifiez la connexion.</string>
+    <string name="security_waiting">En attente de la connexion…</string>
+    <plurals name="security_count_opening"><item quantity="one">%1$d ouvert</item><item quantity="other">%1$d ouverts</item></plurals>
+    <plurals name="security_count_motion"><item quantity="one">%1$d mouvement</item><item quantity="other">%1$d mouvements</item></plurals>
+    <plurals name="security_count_smoke"><item quantity="one">%1$d fumée</item><item quantity="other">%1$d fumées</item></plurals>
+    <plurals name="security_count_co"><item quantity="one">%1$d CO</item><item quantity="other">%1$d CO</item></plurals>
+    <plurals name="security_count_gas"><item quantity="one">%1$d gaz</item><item quantity="other">%1$d gaz</item></plurals>
+    <plurals name="security_count_leak"><item quantity="one">%1$d fuite</item><item quantity="other">%1$d fuites</item></plurals>
+    <plurals name="security_count_sos"><item quantity="one">%1$d SOS</item><item quantity="other">%1$d SOS</item></plurals>
+    <plurals name="security_count_vibration"><item quantity="one">%1$d vibration</item><item quantity="other">%1$d vibrations</item></plurals>
+    <plurals name="security_count_tamper"><item quantity="one">%1$d sabotage</item><item quantity="other">%1$d sabotages</item></plurals>
+</resources>

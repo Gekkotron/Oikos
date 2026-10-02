@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="security_title">Security</string>
+    <string name="security_all_clear">All clear</string>
+    <string name="security_no_panel">No alarm panel. Publish an MQTT alarm_control_panel to see it here.</string>
+    <string name="security_no_sensors">No security sensors.</string>
+    <string name="security_empty">No alarm panel or security sensor yet. Publish an MQTT alarm_control_panel, or pair door, motion, smoke or leak sensors.</string>
+    <string name="security_alerts">Recent alerts</string>
+    <string name="security_alerts_empty">Alerts will appear here once push notifications are set up.</string>
+    <string name="security_show">Show on Security</string>
+    <string name="security_hide_hint">To bring it back later, use Customize on Home.</string>
+    <string name="security_unassigned">Unassigned</string>
+    <string name="security_unavailable">Unavailable</string>
+    <string name="security_unknown">—</string>
+    <string name="security_open">Open</string>
+    <string name="security_closed">Closed</string>
+    <string name="security_motion">Motion</string>
+    <string name="security_clear">Clear</string>
+    <string name="security_detected">Detected</string>
+    <string name="security_leak">Leak</string>
+    <string name="security_dry">Dry</string>
+    <string name="security_sos">SOS</string>
+    <string name="security_ok">OK</string>
+    <string name="security_vibration">Vibration</string>
+    <string name="security_still">Still</string>
+    <string name="security_tampered">Tampered</string>
+    <string name="security_not_confirmed">Not confirmed</string>
+    <string name="security_retry">Retry</string>
+    <string name="security_rejected">Refused: %1$s</string>
+    <string name="security_save_failed">Could not save. Check the connection.</string>
+    <string name="security_waiting">Waiting for the connection…</string>
+    <plurals name="security_count_opening"><item quantity="one">%1$d open</item><item quantity="other">%1$d open</item></plurals>
+    <plurals name="security_count_motion"><item quantity="one">%1$d motion</item><item quantity="other">%1$d motion</item></plurals>
+    <plurals name="security_count_smoke"><item quantity="one">%1$d smoke</item><item quantity="other">%1$d smoke</item></plurals>
+    <plurals name="security_count_co"><item quantity="one">%1$d CO</item><item quantity="other">%1$d CO</item></plurals>
+    <plurals name="security_count_gas"><item quantity="one">%1$d gas</item><item quantity="other">%1$d gas</item></plurals>
+    <plurals name="security_count_leak"><item quantity="one">%1$d leak</item><item quantity="other">%1$d leaks</item></plurals>
+    <plurals name="security_count_sos"><item quantity="one">%1$d SOS</item><item quantity="other">%1$d SOS</item></plurals>
+    <plurals name="security_count_vibration"><item quantity="one">%1$d vibration</item><item quantity="other">%1$d vibrations</item></plurals>
+    <plurals name="security_count_tamper"><item quantity="one">%1$d tamper</item><item quantity="other">%1$d tampers</item></plurals>
+</resources>
