@@ -41,6 +41,32 @@ class EnergyMetersTest {
     }
 
     @Test
+    fun `unnamed Z2M entities pair by unique id when they share the device name`() {
+        // Z2M publishes power_a / energy_a with "name": null, so both are named after the device.
+        val a = power("0xa4_power_a_zigbee2mqtt", "powers/ac_water_heater")
+        val b = power("0xa4_power_b_zigbee2mqtt", "powers/ac_water_heater")
+        val all = listOf(
+            a, b,
+            counter("0xa4_energy_a_zigbee2mqtt", "powers/ac_water_heater"),
+            counter("0xa4_energy_b_zigbee2mqtt", "powers/ac_water_heater"),
+            counter("0xa4_energy_produced_a_zigbee2mqtt", "powers/ac_water_heater"),
+            counter("0xa4_energy_produced_b_zigbee2mqtt", "powers/ac_water_heater"),
+        )
+        assertEquals("0xa4_energy_a_zigbee2mqtt", meter(a, all))
+        assertEquals("0xa4_energy_b_zigbee2mqtt", meter(b, all))
+    }
+
+    @Test
+    fun `a grid sensor's export counter is its energy_produced twin`() {
+        val grid = energyEntity("0x_power_a_z", EnergyRole.GRID).copy(deviceId = "d1")
+        val heater = power("0x_power_b_z", "Heater")
+        val all = listOf(grid, heater, counter("0x_energy_a_z", "x"), counter("0x_energy_produced_a_z", "x"), counter("0x_energy_produced_b_z", "x"))
+        assertEquals("0x_energy_produced_a_z", EnergyMeters.exportFor(grid, all)?.uniqueId)
+        assertEquals("0x_energy_a_z", meter(grid, all))
+        assertNull(EnergyMeters.exportFor(heater, all))
+    }
+
+    @Test
     fun `a label is preferred to the name`() {
         val p = power("p", "Plug Power").copy(label = "Power")
         val all = listOf(p, counter("e", "Plug Energy").copy(label = "Energy"), counter("x", "Other"))

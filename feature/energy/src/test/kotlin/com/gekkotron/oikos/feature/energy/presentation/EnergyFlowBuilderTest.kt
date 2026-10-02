@@ -340,6 +340,56 @@ class EnergyFlowBuilderTest {
         assertEquals(false, s.node("house")!!.hasMeter)
     }
 
+    /** This house's PJ-1203A: power_a = grid (signed), power_b = solar, unnamed so only the ids differ. */
+    private val clamp = listOf(
+        onDevice(energyEntity("0x_power_a_z", EnergyRole.GRID, name = "powers/grid_solar"), "g"),
+        onDevice(energyEntity("0x_power_b_z", EnergyRole.SOLAR, name = "powers/grid_solar"), "g"),
+        counter("0x_energy_a_z", device = "g"),
+        counter("0x_energy_b_z", device = "g"),
+        counter("0x_energy_produced_a_z", device = "g"),
+        counter("0x_energy_produced_b_z", device = "g"),
+    )
+    private val clampStates = listOf(
+        numeric("0x_power_a_z", 300.0), numeric("0x_power_b_z", 500.0),
+        numeric("0x_energy_a_z", 100.0), numeric("0x_energy_b_z", 40.0),
+        numeric("0x_energy_produced_a_z", 30.0), numeric("0x_energy_produced_b_z", 0.0),
+    )
+
+    @Test
+    fun `a derived house totals solar plus grid import minus grid export`() {
+        val s = build(clamp, clampStates)
+        assertEquals(100.0, s.node("grid")!!.totalKwh)
+        assertEquals(40.0, s.node("solar")!!.totalKwh)
+        val house = s.node("house")!!
+        assertTrue(house.hasMeter)
+        assertEquals(110.0, house.totalKwh)
+    }
+
+    @Test
+    fun `a derived house counts a grid_export meter as export`() {
+        val grid = onDevice(energyEntity("grid", EnergyRole.GRID), "g")
+        val solar = onDevice(energyEntity("solar", EnergyRole.SOLAR), "s")
+        val export = onDevice(energyEntity("export", EnergyRole.GRID_EXPORT), "x")
+        val s = build(
+            listOf(grid, solar, export, counter("g_kwh", device = "g"), counter("s_kwh", device = "s"), counter("x_kwh", device = "x")),
+            listOf(numeric("grid", 1.0), numeric("solar", 1.0), numeric("export", 1.0), numeric("g_kwh", 10.0), numeric("s_kwh", 8.0), numeric("x_kwh", 3.0)),
+        )
+        assertEquals(15.0, s.node("house")!!.totalKwh)
+    }
+
+    @Test
+    fun `a derived house without an export counter for its solar has no total`() {
+        val noExport = clamp.filterNot { it.uniqueId == "0x_energy_produced_a_z" }
+        assertEquals(false, build(noExport, clampStates).node("house")!!.hasMeter)
+    }
+
+    @Test
+    fun `a derived house follows its inputs' status`() {
+        val s = build(clamp, clampStates.map { if (it.uniqueId == "0x_energy_produced_a_z") numeric(it.uniqueId, 30.0, available = false) else it })
+        assertNull(s.node("house")!!.totalKwh)
+        assertEquals(NodeStatus.UNAVAILABLE, s.node("house")!!.totalStatus)
+    }
+
     @Test
     fun `grid totals ignore the export counter`() {
         val grid = onDevice(energyEntity("grid", EnergyRole.GRID), "g")

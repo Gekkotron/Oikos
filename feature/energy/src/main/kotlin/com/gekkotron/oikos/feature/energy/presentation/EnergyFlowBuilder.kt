@@ -85,7 +85,14 @@ object EnergyFlowBuilder {
         val solarNode = solar?.let { EnergyNode("solar", NodeKind.SOLAR, value = it.watts, flow = inward(it.watts), status = it.status, sensorIds = ids(EnergyRole.SOLAR)).withTotal(byRole[EnergyRole.SOLAR]) }
         val gridNode = grid?.let { EnergyNode("grid", NodeKind.GRID, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.GRID, EnergyRole.GRID_EXPORT)).withTotal(byRole[EnergyRole.GRID]) }
         val batteryNode = battery?.let { EnergyNode("battery", NodeKind.BATTERY, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.BATTERY)).withTotal(byRole[EnergyRole.BATTERY]) }
-        val houseNode = house?.let { EnergyNode("house", NodeKind.HOUSE, value = it.watts, status = it.status, sensorIds = ids(EnergyRole.HOUSE)).withTotal(byRole[EnergyRole.HOUSE]) }
+        val houseNode = house?.let {
+            val node = EnergyNode("house", NodeKind.HOUSE, value = it.watts, status = it.status, sensorIds = ids(EnergyRole.HOUSE))
+            if (measured != null) {
+                node.withTotal(byRole[EnergyRole.HOUSE])
+            } else {
+                derivedTotal(byRole, all, states).let { t -> node.copy(totalKwh = t.kwh, totalStatus = t.status, hasMeter = t.hasMeter) }
+            }
+        }
         val waterNode = byRole[EnergyRole.WATER]?.firstOrNull()?.let { e -> water(e, states[e.uniqueId]) }
 
         val roles = listOfNotNull(solarNode, gridNode, batteryNode, houseNode)
@@ -122,16 +129,42 @@ object EnergyFlowBuilder {
 
     private fun total(sensors: List<Entity>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
         val meters = sensors.filter { it.ui.energyRole?.power == true }.mapNotNull { EnergyMeters.meterFor(it, all) }.distinctBy { it.uniqueId }
-        if (meters.isEmpty()) return Total(false, null, NodeStatus.LIVE)
-        val parts = meters.map { m ->
-            val state = states[m.uniqueId]
-            val status = status(state)
-            val numeric = (state?.value as? StateValue.Numeric)?.value
-            val factor = EnergyUnits.factor(m.unit)
-            Reading(if (status == NodeStatus.UNAVAILABLE || numeric == null || factor == null) null else numeric * factor, status)
-        }
+        if (meters.isEmpty()) return NO_TOTAL
+        val parts = meters.map { kwh(it, states) }
         val kwh = if (parts.any { it.watts == null }) null else parts.sumOf { it.watts!! }
         return Total(true, kwh, worst(parts.map { it.status }))
+    }
+
+    private val NO_TOTAL = Total(false, null, NodeStatus.LIVE)
+
+    /**
+     * A house without its own sensor: Σsolar + Σgrid import − Σgrid export, like its live watts (spec §3). Every solar
+     * and grid sensor needs a counter, and solar needs an export counter too (else the export would count as
+     * consumption); a battery has no counter pairing yet, so a house with one has no total.
+     */
+    private fun derivedTotal(byRole: Map<EnergyRole, List<Entity>>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
+        if (byRole[EnergyRole.BATTERY] != null) return NO_TOTAL
+        val solar = byRole[EnergyRole.SOLAR].orEmpty()
+        val grid = byRole[EnergyRole.GRID].orEmpty()
+        val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
+        if (solar.isEmpty() && grid.isEmpty()) return NO_TOTAL
+        val added = (solar + grid).map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
+        val exports = grid.mapNotNull { EnergyMeters.exportFor(it, all) } + gridExport.map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
+        if (solar.isNotEmpty() && exports.isEmpty()) return NO_TOTAL
+        val plus = added.distinctBy { it.uniqueId }.map { kwh(it, states) }
+        val minus = exports.distinctBy { it.uniqueId }.map { kwh(it, states) }
+        val parts = plus + minus
+        val kwh = if (parts.any { it.watts == null }) null else plus.sumOf { it.watts!! } - minus.sumOf { it.watts!! }
+        return Total(true, kwh?.coerceAtLeast(0.0), worst(parts.map { it.status }))
+    }
+
+    /** A counter's reading in kWh, carried in [Reading.watts]. */
+    private fun kwh(meter: Entity, states: Map<String, EntityState>): Reading {
+        val state = states[meter.uniqueId]
+        val status = status(state)
+        val numeric = (state?.value as? StateValue.Numeric)?.value
+        val factor = EnergyUnits.factor(meter.unit)
+        return Reading(if (status == NodeStatus.UNAVAILABLE || numeric == null || factor == null) null else numeric * factor, status)
     }
 
     /** Summed watts of [entities] (null if any is unknown), or null when the role has no entity. */
