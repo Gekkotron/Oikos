@@ -56,8 +56,9 @@ fun AlarmHero(
     modifier: Modifier = Modifier,
 ) {
     val c = OikosTheme.colors
-    val accent = accentFor(state, available, c)
+    val accent = alarmAccent(state, available, c)
     val triggered = available && state == AlarmState.TRIGGERED
+    val armed = AlarmActions.of(state, available, caps).current != null
     val pulses = available && (state == AlarmState.ARMING || state == AlarmState.PENDING || state == AlarmState.DISARMING)
     val alpha = if (pulses && animationsEnabled()) {
         val pulse by rememberInfiniteTransition(label = "alarm").animateFloat(
@@ -68,7 +69,11 @@ fun AlarmHero(
         )
         pulse
     } else {
-        if (triggered) 0.35f else 0.12f
+        when {
+            triggered -> 0.35f
+            armed -> 0.22f
+            else -> 0.12f
+        }
     }
     val stateText = when {
         !available -> stringResource(R.string.alarm_unavailable)
@@ -104,7 +109,8 @@ fun AlarmHero(
     }
 }
 
-private fun accentFor(state: AlarmState?, available: Boolean, c: OikosColors): Color = when {
+/** The alarm's colour by state, shared by [AlarmHero] and the selected mode in [AlarmControls]. */
+internal fun alarmAccent(state: AlarmState?, available: Boolean, c: OikosColors): Color = when {
     !available || state == null -> c.contentMuted
     state == AlarmState.DISARMED || state == AlarmState.DISARMING -> c.connected
     state == AlarmState.PENDING -> c.warning
