@@ -22,6 +22,8 @@ data class UiOverride(
     val securityHidden: Boolean = false,
     /** A [ConsumerIcon.key]; kept as a string so a value this app doesn't know falls back to the default plug instead of failing the decode. */
     val energyIcon: String? = null,
+    /** Unique id of the energy counter shown on this power sensor's card; null = paired automatically. */
+    val energyMeter: String? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

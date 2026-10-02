@@ -31,6 +31,9 @@
     <string name="energy_details_role_none">Aucun</string>
     <string name="energy_details_invert">Inverser le signe</string>
     <string name="energy_details_unit_hint">Nécessite une unité de puissance (W, kW)</string>
+    <string name="energy_details_meter">Compteur d\'énergie</string>
+    <string name="energy_meter_auto">Automatique</string>
+    <string name="energy_no_meter">Aucun compteur d\'énergie</string>
     <string name="energy_details_icon">Icône</string>
     <string name="energy_icon_default">Par défaut</string>
     <string name="energy_icon_water_heater">Chauffe-eau</string>

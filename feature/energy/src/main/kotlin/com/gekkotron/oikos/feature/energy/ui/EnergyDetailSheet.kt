@@ -44,6 +44,7 @@ import com.gekkotron.oikos.feature.energy.R
 import com.gekkotron.oikos.feature.energy.presentation.EnergyFormat
 import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import com.gekkotron.oikos.feature.energy.presentation.EnergyUiState
+import com.gekkotron.oikos.feature.energy.presentation.MeterOption
 import com.gekkotron.oikos.feature.energy.presentation.NodeKind
 import com.gekkotron.oikos.feature.energy.presentation.NodeStatus
 import com.gekkotron.oikos.feature.energy.presentation.SensorEdit
@@ -54,7 +55,7 @@ import com.gekkotron.oikos.model.PowerUnits
 import java.util.Locale
 import com.gekkotron.oikos.designsystem.R as DsR
 
-/** A node's details: its value, the sensors behind it, and an editor per sensor (name, role, invert, icon). */
+/** A node's details: its value, the sensors behind it, and an editor per sensor (name, role, invert, icon, energy meter). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EnergyDetailSheet(
@@ -83,7 +84,7 @@ internal fun EnergyDetailSheet(
             if (sensors.isNotEmpty()) {
                 Text(stringResource(R.string.energy_details_sensors), style = OikosTheme.type.label)
                 sensors.forEach { sensor ->
-                    SensorRow(sensor, locale, startOpen = sensors.size == 1, onSave = { onSave(sensor.id, it); onDismiss() })
+                    SensorRow(sensor, state.meters, locale, startOpen = sensors.size == 1, onSave = { onSave(sensor.id, it); onDismiss() })
                 }
             }
         }
@@ -91,7 +92,7 @@ internal fun EnergyDetailSheet(
 }
 
 @Composable
-private fun SensorRow(sensor: SensorUi, locale: Locale, startOpen: Boolean, onSave: (SensorEdit) -> Unit) {
+private fun SensorRow(sensor: SensorUi, meters: List<MeterOption>, locale: Locale, startOpen: Boolean, onSave: (SensorEdit) -> Unit) {
     var open by rememberSaveable(sensor.id) { mutableStateOf(startOpen) }
     HorizontalDivider()
     Row(
@@ -106,15 +107,16 @@ private fun SensorRow(sensor: SensorUi, locale: Locale, startOpen: Boolean, onSa
         Text(sensor.name, style = OikosTheme.type.body, modifier = Modifier.weight(1f))
         Text(sensorValueText(sensor, locale), style = OikosTheme.type.body)
     }
-    if (open) SensorEditor(sensor, onSave)
+    if (open) SensorEditor(sensor, meters, onSave)
 }
 
 @Composable
-private fun SensorEditor(sensor: SensorUi, onSave: (SensorEdit) -> Unit) {
+private fun SensorEditor(sensor: SensorUi, meters: List<MeterOption>, onSave: (SensorEdit) -> Unit) {
     var name by rememberSaveable(sensor.id) { mutableStateOf(sensor.name) }
     var role by rememberSaveable(sensor.id) { mutableStateOf<EnergyRole?>(sensor.role) }
     var invert by rememberSaveable(sensor.id) { mutableStateOf(sensor.invert) }
     var icon by rememberSaveable(sensor.id) { mutableStateOf(sensor.icon) }
+    var meter by rememberSaveable(sensor.id) { mutableStateOf(sensor.meterId) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = name,
@@ -153,8 +155,31 @@ private fun SensorEditor(sensor: SensorUi, onSave: (SensorEdit) -> Unit) {
                 }
             }
         }
+        if (current?.power == true) {
+            Text(stringResource(R.string.energy_details_meter), style = OikosTheme.type.label)
+            val deviceId = sensor.deviceId
+            val ordered = meters.filter { it.deviceId != null && it.deviceId == deviceId } + meters.filterNot { it.deviceId != null && it.deviceId == deviceId }
+            val autoName = meters.firstOrNull { it.id == sensor.autoMeterId }?.name
+            val auto = stringResource(R.string.energy_meter_auto)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = meter == null,
+                    onClick = { meter = null },
+                    label = { Text(if (autoName != null) "$auto · $autoName" else auto) },
+                    modifier = Modifier.heightIn(min = OikosDimens.minTouch).testTag("energy-meter-auto"),
+                )
+                ordered.forEach { m ->
+                    FilterChip(
+                        selected = meter == m.id,
+                        onClick = { meter = m.id },
+                        label = { Text(m.name) },
+                        modifier = Modifier.heightIn(min = OikosDimens.minTouch).testTag("energy-meter-${m.id}"),
+                    )
+                }
+            }
+        }
         Button(
-            onClick = { onSave(SensorEdit(name, role, invert, icon)) },
+            onClick = { onSave(SensorEdit(name, role, invert, icon, meter)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch),
         ) { Text(stringResource(R.string.energy_details_save)) }
     }

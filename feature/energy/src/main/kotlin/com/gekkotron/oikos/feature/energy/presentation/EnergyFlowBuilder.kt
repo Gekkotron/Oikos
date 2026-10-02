@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.energy.presentation
 
 import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
+import com.gekkotron.oikos.model.EnergyUnits
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.PowerUnits
@@ -62,10 +63,15 @@ object EnergyFlowBuilder {
         val byName = compareBy<Entity>({ it.name }, { it.uniqueId })
         fun ids(vararg roles: EnergyRole) = roles.flatMap { byRole[it].orEmpty() }.sortedWith(byName).map { it.uniqueId }
 
+        val all = entities.values
+        fun EnergyNode.withTotal(sensors: List<Entity>?): EnergyNode = total(sensors.orEmpty(), all, states).let {
+            copy(totalKwh = it.kwh, totalStatus = it.status, hasMeter = it.hasMeter)
+        }
+
         val consumerNodes = consumerEntities.associate { e ->
             val r = sum(listOf(e), states)!!
             val w = r.watts?.coerceAtLeast(0.0)
-            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status, sensorIds = listOf(e.uniqueId), icon = ConsumerIcon.of(e.ui.energyIcon))
+            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status, sensorIds = listOf(e.uniqueId), icon = ConsumerIcon.of(e.ui.energyIcon)).withTotal(listOf(e))
         }
         val fresh = rank(consumerEntities, consumerNodes)
         val order = if (previous != null && nowMillis - previous.atMillis < REORDER_MS && previous.ids.toSet() == fresh.toSet()) {
@@ -76,10 +82,10 @@ object EnergyFlowBuilder {
         val consumers = order.ids.map(consumerNodes::getValue)
         val arc = if (consumers.size <= ARC_SLOTS) consumers else consumers.take(ARC_SLOTS - 1) + more(consumers.drop(ARC_SLOTS - 1))
 
-        val solarNode = solar?.let { EnergyNode("solar", NodeKind.SOLAR, value = it.watts, flow = inward(it.watts), status = it.status, sensorIds = ids(EnergyRole.SOLAR)) }
-        val gridNode = grid?.let { EnergyNode("grid", NodeKind.GRID, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.GRID, EnergyRole.GRID_EXPORT)) }
-        val batteryNode = battery?.let { EnergyNode("battery", NodeKind.BATTERY, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.BATTERY)) }
-        val houseNode = house?.let { EnergyNode("house", NodeKind.HOUSE, value = it.watts, status = it.status, sensorIds = ids(EnergyRole.HOUSE)) }
+        val solarNode = solar?.let { EnergyNode("solar", NodeKind.SOLAR, value = it.watts, flow = inward(it.watts), status = it.status, sensorIds = ids(EnergyRole.SOLAR)).withTotal(byRole[EnergyRole.SOLAR]) }
+        val gridNode = grid?.let { EnergyNode("grid", NodeKind.GRID, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.GRID, EnergyRole.GRID_EXPORT)).withTotal(byRole[EnergyRole.GRID]) }
+        val batteryNode = battery?.let { EnergyNode("battery", NodeKind.BATTERY, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.BATTERY)).withTotal(byRole[EnergyRole.BATTERY]) }
+        val houseNode = house?.let { EnergyNode("house", NodeKind.HOUSE, value = it.watts, status = it.status, sensorIds = ids(EnergyRole.HOUSE)).withTotal(byRole[EnergyRole.HOUSE]) }
         val waterNode = byRole[EnergyRole.WATER]?.firstOrNull()?.let { e -> water(e, states[e.uniqueId]) }
 
         val roles = listOfNotNull(solarNode, gridNode, batteryNode, houseNode)
@@ -100,14 +106,32 @@ object EnergyFlowBuilder {
             hint = hint,
             link = link,
             order = order,
-            sensors = byRole.values.flatten().associate { e -> e.uniqueId to sensor(e, states[e.uniqueId]) },
+            sensors = byRole.values.flatten().associate { e -> e.uniqueId to sensor(e, states[e.uniqueId], all) },
+            meters = EnergyMeters.counters(all).sortedWith(compareBy({ it.name }, { it.uniqueId })).map { MeterOption(it.uniqueId, it.name, it.deviceId) },
         )
     }
 
-    private fun sensor(e: Entity, state: EntityState?): SensorUi {
+    private fun sensor(e: Entity, state: EntityState?, all: Collection<Entity>): SensorUi {
         val status = status(state)
         val value = (state?.value as? StateValue.Numeric)?.value.takeIf { status != NodeStatus.UNAVAILABLE }
-        return SensorUi(e.uniqueId, e.name, value, e.unit, status, e.ui.energyRole!!, e.ui.energyInvert, ConsumerIcon.of(e.ui.energyIcon))
+        return SensorUi(e.uniqueId, e.name, value, e.unit, status, e.ui.energyRole!!, e.ui.energyInvert, ConsumerIcon.of(e.ui.energyIcon), e.ui.energyMeter, EnergyMeters.auto(e, all)?.uniqueId, e.deviceId)
+    }
+
+    /** A node's lifetime energy: the paired meters of its power [sensors] (each counted once), summed in kWh. */
+    private data class Total(val hasMeter: Boolean, val kwh: Double?, val status: NodeStatus)
+
+    private fun total(sensors: List<Entity>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
+        val meters = sensors.filter { it.ui.energyRole?.power == true }.mapNotNull { EnergyMeters.meterFor(it, all) }.distinctBy { it.uniqueId }
+        if (meters.isEmpty()) return Total(false, null, NodeStatus.LIVE)
+        val parts = meters.map { m ->
+            val state = states[m.uniqueId]
+            val status = status(state)
+            val numeric = (state?.value as? StateValue.Numeric)?.value
+            val factor = EnergyUnits.factor(m.unit)
+            Reading(if (status == NodeStatus.UNAVAILABLE || numeric == null || factor == null) null else numeric * factor, status)
+        }
+        val kwh = if (parts.any { it.watts == null }) null else parts.sumOf { it.watts!! }
+        return Total(true, kwh, worst(parts.map { it.status }))
     }
 
     /** Summed watts of [entities] (null if any is unknown), or null when the role has no entity. */

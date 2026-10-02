@@ -114,4 +114,18 @@ class UiOverrideTest {
         assertNull(UiOverrides.decode("{}")!!.energyIcon)
         assertFalse(UiOverrides.encode(UiOverride()).contains("energyIcon"))
     }
+
+    @Test
+    fun `energyMeter round-trips`() {
+        val o = UiOverride(energyRole = EnergyRole.SOLAR, energyMeter = "solar_kwh")
+        val json = UiOverrides.encode(o)
+        assertTrue(json.contains("\"energyMeter\":\"solar_kwh\""), json)
+        assertEquals(o, UiOverrides.decode(json))
+    }
+
+    @Test
+    fun `absent energyMeter is null and omitted`() {
+        assertNull(UiOverrides.decode("{}")!!.energyMeter)
+        assertFalse(UiOverrides.encode(UiOverride()).contains("energyMeter"))
+    }
 }

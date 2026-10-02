@@ -67,4 +67,24 @@ class EnergyEditTest {
         val withIcon = heater.copy(ui = heater.ui.copy(energyIcon = "oven"))
         assertNull(EnergyEdit.apply(withIcon, SensorEdit("PowerB", EnergyRole.CONSUMER, invert = false)).energyIcon)
     }
+
+    @Test
+    fun `a meter is stored on a power role and keeps the other fields`() {
+        val o = EnergyEdit.apply(heater, SensorEdit("PowerB", EnergyRole.CONSUMER, invert = false, meter = "kwh_b"))
+        assertEquals(UiOverride(area = "garage", favorite = true, order = 2, energyRole = EnergyRole.CONSUMER, energyMeter = "kwh_b"), o)
+    }
+
+    @Test
+    fun `the meter is cleared when the role is water or none`() {
+        val withMeter = heater.copy(ui = heater.ui.copy(energyMeter = "kwh_b"))
+        assertEquals("kwh_b", EnergyEdit.from(withMeter).meter)
+        assertNull(EnergyEdit.apply(withMeter, SensorEdit("PowerB", EnergyRole.WATER, invert = false, meter = "kwh_b")).energyMeter)
+        assertNull(EnergyEdit.apply(withMeter, SensorEdit("PowerB", null, invert = false, meter = "kwh_b")).energyMeter)
+    }
+
+    @Test
+    fun `no meter clears a stored one`() {
+        val withMeter = heater.copy(ui = heater.ui.copy(energyMeter = "kwh_b"))
+        assertNull(EnergyEdit.apply(withMeter, SensorEdit("PowerB", EnergyRole.CONSUMER, invert = false)).energyMeter)
+    }
 }

@@ -46,7 +46,19 @@ class DemoHouse(private val random: Random = Random(7)) {
         sensor("demo_house_power", "House consumption", null, "Garage", ENERGY, "house", "power", "W")
         sensor("demo_water_heater_power", "Water heater", null, "Garage", ENERGY, "water_heater", "power", "W")
         sensor("demo_ac_power", "Air conditioner power", null, "Living room", ENERGY, "ac", "power", "W")
-        doc(ENERGY, obj("solar" to 2140, "grid" to -380, "house" to 1760, "water_heater" to 900, "ac" to 350))
+        // Lifetime counters share their power sensor's device so automatic pairing finds them.
+        sensor("demo_solar_energy", "Solar production", "Energy", "Garage", ENERGY, "solar_kwh", "energy", "kWh", "total_increasing")
+        sensor("demo_grid_energy", "Grid", "Energy", "Garage", ENERGY, "grid_kwh", "energy", "kWh", "total_increasing")
+        sensor("demo_house_energy", "House consumption", "Energy", "Garage", ENERGY, "house_kwh", "energy", "kWh", "total_increasing")
+        sensor("demo_water_heater_energy", "Water heater", "Energy", "Garage", ENERGY, "water_heater_kwh", "energy", "kWh", "total_increasing")
+        sensor("demo_ac_energy", "Air conditioner power", "Energy", "Living room", ENERGY, "ac_kwh", "energy", "kWh", "total_increasing")
+        doc(
+            ENERGY,
+            obj(
+                "solar" to 2140, "grid" to -380, "house" to 1760, "water_heater" to 900, "ac" to 350,
+                "solar_kwh" to 5821.4, "grid_kwh" to 3290.7, "house_kwh" to 7413.2, "water_heater_kwh" to 1186.9, "ac_kwh" to 642.3,
+            ),
+        )
         binarySensor("demo_front_door", "Front door", "Hallway", "demo/hallway/door", "door", "contact", onValue = false, initial = true)
         binarySensor("demo_hallway_motion", "Hallway motion", "Hallway", "demo/hallway/motion", "motion", "occupancy", onValue = true, initial = false)
         binarySensor("demo_bedroom_window", "Bedroom window", "Bedroom", "demo/bedroom/window", "window", "contact", onValue = false, initial = false)
@@ -95,6 +107,11 @@ class DemoHouse(private val random: Random = Random(7)) {
         docs[ENERGY] = obj(
             "solar" to solar.roundToInt(), "grid" to (house - solar).roundToInt(), "house" to house.roundToInt(),
             "water_heater" to heater.roundToInt(), "ac" to ac.roundToInt(),
+            "solar_kwh" to counter(energy, "solar_kwh", solar),
+            "grid_kwh" to counter(energy, "grid_kwh", (house - solar).coerceAtLeast(0.0)),
+            "house_kwh" to counter(energy, "house_kwh", house),
+            "water_heater_kwh" to counter(energy, "water_heater_kwh", heater),
+            "ac_kwh" to counter(energy, "ac_kwh", ac),
         )
         val outdoor = docs.getValue(OUTDOOR).number("temperature") + random.nextInt(-1, 2) / 10.0
         docs[OUTDOOR] = obj("temperature" to (outdoor * 10).roundToInt() / 10.0)
@@ -112,6 +129,10 @@ class DemoHouse(private val random: Random = Random(7)) {
         }
         return listOf(DemoMessage(ENERGY, docs.getValue(ENERGY).toString()), DemoMessage(OUTDOOR, docs.getValue(OUTDOOR).toString())) + alarmMessages
     }
+
+    /** A lifetime counter advanced by one tick of [watts], rounded to 0.01 kWh; demo ticks are sped up so it visibly moves. */
+    private fun counter(doc: JsonObject, key: String, watts: Double): Double =
+        ((doc.number(key) + watts / 1_000 * COUNTER_STEP_HOURS) * 100).roundToInt() / 100.0
 
     private fun areas() {
         val areas = listOf("Living room", "Kitchen", "Bedroom", "Hallway", "Garage").withIndex().joinToString(",") { (i, name) ->
@@ -256,13 +277,13 @@ class DemoHouse(private val random: Random = Random(7)) {
 
     private fun sensor(
         id: String, device: String, name: String?, area: String, topic: String,
-        field: String, deviceClass: String, unit: String,
+        field: String, deviceClass: String, unit: String, stateClass: String = "measurement",
     ) = config("sensor", id, device, name, area) {
         put("state_topic", topic)
         put("value_template", "{{ value_json.$field }}")
         put("device_class", deviceClass)
         put("unit_of_measurement", unit)
-        put("state_class", "measurement")
+        put("state_class", stateClass)
     }
 
     /** zigbee2mqtt style: JSON booleans for payload_on/off (a door contact is `true` when closed). */
@@ -340,6 +361,7 @@ class DemoHouse(private val random: Random = Random(7)) {
 
     private companion object {
         const val ENERGY = "demo/energy"
+        const val COUNTER_STEP_HOURS = 0.05
         const val OUTDOOR = "demo/outdoor"
         const val ALARM = "demo/alarm"
         const val DEMO_CODE = "1234"

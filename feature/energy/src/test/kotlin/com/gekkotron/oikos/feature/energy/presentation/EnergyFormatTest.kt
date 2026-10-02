@@ -25,4 +25,12 @@ class EnergyFormatTest {
         assertEquals("1.5 m³", EnergyFormat.amount(1.46, "m³", Locale.US))
         assertEquals("7", EnergyFormat.amount(7.0, null, Locale.US))
     }
+
+    @Test
+    fun `energy shows kWh with at most one decimal`() {
+        assertEquals("1,234.5 kWh", EnergyFormat.energy(1234.5, Locale.US))
+        assertEquals("0 kWh", EnergyFormat.energy(0.0, Locale.US))
+        assertEquals("12 kWh", EnergyFormat.energy(12.0, Locale.US))
+        assertEquals("3,2 kWh", EnergyFormat.energy(3.24, Locale.FRANCE))
+    }
 }

@@ -160,17 +160,23 @@ private fun EnergyHeader(state: EnergyUiState) {
 @Composable
 private fun EnergyValueCard(node: EnergyNode, locale: Locale, onClick: () -> Unit) {
     val staleText = stringResource(R.string.energy_stale)
+    // Water keeps its own reading; every other card shows the node's lifetime energy counter.
+    val water = node.kind == NodeKind.WATER
+    val status = if (water) node.status else node.totalStatus
     OikosCard(
         Modifier
             .fillMaxWidth()
             .testTag("energy-card-${node.id}")
-            .alpha(statusAlpha(node.status))
-            .semantics(mergeDescendants = true) { if (node.status == NodeStatus.STALE) stateDescription = staleText },
+            .alpha(statusAlpha(status))
+            .semantics(mergeDescendants = true) { if (status == NodeStatus.STALE) stateDescription = staleText },
         onClick = onClick,
     ) {
         Column(Modifier.padding(12.dp)) {
             Text(nodeLabel(node), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
-            Text(nodeValueText(node, locale), style = OikosTheme.type.body)
+            Text(if (water) nodeValueText(node, locale) else cardValueText(node, locale), style = OikosTheme.type.body)
+            if (!water && !node.hasMeter) {
+                Text(stringResource(R.string.energy_no_meter), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
+            }
         }
     }
 }
@@ -186,6 +192,15 @@ internal fun nodeLabel(node: EnergyNode): String = node.name ?: stringResource(
         NodeKind.CONSUMER, NodeKind.MORE -> DsR.string.energy_consumer
     },
 )
+
+/** A card's lifetime energy: "—" without a meter or a reading, "Unavailable", or "1,234.5 kWh". */
+@Composable
+private fun cardValueText(node: EnergyNode, locale: Locale): String = when {
+    !node.hasMeter -> stringResource(R.string.energy_unknown)
+    node.totalStatus == NodeStatus.UNAVAILABLE -> stringResource(R.string.energy_unavailable)
+    node.totalKwh == null -> stringResource(R.string.energy_unknown)
+    else -> EnergyFormat.energy(node.totalKwh, locale)
+}
 
 /** "—", "Unavailable", or the value; grid and battery get ↙ (into the house) or ↗ (out of it). */
 @Composable

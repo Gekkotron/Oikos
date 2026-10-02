@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.energy.ui
 
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -198,5 +199,34 @@ class EnergyScreenTest {
         }
         compose.onNodeWithText("Solar").assertExists()
         compose.onNodeWithText("Grid").assertExists()
+    }
+
+    private val metered = listOf(
+        energyEntity("grid", EnergyRole.GRID),
+        energyEntity("heater", EnergyRole.CONSUMER, name = "Water heater").copy(deviceId = "wh"),
+        energyEntity("heater_kwh", null, unit = "kWh", name = "Water heater energy").copy(deviceId = "wh"),
+    )
+    private val meteredStates = listOf(numeric("grid", 100.0), numeric("heater", 900.0), numeric("heater_kwh", 1234.5))
+
+    @Test
+    fun `a card with a meter shows its lifetime kWh`() {
+        show(state(metered, meteredStates))
+        compose.onNodeWithTag("energy-card-consumer:heater").performScrollTo().assertTextContains("1,234.5 kWh", substring = true)
+    }
+
+    @Test
+    fun `a card without a meter says so`() {
+        show(state(metered, meteredStates))
+        compose.onNodeWithTag("energy-card-grid").performScrollTo().assertTextContains("No energy meter", substring = true)
+    }
+
+    @Test
+    fun `choosing a meter in the editor saves it`() {
+        showDetails(state(metered, meteredStates))
+        compose.onNodeWithTag("energy-card-consumer:heater").performScrollTo().performClick()
+        compose.onNodeWithTag("energy-meter-auto").performScrollTo().assertExists()
+        compose.onNodeWithTag("energy-meter-heater_kwh").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("heater" to SensorEdit("Water heater", EnergyRole.CONSUMER, invert = false, meter = "heater_kwh")), saves)
     }
 }
