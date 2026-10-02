@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.energy.ui
 import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import com.gekkotron.oikos.feature.energy.presentation.Flow
 import com.gekkotron.oikos.feature.energy.presentation.NodeKind
+import androidx.compose.ui.geometry.Offset
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -53,5 +54,34 @@ class FlowLayoutTest {
                 assertTrue(step < 0.01f, "speed $speed jumps by $step at t=$t")
             }
         }
+    }
+
+    private val hub = Offset(100f, 100f)
+
+    @Test
+    fun `a side edge runs from the node's facing side to the house's, at circle-centre height`() {
+        val e = FlowLayout.edge(node = Offset(20f, 150f), hub = hub, clearance = 25f)
+        assertEquals(Offset(45f, 150f), e.start)
+        assertEquals(Offset(75f, 100f), e.end)
+        // Leaves and arrives horizontally, so it never dips into the labels under a circle.
+        assertEquals(e.start.y, e.c1.y)
+        assertEquals(e.end.y, e.c2.y)
+        val right = FlowLayout.edge(node = Offset(180f, 40f), hub = hub, clearance = 25f)
+        assertEquals(Offset(155f, 40f), right.start)
+        assertEquals(Offset(125f, 100f), right.end)
+    }
+
+    @Test
+    fun `a solar edge drops from below its labels to the top of the house`() {
+        val e = FlowLayout.edge(node = Offset(100f, 20f), hub = hub, clearance = 25f, below = 60f)
+        assertEquals(Offset(100f, 60f), e.start)
+        assertEquals(Offset(100f, 75f), e.end)
+    }
+
+    @Test
+    fun `reversing keeps the shape and swaps the ends`() {
+        val e = FlowLayout.edge(node = Offset(20f, 150f), hub = hub, clearance = 25f)
+        val r = e.reversed()
+        assertEquals(listOf(e.end, e.c2, e.c1, e.start), listOf(r.start, r.c1, r.c2, r.end))
     }
 }
