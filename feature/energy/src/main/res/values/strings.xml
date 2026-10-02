@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="energy_title">Energy</string>
+    <string name="energy_live">Live</string>
+    <string name="energy_live_self">Live · self-consumption %1$d %%</string>
+    <string name="energy_empty">Long-press a power sensor on Home and choose an energy role.</string>
+    <string name="energy_go_home">Go to Home</string>
+    <string name="energy_check_sign">Check the grid or battery sign</string>
+    <string name="energy_more">+%1$d</string>
+    <string name="energy_more_action">Show all %1$d consumers</string>
+    <string name="energy_consumers_title">All consumers</string>
+    <string name="energy_unknown">—</string>
+    <string name="energy_unavailable">Unavailable</string>
+    <string name="energy_stale">Last known value</string>
+    <string name="energy_spoken_kw">%1$s kilowatts</string>
+    <string name="energy_spoken_w">%1$s watts</string>
+    <string name="energy_cd_solar">Solar %1$s to the house.</string>
+    <string name="energy_cd_house">House uses %1$s.</string>
+    <string name="energy_cd_grid_in">Importing %1$s from the grid.</string>
+    <string name="energy_cd_grid_out">Exporting %1$s to the grid.</string>
+    <string name="energy_cd_battery_in">Battery supplies %1$s.</string>
+    <string name="energy_cd_battery_out">Battery charging at %1$s.</string>
+    <string name="energy_cd_consumer">%1$s %2$s.</string>
+    <string name="energy_cd_water">Water %1$s.</string>
+</resources>
