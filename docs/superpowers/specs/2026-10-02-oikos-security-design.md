@@ -44,7 +44,11 @@ Binary sensors (Z2M 2.14.1): 10 `door`-class contacts (doors, windows, garage, m
 
 ### 3.2 Security sensor classes
 
-`SECURITY_CLASSES = door, window, garage_door, opening, motion, occupancy, presence, smoke, carbon_monoxide, gas, moisture, safety, vibration, tamper`.
+`SensorGroup` (in `:core:model`, so Home's customise sheet and Security share it) maps device classes to groups:
+- `door, window, garage_door, opening` → OPENING;
+- `motion, occupancy, presence` → MOTION;
+- `smoke` → SMOKE, `carbon_monoxide` → CO, `gas` → GAS, `moisture` → LEAK, `safety` → SOS;
+- `vibration` → VIBRATION, `tamper` → TAMPER.
 
 - `danger` subset (rose accent): `smoke, carbon_monoxide, gas, moisture, safety`.
 - `intrusion` subset (amber accent): every other class.
@@ -62,14 +66,18 @@ Binary sensors (Z2M 2.14.1): 10 `door`-class contacts (doors, windows, garage, m
 
 The alarm controls are now private to `:feature:home` (`ControlSheet.AlarmControls`, `CardText.alarmLabel/armLabel`). Feature modules cannot depend on each other, so these move:
 
-- `AlarmPanel(state, available, pending, caps, onArm(mode, code?), onDisarm(code?))`: a stateless composable for the hero card and Home's sheet. It owns the colour by state and the button set.
+- `AlarmActions.of(state, available, caps)` (pure): which arm modes, whether Disarm is offered, and which buttons are enabled.
+- `AlarmControls(state, available, caps, onSend: (Command) -> Unit)`: the buttons plus the code flow, used inside Home's sheet.
+- `AlarmHero(name, state, available, pending, caps, onSend)`: the Security card, with a colour by state, the state text and `AlarmControls`.
 - `CodeKeypadSheet(format, onSubmit(code), onDismiss)`: a 3×4 digit grid with ⌫ and OK for `NUMBER`, or a password field for `TEXT`. The code lives only in the sheet's state, never `rememberSaveable`, and is cleared on dismiss.
 - The alarm state and arm-mode strings (EN + FR), moved from `feature:home`.
-- `KindIcon` / `IconSpec`, so the Security rows use the same icon by kind and device class. This is a move only: the `feature:home` call sites import the new location.
+- `:core:designsystem` gains an `api` dependency on `:core:model`, since these composables take `AlarmState`, `AlarmMode`, `Capabilities` and `Command`.
 
-Home keeps its alarm card. Its sheet becomes the shared `AlarmPanel`, which brings it the disarm-code fix and the keypad.
+`KindIcon` / `IconSpec` stay in `feature:home`. Security rows draw the designsystem icons directly (`DoorIcon`/`WindowIcon`/`GarageIcon` at openness 0 or 1, otherwise `StaticIcon`), without the swing animation.
 
-### 4.2 Hero card (`AlarmPanel`)
+Home keeps its alarm card. Its sheet uses the shared `AlarmControls`, which brings it the disarm-code fix and the keypad.
+
+### 4.2 Hero card (`AlarmHero`)
 
 | State | Look | Text | Buttons |
 |---|---|---|---|
@@ -115,8 +123,8 @@ Top to bottom: the status pill (as on Home and Energy), the hero card(s), a summ
   - No sensors: "No security sensors."
   - Neither: one combined empty state.
 - **Accessibility:**
-  - The hero card is one TalkBack node, for example "Alarm, armed away. Actions: Home, Night, Disarm", with each button as a custom action.
-  - The summary line is a polite live region; `triggered` is announced assertively.
+  - The hero header (name and state) is one TalkBack node, for example "Alarm, armed away", and is a live region (polite; assertive when triggered). The buttons stay individually focusable.
+  - The summary line is a polite live region.
   - Rows read as "Garage door, garage, open".
   - The keypad's digit buttons are at least 48 dp.
 
@@ -148,10 +156,10 @@ Tapping a row opens a small sheet in `:feature:security`: the name, area and sta
 ## 7. Architecture summary
 
 ```
-:core:model        Capabilities.codeDisarmRequired, codeFormat; UiOverride.securityHidden
+:core:model        Capabilities.codeDisarmRequired, codeFormat; UiOverride.securityHidden; SensorGroup
 :core:source       DiscoveryParser fills the two new capabilities
-:core:designsystem AlarmPanel, CodeKeypadSheet, alarm strings, KindIcon/IconSpec (moved)
-:feature:home      sheet uses AlarmPanel; CustomizeSheet "Show on Security"
+:core:designsystem AlarmActions, AlarmControls, AlarmHero, CodeKeypadSheet, alarm strings (api → :core:model)
+:feature:home      sheet uses AlarmControls; CustomizeSheet "Show on Security"
 :feature:security  SecurityUiBuilder, SecurityViewModel, SecurityScreen, SensorSheet   (new)
 :core:demo         remote-code alarm with delays, intrusion switch, sensor classes
 :app               third tab, generalised selectTab
@@ -168,7 +176,7 @@ Dependencies follow parent §4.1: `:feature:security → :core:source, :core:des
   - `selectTab` / `showsTabBar` with three tabs.
   - Demo: arm → arming → armed; disarm with right and wrong code; intrusion only when armed.
 - **Compose UI:**
-  - `AlarmPanel` buttons per state and capabilities, and the triggered layout.
+  - `AlarmActions` per state and capabilities (unit); `AlarmHero` triggered layout and `AlarmControls` code flow (Compose).
   - `CodeKeypadSheet`: digits, ⌫, OK sends the entered code, dismiss clears it.
   - Security screen empty states.
 - `./gradlew check` green; manual run on the Pixel 6a against the demo, then against the Jeedom bridge once it exists.
@@ -177,7 +185,8 @@ Dependencies follow parent §4.1: `:feature:security → :core:source, :core:des
 
 - **Code in transit.** With `REMOTE_CODE`, the PIN travels in the command payload. In direct mode that is the LAN broker (TLS when configured); away, it goes through the encrypted gateway envelope. It is never logged or cached; the logs viewer must not print alarm command payloads.
 - **Bridge latency.** A bridge slower than 5 s triggers a false rollback snackbar. Appendix A asks for a state publish within 5 s.
-- **Moving `KindIcon` / alarm UI** touches many `feature:home` imports; screenshot and UI tests guard against regressions.
+- **Moving the alarm UI** touches `feature:home` imports and strings; the existing Home tests guard against regressions.
+- **Two view models collect `commandFailures`.** Home's view model, still alive under Security on the back stack, also buffers a "not confirmed" event, which then shows when the user returns to Home. This is a known minor.
 
 ## Appendix A — Jeedom bridge contract
 
