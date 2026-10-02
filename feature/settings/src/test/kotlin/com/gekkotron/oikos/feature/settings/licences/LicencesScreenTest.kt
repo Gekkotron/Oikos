@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.settings.licences
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -32,7 +33,7 @@ class LicencesScreenTest {
     fun `rows are parsed and sorted by name`() {
         val rows = licenceRows(json)
         assertEquals(listOf("Core", "Inter"), rows.map { it.name })
-        assertEquals(LicenceRow("Inter", "variable", "SIL Open Font License 1.1", "OFL body"), rows[1])
+        assertEquals(LicenceRow("Inter", "variable", "SIL Open Font License 1.1", "OFL body", id = rows[1].id), rows[1])
     }
 
     @Test
@@ -47,5 +48,25 @@ class LicencesScreenTest {
     @Test
     fun `broken json gives an empty list, not a crash`() {
         assertEquals(emptyList(), licenceRows("{oops"))
+    }
+
+    @Test
+    fun `rows with the same name open their own licence text and close works`() {
+        val rows = listOf(
+            LicenceRow("Annotation", "1.0", "MIT", "first text", id = "a:one"),
+            LicenceRow("Annotation", "1.0", "Apache", "second text", id = "b:two"),
+        )
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { LicencesScreen(rows, onBack = {}) } }
+        compose.onAllNodesWithText("Annotation")[1].performClick()
+        compose.onNodeWithText("second text").assertExists()
+        compose.onNodeWithText("first text").assertDoesNotExist()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("second text").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a missing licence leaves no trailing separator`() {
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { LicencesScreen(listOf(LicenceRow("Bare", "2.0", "", "")), onBack = {}) } }
+        compose.onNodeWithText("2.0").assertExists()
     }
 }
