@@ -70,6 +70,7 @@ fun HomeRoute(
     onAssignRooms: () -> Unit = {},
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
+    windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -82,6 +83,7 @@ fun HomeRoute(
         onAssignRooms = onAssignRooms,
         route = route,
         onRouteChange = onRouteChange,
+        windowInsets = windowInsets,
     )
 }
 

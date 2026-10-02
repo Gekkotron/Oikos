@@ -73,6 +73,7 @@ dependencies {
     implementation(project(":core:transport"))
     implementation(project(":core:data"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:energy"))
     implementation(project(":feature:onboarding"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation3.runtime)
