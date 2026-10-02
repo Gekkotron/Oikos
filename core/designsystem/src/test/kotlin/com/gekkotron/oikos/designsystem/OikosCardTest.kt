@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.designsystem
 
+import com.gekkotron.oikos.designsystem.components.cardBorderColor
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -102,5 +103,13 @@ class OikosCardTest {
         }
         compose.onNodeWithTag("card").assertIsNotEnabled().performClick()
         assertEquals(emptyList(), events)
+    }
+
+    @Test
+    fun `the accent border is the warning color, only when the card is not on`() {
+        val c = NightGlassColors
+        assertEquals(c.warning.copy(alpha = 0.35f), cardBorderColor(c, on = false, accent = true))
+        assertEquals(c.cardOnBorder, cardBorderColor(c, on = true, accent = true))
+        assertEquals(c.cardBorder, cardBorderColor(c, on = false, accent = false))
     }
 }

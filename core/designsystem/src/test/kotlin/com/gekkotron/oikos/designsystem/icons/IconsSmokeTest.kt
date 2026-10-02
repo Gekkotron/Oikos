@@ -38,4 +38,19 @@ class IconsSmokeTest {
         }
         compose.onNodeWithTag("shutter").assertWidthIsEqualTo(24.dp).assertHeightIsEqualTo(24.dp)
     }
+
+    @Test
+    fun `every static glyph draws, with and without an accent`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.WARM_MINIMAL) {
+                Row {
+                    OikosGlyph.entries.forEach { glyph ->
+                        StaticIcon(glyph)
+                        StaticIcon(glyph, Color.Yellow)
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
 }

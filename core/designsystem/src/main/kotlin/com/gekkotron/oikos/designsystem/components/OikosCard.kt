@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
@@ -36,6 +37,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.gekkotron.oikos.designsystem.OikosColors
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 
@@ -50,6 +52,8 @@ private val LONG_PRESS_KEYS = setOf(Key.Enter, Key.DirectionCenter, Key.NumPadEn
 fun OikosCard(
     modifier: Modifier = Modifier,
     on: Boolean = false,
+    /** A warm border without the "on" gradient: an open door or window (device-icons spec §2). */
+    accent: Boolean = false,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
@@ -98,7 +102,7 @@ fun OikosCard(
                 .then(if (c.isDark) Modifier else Modifier.shadow(6.dp, shape, ambientColor = c.shadow, spotColor = c.shadow))
                 .clip(shape)
                 .background(background)
-                .border(1.dp, if (on) c.cardOnBorder else c.cardBorder, shape)
+                .border(1.dp, cardBorderColor(c, on, accent), shape)
                 .then(clicks)
                 .heightIn(min = OikosDimens.cardMinHeight)
                 .padding(OikosDimens.cardPadding),
@@ -106,4 +110,10 @@ fun OikosCard(
             content = content,
         )
     }
+}
+
+internal fun cardBorderColor(colors: OikosColors, on: Boolean, accent: Boolean): Color = when {
+    on -> colors.cardOnBorder
+    accent -> colors.warning.copy(alpha = 0.35f)
+    else -> colors.cardBorder
 }
