@@ -5,6 +5,6 @@ interface ManagedTransport : MqttTransport {
     /** Starts connecting. Callers subscribe to [messages] first. */
     fun start()
 
-    /** Disconnects for good. Safe to call when not connected. */
+    /** Disconnects for good. Safe to call when not connected, and idempotent: a second call does nothing. */
     suspend fun close()
 }

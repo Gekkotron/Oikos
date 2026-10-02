@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.transport
 
 import com.gekkotron.oikos.transport.testing.FakeGatewayApi
+import com.gekkotron.oikos.transport.testing.FakeManagedTransport
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -256,6 +257,42 @@ class GatewayTransportTest {
         assertEquals(listOf("x/set"), api.published.map { it.topic })
         api.failPublish = "MQTT error: boom"
         assertEquals("MQTT error: boom", assertFailsWith<PublishFailed> { t.publish("x/set", byteArrayOf(), 1, false) }.message)
+    }
+
+    @Test
+    fun `a gateway candidate whose first stream drops is not given up by the outer handover`() = runTest {
+        val outer = Handover(backgroundScope)
+        val direct = FakeManagedTransport(TransportSpec.Direct("h", 1883, tls = false, ws = false, username = null, password = null, clientId = "c"))
+        direct.fake.setLink(LinkState.Connected(TransportMode.DIRECT))
+        outer.switchTo(direct)
+        val t = GatewayTransport(api, backgroundScope, backoff = Backoff(jitter = 0.0))
+        var switched: Boolean? = null
+        backgroundScope.launch { switched = outer.switchTo(t) }
+        backgroundScope.launch { t.setSubscriptions(setOf("homeassistant/#")) }
+        advanceTimeBy(301.milliseconds)
+        runCurrent()
+        api.streams[0].end(IOException("502")) // before it ever connected: reconnect retries after 1 s
+        runCurrent()
+        assertEquals(null, switched, "a gateway that is reconnecting is still a candidate")
+        advanceTimeBy(1.seconds + 1.milliseconds)
+        runCurrent()
+        api.streams[1].connect()
+        runCurrent()
+        assertEquals(true, switched)
+    }
+
+    @Test
+    fun `a new topic set racing the reconnect opens a single stream`() = runTest {
+        val (t, _) = started(setOf("a"))
+        api.streams[0].connect()
+        runCurrent()
+        api.streams[0].end(IOException("reset")) // reconnect reopens after the 1 s backoff
+        runCurrent()
+        advanceTimeBy(700.milliseconds)
+        t.setSubscriptions(setOf("a", "b")) // its debounce ends at the same instant as the backoff
+        advanceTimeBy(301.milliseconds)
+        runCurrent()
+        assertEquals(listOf(setOf("a"), setOf("a", "b")), api.streams.map { it.topics })
     }
 
     @Test

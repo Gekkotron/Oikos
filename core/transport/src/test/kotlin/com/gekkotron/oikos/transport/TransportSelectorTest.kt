@@ -36,6 +36,9 @@ class TransportSelectorTest {
     /** Every gateway factory call throws this (a malformed gateway URL in a saved profile). */
     private var gatewayFactoryThrows: Throwable? = null
 
+    /** Every gateway's start() throws (it is created fine). */
+    private var gatewayStartFails = false
+
     /** The next call to [probe] throws this instead of returning [reachable], then falls back to normal. */
     private var probeThrows: Throwable? = null
 
@@ -50,7 +53,7 @@ class TransportSelectorTest {
             },
             gateway = {
                 gatewayFactoryThrows?.let { e -> throw e }
-                FakeManagedTransport(it).also { g ->
+                FakeManagedTransport(it, failStart = gatewayStartFails).also { g ->
                     g.fake.setLink(if (gatewayConnects) LinkState.Connected(TransportMode.GATEWAY) else LinkState.Connecting)
                     gateways += g
                 }
@@ -100,6 +103,15 @@ class TransportSelectorTest {
         s.close()
         runCurrent()
         assertEquals(LinkState.Offline(LinkState.Offline.CLOSED), s.link.value)
+    }
+
+    @Test
+    fun `route GATEWAY whose start throws goes Offline FAILED, not Connecting forever`() = runTest {
+        gatewayStartFails = true
+        val (s, _) = selector(Route.GATEWAY)
+        advanceTimeBy(5.seconds * 60)
+        assertEquals(1, gateways.size)
+        assertEquals(LinkState.Offline(LinkState.Offline.FAILED), s.link.value)
     }
 
     @Test
