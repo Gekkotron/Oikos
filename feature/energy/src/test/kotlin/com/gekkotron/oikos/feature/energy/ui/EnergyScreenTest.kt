@@ -167,4 +167,18 @@ class EnergyScreenTest {
         compose.onNodeWithText("Sensors").assertExists()
         compose.onNode(hasSetTextAction() and hasText("Name")).assertExists()
     }
+
+    @Test
+    fun `role bubbles show their role name`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                androidx.compose.foundation.layout.Column {
+                    NodeBubble(EnergyNode("solar", NodeKind.SOLAR, value = 3200.0), Locale.US, androidx.compose.ui.Modifier)
+                    NodeBubble(EnergyNode("grid", NodeKind.GRID, value = 400.0), Locale.US, androidx.compose.ui.Modifier)
+                }
+            }
+        }
+        compose.onNodeWithText("Solar").assertExists()
+        compose.onNodeWithText("Grid").assertExists()
+    }
 }

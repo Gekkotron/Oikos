@@ -141,10 +141,8 @@ internal fun NodeBubble(n: EnergyNode, locale: Locale, modifier: Modifier) {
             contentAlignment = Alignment.Center,
         ) { StaticIcon(glyph(n.kind), modifier = Modifier.size(22.dp)) }
         Text(nodeValueText(n, locale), style = OikosTheme.type.label, color = colors.content, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
-        // Consumers share one glyph, so the arc names them (spec §2).
-        if (n.kind == NodeKind.CONSUMER && n.name != null) {
-            Text(n.name, style = OikosTheme.type.label, color = colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        }
+        // Every bubble is named: the role ("Solar", "Grid"…) or the consumer's name (spec §2).
+        Text(nodeLabel(n), style = OikosTheme.type.label, color = colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
