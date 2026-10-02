@@ -30,6 +30,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         areas()
         light("demo_living_lamp", "Floor lamp", "Living room", "demo/living/lamp", on = true, brightness = 180)
         light("demo_kitchen_spots", "Kitchen spots", "Kitchen", "demo/kitchen/spots", on = false, brightness = 255)
+        ledStrip("demo_bedroom_strip", "LED strip", "Bedroom", "demo/bedroom/strip")
         switch("demo_coffee", "Coffee machine", "Kitchen", "demo/kitchen/coffee", on = false, available = true)
         switch("demo_garage_plug", "Garage plug", "Garage", "demo/garage/plug", on = false, available = false)
         cover("demo_living_shutter", "Shutter", "Living room", "demo/living/shutter")
@@ -135,6 +136,44 @@ class DemoHouse(private val random: Random = Random(7)) {
             put("command_topic", "$topic/set")
         }
         doc(topic, obj("state" to onOff(on), "brightness" to brightness))
+        echo("$topic/set", topic) { p -> runCatching { Json.parseToJsonElement(p).jsonObject }.getOrNull() }
+    }
+
+    /** An addressable strip: a JSON light with effects and xy colour, plus speed and intensity numbers on the same device. */
+    private fun ledStrip(id: String, device: String, area: String, topic: String) {
+        val effects = listOf("solid", "breathe", "rainbow", "candle")
+        config("light", id, device, null, area) {
+            put("schema", "json")
+            put("brightness", true)
+            put("brightness_scale", 255)
+            putJsonArray("supported_color_modes") { add("xy") }
+            put("effect", true)
+            putJsonArray("effect_list") { effects.forEach { add(it) } }
+            put("state_topic", topic)
+            put("command_topic", "$topic/set")
+        }
+        for ((field, label) in listOf("effect_speed" to "Effect speed", "effect_intensity" to "Effect intensity")) {
+            config("number", "${id}_$field", device, label, area) {
+                put("state_topic", topic)
+                put("value_template", "{{ value_json.$field }}")
+                put("command_topic", "$topic/set/$field")
+                put("min", 0)
+                put("max", 255)
+                put("step", 1)
+            }
+            echo("$topic/set/$field", topic) { p -> p.toDoubleOrNull()?.let { obj(field to it.roundToInt().coerceIn(0, 255)) } }
+        }
+        doc(
+            topic,
+            buildJsonObject {
+                put("state", "ON")
+                put("brightness", 160)
+                put("effect", "rainbow")
+                put("color", buildJsonObject { put("x", 0.196); put("y", 0.203) })
+                put("effect_speed", 128)
+                put("effect_intensity", 128)
+            },
+        )
         echo("$topic/set", topic) { p -> runCatching { Json.parseToJsonElement(p).jsonObject }.getOrNull() }
     }
 

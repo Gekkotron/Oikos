@@ -9,8 +9,8 @@ sealed interface StateValue {
 
     data class OnOff(val on: Boolean) : StateValue
 
-    /** [brightness] is normalised to 0..255. */
-    data class Light(val on: Boolean, val brightness: Int? = null) : StateValue
+    /** [brightness] is normalised to 0..255; [effect] and [color] are null until the light reports them. */
+    data class Light(val on: Boolean, val brightness: Int? = null, val effect: String? = null, val color: Hs? = null) : StateValue
 
     data class Numeric(val value: Double) : StateValue
 

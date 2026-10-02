@@ -293,4 +293,27 @@ class DiscoveryParserTest {
         assertEquals(null to null, parts("""{"cmd_t":"c","name":"Plugin light","dev":{"ids":["p"],"name":"Plug"}}"""))
         assertEquals(null to null, parts("""{"cmd_t":"c","name":"Relay"}"""))
     }
+
+    @Test
+    fun `json light effects and colour modes`() {
+        val e = single("homeassistant/light/0x1051dbfffe1a4058/light/config", fixture("zigled_light.json")).entity
+        assertEquals(listOf("solid", "breathe", "comet", "wipe", "sparkle", "rainbow", "candle", "fire_1d", "plasma_2d"), e.capabilities.effects)
+        assertEquals(setOf("xy"), e.capabilities.colorModes)
+        val noFx = single(
+            "homeassistant/light/x/config",
+            """{"schema":"json","command_topic":"x/set","unique_id":"x","effect":false,"effect_list":["a"]}""",
+        ).entity
+        assertEquals(emptyList(), noFx.capabilities.effects)
+    }
+
+    @Test
+    fun `default light effects need an effect command topic`() {
+        val withTopic = single(
+            "homeassistant/light/y/config",
+            """{"command_topic":"y/set","effect_command_topic":"y/fx","effect_list":["solid","rainbow"],"unique_id":"y"}""",
+        ).entity
+        assertEquals(listOf("solid", "rainbow"), withTopic.capabilities.effects)
+        val without = single("homeassistant/light/z/config", """{"command_topic":"z/set","effect_list":["solid"],"unique_id":"z"}""").entity
+        assertEquals(emptyList(), without.capabilities.effects)
+    }
 }

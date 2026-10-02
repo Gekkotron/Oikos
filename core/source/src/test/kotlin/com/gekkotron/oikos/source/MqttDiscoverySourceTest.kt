@@ -433,6 +433,21 @@ class MqttDiscoverySourceTest {
     private val shutterMovingId = "0x847127fffe08106c_moving_zigbee2mqtt"
 
     @Test
+    fun `a light's device numbers are folded into it regardless of arrival order`() = runTest {
+        val lightTopic = "homeassistant/light/0x1051dbfffe1a4058/light/config"
+        val numberTopic = "homeassistant/number/0x1051dbfffe1a4058/effect_intensity/config"
+        val lightId = "0x1051dbfffe1a4058_light_zigbee2mqtt"
+        val numberId = "0x1051dbfffe1a4058_effect_intensity_zigbee2mqtt"
+        for (order in listOf(listOf(lightTopic, numberTopic), listOf(numberTopic, lightTopic))) {
+            val h = start()
+            for (topic in order) h.transport.deliver(topic, fixture(if (topic == lightTopic) "zigled_light.json" else "zigled_effect_intensity.json"))
+            runCurrent()
+            assertEquals(lightId, h.source.entities.value.getValue(numberId).partOf)
+            assertNull(h.source.entities.value.getValue(lightId).partOf)
+        }
+    }
+
+    @Test
     fun `a Z2M Moving sensor is attached to its cover regardless of arrival order`() = runTest {
         val cover = fixture("z2m_shutter_cover.json")
         val moving = fixture("z2m_shutter_moving.json")

@@ -260,4 +260,52 @@ class HomeUiBuilderTest {
         val all = listOf(testEntity("lamp", Kind.LIGHT, "Lamp", area = "living")).associateBy { it.uniqueId }
         assertTrue(HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US, query = "zzz").cards.isEmpty())
     }
+
+    @Test
+    fun `a light carries its device's numbers as companions, sorted, off the grid and out of search`() {
+        val all = listOf(
+            testEntity("leds", Kind.LIGHT, "Leds", area = "living", deviceId = "zl"),
+            testEntity("speed", Kind.NUMBER, "Effect speed", area = "living", deviceId = "zl", partOf = "leds"),
+            testEntity("intensity", Kind.NUMBER, "Effect intensity", area = "living", deviceId = "zl", partOf = "leds"),
+            testEntity("moving", Kind.SENSOR, "Moving", area = "living", deviceId = "zl", partOf = "leds"),
+        ).associateBy { it.uniqueId }
+        val states = mapOf("speed" to EntityState("speed", StateValue.Numeric(38.0)))
+        val s = HomeUiBuilder.build(all, states, areas, RoomFilter.All, link, Locale.US)
+        assertEquals(listOf("leds"), s.cards.map { it.id })
+        val leds = s.cards.single()
+        assertEquals(listOf("Effect intensity", "Effect speed"), leds.companions.map { it.name })
+        assertEquals(StateValue.Numeric(38.0), leds.companions.single { it.id == "speed" }.state)
+        assertTrue(leds.hasSheet)
+        assertTrue(HomeUiBuilder.build(all, states, areas, RoomFilter.All, link, Locale.US, query = "speed").cards.isEmpty())
+    }
+
+    @Test
+    fun `companions are found by card(id)`() {
+        val all = listOf(
+            testEntity("leds", Kind.LIGHT, "Leds", deviceId = "zl"),
+            testEntity("speed", Kind.NUMBER, "Effect speed", deviceId = "zl", partOf = "leds"),
+        ).associateBy { it.uniqueId }
+        val s = HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US)
+        assertEquals("speed", s.card("speed")?.id)
+        assertEquals("leds", s.card("leds")?.id)
+    }
+
+    @Test
+    fun `a light with only effects or only a colour mode has a sheet`() {
+        val all = listOf(
+            testEntity("fx", Kind.LIGHT, "Fx", capabilities = Capabilities(effects = listOf("solid"))),
+            testEntity("rgb", Kind.LIGHT, "Rgb", capabilities = Capabilities(colorModes = setOf("xy"))),
+            testEntity("plain", Kind.LIGHT, "Plain"),
+        ).associateBy { it.uniqueId }
+        val byId = HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US).cards.associateBy { it.id }
+        assertTrue(byId.getValue("fx").hasSheet)
+        assertTrue(byId.getValue("rgb").hasSheet)
+        assertFalse(byId.getValue("plain").hasSheet)
+    }
+
+    @Test
+    fun `colour temperature alone is not a colour`() {
+        val all = listOf(testEntity("ambiance", Kind.LIGHT, "Ambiance", capabilities = Capabilities(colorModes = setOf("color_temp")))).associateBy { it.uniqueId }
+        assertFalse(HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US).cards.single().hasSheet)
+    }
 }

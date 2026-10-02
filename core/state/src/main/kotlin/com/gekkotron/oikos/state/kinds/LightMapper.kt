@@ -1,7 +1,10 @@
 package com.gekkotron.oikos.state.kinds
 
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Hs
+import com.gekkotron.oikos.model.Rgb
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.state.ColorMath
 import com.gekkotron.oikos.state.mqtt.MqttBindings
 import com.gekkotron.oikos.state.template.asDouble
 import com.gekkotron.oikos.state.template.asPayloadString
@@ -24,11 +27,44 @@ object LightMapper : KindMapper {
 
     private fun fromByte(value: Int, scale: Double): Int = (value / 255.0 * scale).roundToInt()
 
+    private val RGB_MODES = setOf("rgb", "rgbw", "rgbww")
+
+    /** `{x,y}`, then `{h|hue, s|saturation}` (s in 0..100), then `{r,g,b}`; null when none is complete. */
+    private fun colorOf(o: JsonObject): Hs? {
+        fun num(vararg keys: String) = keys.firstNotNullOfOrNull { (o[it] as? JsonPrimitive)?.doubleOrNull?.takeIf(Double::isFinite) }
+        val x = num("x")
+        val y = num("y")
+        if (x != null && y != null) return ColorMath.xyToHs(ColorMath.Xy(x, y))
+        val h = num("h", "hue")
+        val s = num("s", "saturation")
+        if (h != null && s != null) return Hs(((h % 360) + 360) % 360, (s / 100).coerceIn(0.0, 1.0))
+        val r = num("r")
+        val g = num("g")
+        val bl = num("b")
+        if (r != null && g != null && bl != null) {
+            return ColorMath.rgbToHs(Rgb(r.roundToInt().coerceIn(0, 255), g.roundToInt().coerceIn(0, 255), bl.roundToInt().coerceIn(0, 255)))
+        }
+        return null
+    }
+
+    /** The colour in the light's own mode (spec §3.3), or null when it has no colour mode. */
+    private fun colorJson(b: MqttBindings, hs: Hs): JsonObject? {
+        val modes = b.strList("supported_color_modes").orEmpty()
+        return when {
+            "xy" in modes -> ColorMath.hsToXy(hs).let { buildJsonObject { put("x", it.x); put("y", it.y) } }
+            "hs" in modes -> buildJsonObject { put("h", round1(hs.hue)); put("s", round1(hs.saturation * 100)) }
+            modes.any { it in RGB_MODES } -> ColorMath.hsToRgb(hs).let { c -> buildJsonObject { put("r", c.r); put("g", c.g); put("b", c.b) } }
+            else -> null
+        }
+    }
+
+    private fun round1(v: Double) = (v * 10).roundToInt() / 10.0
+
     private fun StateValue.asLight(): StateValue.Light = this as? StateValue.Light ?: StateValue.Light(on = isOn())
 
     override fun stateTopics(b: MqttBindings): Set<String> =
         if (isJson(b)) setOfNotNull(b.str("state_topic"))
-        else setOfNotNull(b.str("state_topic"), b.str("brightness_state_topic"))
+        else setOfNotNull(b.str("state_topic"), b.str("brightness_state_topic"), b.str("effect_state_topic"), b.str("rgb_state_topic"))
 
     override fun decode(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded =
         if (isJson(b)) decodeJson(b, payload, previous) else decodeDefault(b, topic, payload, previous)
@@ -42,14 +78,16 @@ object LightMapper : KindMapper {
         val prev = previous.asLight()
         val stateWord = (obj["state"] as? JsonPrimitive)?.contentOrNull
         val rawBrightness = (obj["brightness"] as? JsonPrimitive)?.doubleOrNull
-        if (stateWord == null && rawBrightness == null) return Decoded.Ignored
+        val effect = (obj["effect"] as? JsonPrimitive)?.contentOrNull
+        val color = (obj["color"] as? JsonObject)?.let(::colorOf)
+        if (stateWord == null && rawBrightness == null && effect == null && color == null) return Decoded.Ignored
         val on = when (stateWord) {
             "ON" -> true
             "OFF" -> false
             else -> prev.on
         }
         val brightness = rawBrightness?.let { toByte(it, scale(b)) } ?: prev.brightness
-        return Decoded.State(StateValue.Light(on, brightness))
+        return Decoded.State(StateValue.Light(on, brightness, effect ?: prev.effect, color ?: prev.color))
     }
 
     private fun decodeDefault(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded {
@@ -71,6 +109,21 @@ object LightMapper : KindMapper {
                 true
             }
         }
+        if (topic == b.str("effect_state_topic")) {
+            parts.part(renderIncoming(b, "effect_value_template", payload)) { v ->
+                val effect = v.asPayloadString()?.takeIf { it.isNotEmpty() } ?: return@part false
+                light = light.copy(effect = effect)
+                true
+            }
+        }
+        if (topic == b.str("rgb_state_topic")) {
+            parts.part(renderIncoming(b, "rgb_value_template", payload)) { v ->
+                val channels = v.asPayloadString()?.split(',')?.map { it.trim().toIntOrNull() }
+                if (channels == null || channels.size != 3 || channels.any { it == null || it !in 0..255 }) return@part false
+                light = light.copy(color = ColorMath.rgbToHs(Rgb(channels[0]!!, channels[1]!!, channels[2]!!)))
+                true
+            }
+        }
         return parts.result(light)
     }
 
@@ -82,9 +135,8 @@ object LightMapper : KindMapper {
             val body = buildJsonObject {
                 put("state", if (on) "ON" else "OFF")
                 turnOn?.brightness?.let { put("brightness", fromByte(it, scale(b))) }
-                turnOn?.color?.let { c ->
-                    put("color", buildJsonObject { put("r", c.r); put("g", c.g); put("b", c.b) })
-                }
+                turnOn?.effect?.let { put("effect", it) }
+                turnOn?.color?.let { hs -> colorJson(b, hs)?.let { put("color", it) } }
             }
             return Encoded.Publish(listOf(outgoing(b, topic, body.toString())))
         }
@@ -94,13 +146,20 @@ object LightMapper : KindMapper {
         val brightnessOnly = brightness != null && brightnessTopic != null && b.str("on_command_type") == "brightness"
         if (!brightnessOnly) messages += outgoing(b, topic, if (on) b.str("payload_on", "ON") else b.str("payload_off", "OFF"))
         if (brightness != null && brightnessTopic != null) messages += outgoing(b, brightnessTopic, fromByte(brightness, scale(b)).toString())
-        turnOn?.color?.let { c -> b.str("rgb_command_topic")?.let { messages += outgoing(b, it, "${c.r},${c.g},${c.b}") } }
+        turnOn?.effect?.let { effect ->
+            (publish(b, "effect_command_topic", "effect_command_template", effect) as? Encoded.Publish)?.let { messages += it.messages }
+        }
+        turnOn?.color?.let { hs ->
+            val c = ColorMath.hsToRgb(hs)
+            b.str("rgb_command_topic")?.let { messages += outgoing(b, it, "${c.r},${c.g},${c.b}") }
+        }
         return Encoded.Publish(messages)
     }
 
     override fun predict(command: Command, previous: StateValue): StateValue? {
         val on = targetOn(command, previous) ?: return null
         val prev = previous.asLight()
-        return StateValue.Light(on, (command as? Command.TurnOn)?.brightness ?: prev.brightness)
+        val turnOn = command as? Command.TurnOn
+        return StateValue.Light(on, turnOn?.brightness ?: prev.brightness, turnOn?.effect ?: prev.effect, turnOn?.color ?: prev.color)
     }
 }

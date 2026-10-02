@@ -6,6 +6,8 @@ interface Bindings
 data class Capabilities(
     val brightness: Boolean = false,
     val colorModes: Set<String> = emptySet(),
+    /** The light's `effect_list`, in published order; empty when it has no effects. */
+    val effects: List<String> = emptyList(),
     val position: Boolean = false,
     val hvacModes: List<String> = emptyList(),
     val minTemp: Double? = null,

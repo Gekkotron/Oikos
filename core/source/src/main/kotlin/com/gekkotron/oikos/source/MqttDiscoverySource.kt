@@ -18,6 +18,7 @@ import com.gekkotron.oikos.model.UiOverrides
 import com.gekkotron.oikos.source.discovery.DiscoveredEntity
 import com.gekkotron.oikos.source.discovery.DiscoveryParser
 import com.gekkotron.oikos.source.discovery.DiscoveryResult
+import com.gekkotron.oikos.source.discovery.LightAttachment
 import com.gekkotron.oikos.source.discovery.SensorAttachment
 import com.gekkotron.oikos.state.CommandTracker
 import com.gekkotron.oikos.state.StateStore
@@ -367,7 +368,8 @@ class MqttDiscoverySource(
             }
             // Recomputed from scratch every time, so it stays correct regardless of the order the cover
             // and its "Moving" sensor arrive in, and clears when either is removed.
-            val partOf = SensorAttachment.compute(entities.values)
+            // SensorAttachment wins a conflict: it is applied last.
+            val partOf = LightAttachment.compute(entities.values) + SensorAttachment.compute(entities.values)
             val attached = entities.mapValues { (id, e) -> partOf[id]?.let { e.copy(partOf = it) } ?: e }
             Snapshot(attached, all.mapNotNull { it.device }.associateBy { it.id }, computeAreas(declared, attached.values))
         }
