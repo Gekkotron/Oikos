@@ -34,6 +34,7 @@ class MainTabsTest {
     fun `tab bar only on the main tabs`() {
         assertTrue(showsTabBar(HomeKey))
         assertTrue(showsTabBar(EnergyKey))
+        assertTrue(showsTabBar(SecurityKey))
         assertFalse(showsTabBar(OnboardingKey))
         assertFalse(showsTabBar(RoomsKey))
         assertFalse(showsTabBar(null))
@@ -62,5 +63,25 @@ class MainTabsTest {
         val tabs = mutableListOf<NavKey>(HomeKey, EnergyKey)
         resetToRoot(tabs, OnboardingKey)
         assertEquals(listOf<NavKey>(OnboardingKey), tabs)
+    }
+
+    @Test
+    fun `side tabs replace each other on top of home`() {
+        val stack = mutableListOf<NavKey>(HomeKey)
+        selectTab(stack, EnergyKey)
+        selectTab(stack, SecurityKey)
+        assertEquals(listOf<NavKey>(HomeKey, SecurityKey), stack)
+        selectTab(stack, SecurityKey)
+        assertEquals(listOf<NavKey>(HomeKey, SecurityKey), stack)
+        selectTab(stack, HomeKey)
+        assertEquals(listOf<NavKey>(HomeKey), stack)
+    }
+
+    @Test
+    fun `tapping security selects it`() {
+        val picked = mutableListOf<NavKey>()
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { MainTabBar(selected = HomeKey, onSelect = { picked += it }) } }
+        compose.onNodeWithText("Security").performClick()
+        assertEquals(listOf<NavKey>(SecurityKey), picked)
     }
 }

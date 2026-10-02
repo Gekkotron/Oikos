@@ -15,12 +15,17 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.icons.OikosGlyph
 import com.gekkotron.oikos.designsystem.icons.StaticIcon
 
-/** Energy sits on top of Home, so back from Energy returns to Home (energy spec §5). */
+/** Energy and Security sit on top of Home and replace each other, so back always returns to Home (security spec §5). */
+private val SIDE_TABS: Set<NavKey> = setOf(EnergyKey, SecurityKey)
+
 internal fun selectTab(stack: MutableList<NavKey>, key: NavKey) {
-    when (key) {
-        HomeKey -> stack.removeAll { it == EnergyKey }
-        EnergyKey -> if (stack.lastOrNull() != EnergyKey) stack.add(EnergyKey)
+    if (key == HomeKey) {
+        stack.removeAll { it in SIDE_TABS }
+        return
     }
+    if (stack.lastOrNull() == key) return
+    stack.removeAll { it in SIDE_TABS }
+    stack.add(key)
 }
 
 /**
@@ -33,7 +38,7 @@ internal fun resetToRoot(stack: MutableList<NavKey>, root: NavKey) {
     stack.removeAll { it != root }
 }
 
-internal fun showsTabBar(top: NavKey?): Boolean = top == HomeKey || top == EnergyKey
+internal fun showsTabBar(top: NavKey?): Boolean = top == HomeKey || (top != null && top in SIDE_TABS)
 
 @Composable
 internal fun MainTabBar(selected: NavKey?, onSelect: (NavKey) -> Unit) {
@@ -59,6 +64,13 @@ internal fun MainTabBar(selected: NavKey?, onSelect: (NavKey) -> Unit) {
             onClick = { onSelect(EnergyKey) },
             icon = { StaticIcon(OikosGlyph.BOLT, modifier = Modifier.size(24.dp)) },
             label = { Text(stringResource(R.string.nav_energy)) },
+            colors = itemColors,
+        )
+        NavigationBarItem(
+            selected = selected == SecurityKey,
+            onClick = { onSelect(SecurityKey) },
+            icon = { StaticIcon(OikosGlyph.SHIELD, modifier = Modifier.size(24.dp)) },
+            label = { Text(stringResource(R.string.nav_security)) },
             colors = itemColors,
         )
     }
