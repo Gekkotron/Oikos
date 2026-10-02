@@ -122,17 +122,17 @@ class SecurityUiBuilderTest {
     }
 
     @Test
-    fun `sensors fall into sections, danger first, empty sections left out`() {
+    fun `sensors fall into sections, openings first, empty sections left out`() {
         val ui = build(
             listOf(sensor("door", "door"), sensor("smoke", "smoke"), sensor("co", "carbon_monoxide"), sensor("pool", "moisture"), sensor("tamper", "tamper")),
             listOf(on("door", false), on("smoke", false), on("co", true)),
         )
         assertEquals(
-            listOf(SensorSection.FIRE, SensorSection.WATER, SensorSection.OPENINGS, SensorSection.OTHER),
+            listOf(SensorSection.OPENINGS, SensorSection.FIRE, SensorSection.WATER, SensorSection.OTHER),
             ui.sections.map { it.section },
         )
         // Within a section the tab order holds: the active CO alarm comes before the calm smoke one.
-        assertEquals(listOf("co", "smoke"), ui.sections.first().rows.map { it.id })
+        assertEquals(listOf("co", "smoke"), ui.sections.first { it.section == SensorSection.FIRE }.rows.map { it.id })
         assertEquals(ui.sensors.toSet(), ui.sections.flatMap { it.rows }.toSet())
     }
 }

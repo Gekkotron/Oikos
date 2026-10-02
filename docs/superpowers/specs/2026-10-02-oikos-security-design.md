@@ -102,7 +102,7 @@ Top to bottom: the status pill (as on Home and Energy), the hero card(s), a summ
 
 - **Panels:** every visible (`!hidden && !securityHidden`) alarm panel, in user order.
 - **Summary:** counts of active sensors by group, ordered danger groups first, then intrusion, for example "1 smoke · 2 open · 1 motion", or "All clear". "Open" covers contact classes; "motion" covers motion, occupancy and presence; the danger classes are named one by one.
-- **Sections:** sensors are grouped under headers, danger first: Fire (smoke, CO, gas), Water (leak), Openings, Motion, Other (SOS, vibration, tamper). Empty sections are left out; each section keeps the order below.
+- **Sections:** sensors are grouped under headers in this order: Openings, Motion, Fire (smoke, CO, gas), Water (leak), Other (SOS, vibration, tamper). Empty sections are left out; each section keeps the order below.
 - **Sensor tiles:** two per row, the same height, so many statuses fit at a glance. Line 1: icon and name; line 2: area and a state word. Long names and areas are cut with an ellipsis, never the state word. A stale row (cached value) is dimmed and announces "Last known value"; it still sorts and counts by its cached value. An active danger row has a rose border and word, and an active intrusion row amber:
   - Open / Closed (contacts);
   - Motion / Clear (motion, occupancy, presence);

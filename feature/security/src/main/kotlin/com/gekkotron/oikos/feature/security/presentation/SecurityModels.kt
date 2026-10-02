@@ -31,9 +31,9 @@ data class SensorRow(
 
 data class GroupCount(val group: SensorGroup, val count: Int)
 
-/** The tab's sensor sections, danger first; the enum order is the screen order. */
+/** The tab's sensor sections; the enum order is the screen order (openings and motion on top). */
 enum class SensorSection {
-    FIRE, WATER, OPENINGS, MOTION, OTHER,
+    OPENINGS, MOTION, FIRE, WATER, OTHER,
     ;
 
     companion object {
