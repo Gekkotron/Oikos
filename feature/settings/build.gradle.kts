@@ -2,6 +2,7 @@ plugins {
     id("oikos.android.library")
     id("oikos.android.compose")
     id("oikos.hilt")
+    id("oikos.serialization")
 }
 
 android {

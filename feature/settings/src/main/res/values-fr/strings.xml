@@ -32,4 +32,6 @@
     <string name="rooms_move_down">Descendre</string>
     <string name="rooms_save_failed">Impossible d\'enregistrer l\'ordre. Vérifiez la connexion.</string>
     <string name="rooms_assign">Attribuer les pièces</string>
+    <string name="licences_title">Licences open source</string>
+    <string name="licences_close">Fermer</string>
 </resources>
