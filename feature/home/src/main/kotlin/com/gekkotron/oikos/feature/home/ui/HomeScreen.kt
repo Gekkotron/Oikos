@@ -255,9 +255,12 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Un
 private fun SearchField(query: String, onSearch: (String) -> Unit, onClose: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    // The field owns its text: state.query comes back off Main, a frame or more late, and feeding it
+    // back as the value would reset the field (and the IME) to the stale text on every keystroke.
+    var text by rememberSaveable { mutableStateOf(query) }
     OutlinedTextField(
-        value = query,
-        onValueChange = onSearch,
+        value = text,
+        onValueChange = { text = it; onSearch(it) },
         placeholder = { Text(stringResource(R.string.search_hint)) },
         leadingIcon = { StaticIcon(OikosGlyph.SEARCH, modifier = Modifier.size(20.dp)) },
         trailingIcon = {

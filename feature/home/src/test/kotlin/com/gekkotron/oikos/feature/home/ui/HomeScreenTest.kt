@@ -301,6 +301,23 @@ class HomeScreenTest {
     }
 
     @Test
+    fun `typed text stays while the state lags behind`() {
+        // The real ViewModel rebuilds off Main, so state.query trails the keystrokes.
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { _, _ -> },
+                )
+            }
+        }
+        compose.onNodeWithContentDescription("Search devices").performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("co")
+        compose.onNode(hasSetTextAction()).performTextInput("f")
+        compose.onNodeWithText("cof").assertExists()
+    }
+
+    @Test
     fun `no match says so`() {
         showSearchable()
         compose.onNodeWithContentDescription("Search devices").performClick()
