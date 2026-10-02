@@ -85,6 +85,8 @@ data class CardUi(
     /** The override as it is now, for the override sheet. */
     val ui: UiOverride,
     val hidden: Boolean,
+    /** A light's folded device controls (speed, palette…), shown in its sheet instead of as cards. */
+    val companions: List<CardUi> = emptyList(),
 )
 
 data class HomeUiState(
@@ -100,7 +102,8 @@ data class HomeUiState(
     /** The Home search text; blank when not searching. */
     val query: String = "",
 ) {
-    fun card(id: String): CardUi? = cards.firstOrNull { it.id == id } ?: hero?.takeIf { it.id == id }
+    fun card(id: String): CardUi? =
+        (cards + listOfNotNull(hero)).firstNotNullOfOrNull { c -> c.takeIf { it.id == id } ?: c.companions.firstOrNull { it.id == id } }
 }
 
 sealed interface HomeEvent {

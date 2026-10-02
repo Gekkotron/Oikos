@@ -20,6 +20,7 @@ object HomeUiBuilder {
     const val HERO_WEATHER = "hero_weather"
     private val WIDE_CLASSES = setOf("power", "energy")
     private val SHEET_KINDS = setOf(Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL)
+    private val COMPANION_KINDS = setOf(Kind.NUMBER, Kind.SELECT)
 
     fun build(
         entities: Map<String, Entity>,
@@ -36,6 +37,10 @@ object HomeUiBuilder {
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
         val areaNames = areas.associate { it.id to it.name }
         val standalone = entities.values.filter { it.partOf == null }
+        val children = entities.values.filter { it.partOf != null && it.kind in COMPANION_KINDS }.groupBy { it.partOf!! }
+        fun companionsOf(e: Entity): List<CardUi> = if (e.kind != Kind.LIGHT) emptyList() else children[e.uniqueId].orEmpty()
+            .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList()) }
+            .sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id }))
         val visible = standalone.filterNot { it.ui.hidden }
         val hidden = standalone.filter { it.ui.hidden }
         val hero = visible.filter { it.ui.cardStyle == HERO_WEATHER }.minByOrNull { it.uniqueId }
@@ -66,12 +71,12 @@ object HomeUiBuilder {
                     { it.uniqueId },
                 ),
             )
-            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale) }
+            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it)) }
 
         return HomeUiState(
             loading = entities.isEmpty(),
             link = link,
-            hero = hero?.let { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale) },
+            hero = hero?.let { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it)) },
             chips = chips,
             selected = effective,
             cards = cards,
@@ -96,7 +101,26 @@ object HomeUiBuilder {
         return "$device $label"
     }
 
-    private fun card(entity: Entity, name: String, state: EntityState?, areaNames: Map<String, String>, locale: Locale): CardUi {
+    /** Inside a light's sheet the device name is redundant: "Effect speed", not "Leds Effect speed". */
+    private fun companionName(entity: Entity, labels: LabelText): String {
+        if (entity.ui.name != null) return entity.name
+        val label = entity.label ?: return entity.name
+        return labels(label) ?: label
+    }
+
+    private fun hasLightSheet(entity: Entity, companions: List<CardUi>): Boolean {
+        val caps = entity.capabilities
+        return caps.brightness || caps.effects.isNotEmpty() || caps.colorModes.isNotEmpty() || companions.isNotEmpty()
+    }
+
+    private fun card(
+        entity: Entity,
+        name: String,
+        state: EntityState?,
+        areaNames: Map<String, String>,
+        locale: Locale,
+        companions: List<CardUi>,
+    ): CardUi {
         val value = state?.value ?: StateValue.Unknown
         return CardUi(
             id = entity.uniqueId,
@@ -114,10 +138,11 @@ object HomeUiBuilder {
             pending = state?.pending ?: false,
             stale = state?.stale ?: false,
             tap = tapFor(entity.kind),
-            hasSheet = entity.kind in SHEET_KINDS || (entity.kind == Kind.LIGHT && entity.capabilities.brightness),
+            hasSheet = entity.kind in SHEET_KINDS || (entity.kind == Kind.LIGHT && hasLightSheet(entity, companions)),
             areaId = entity.area,
             ui = entity.ui,
             hidden = entity.ui.hidden,
+            companions = companions,
         )
     }
 
