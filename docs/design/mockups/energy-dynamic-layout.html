@@ -1,0 +1,99 @@
+<style>
+  .phones{display:flex;gap:18px;flex-wrap:wrap}
+  .ph{width:270px;background:#0d1020;color:#e8ecff;border-radius:26px;padding:14px 12px;font-family:system-ui,sans-serif;font-size:12px}
+  .ph h1{margin:2px 4px;font-size:20px}
+  .ph .sub{opacity:.6;margin:0 4px 8px}
+  .g{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:8px}
+  .row{display:flex;gap:6px;margin-top:6px}.row .g{flex:1}
+  .n{opacity:.65;font-size:10px}.v{font-weight:700;font-size:15px}
+  .flow{fill:none;stroke-width:2.5;stroke-dasharray:6 6;animation:dash 1s linear infinite}
+  .thin{stroke-width:1.5}.thick{stroke-width:4}
+  @keyframes dash{to{stroke-dashoffset:-24}}
+  .bar{height:8px;border-radius:5px;background:#ff7a9a}
+  .lab{margin-top:8px;font-size:13px}
+  .chip{display:inline-block;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.1);font-size:10px}
+</style>
+<h2>Energy: how should the diagram handle any mix of nodes?</h2>
+<p class="subtitle">Your house shown: solar 3.2 kW, grid −0.4 kW (export), house 2.8 kW, AC 0.6 kW, water heater 1.7 kW, water 312 L. Each card notes how it scales to a battery + 6 consumers (HA user).</p>
+<div class="phones">
+
+  <div class="option" data-choice="hub" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph">
+      <h1>Energy</h1><div class="sub">Live · self-consumption 87%</div>
+      <div class="g"><svg viewBox="0 0 260 250" width="100%">
+        <!-- sources row -->
+        <path class="flow thick" stroke="#ffc457" d="M60 46 Q 90 90 118 110"/>
+        <path class="flow thin" stroke="#8f7bff" d="M118 120 Q 160 80 200 46" />
+        <!-- consumers row -->
+        <path class="flow" stroke="#ff7a9a" d="M120 150 Q 90 180 70 200"/>
+        <path class="flow thin" stroke="#58e1ff" d="M140 150 Q 170 180 190 200"/>
+        <circle cx="60" cy="30" r="20" fill="rgba(255,196,87,.18)" stroke="#ffc457"/><text x="60" y="35" text-anchor="middle" font-size="15">☀️</text>
+        <text x="60" y="64" text-anchor="middle" fill="#ffc457" font-size="10" font-weight="700">3.2 kW</text>
+        <circle cx="200" cy="30" r="20" fill="rgba(143,123,255,.18)" stroke="#8f7bff"/><text x="200" y="35" text-anchor="middle" font-size="15">🔌</text>
+        <text x="200" y="64" text-anchor="middle" fill="#8f7bff" font-size="10" font-weight="700">↗ 0.4 kW</text>
+        <circle cx="130" cy="130" r="24" fill="rgba(255,255,255,.08)" stroke="#e8ecff"/><text x="130" y="136" text-anchor="middle" font-size="17">🏠</text>
+        <text x="170" y="134" fill="#e8ecff" font-size="11" font-weight="700">2.8 kW</text>
+        <circle cx="65" cy="212" r="17" fill="rgba(255,122,154,.15)" stroke="#ff7a9a"/><text x="65" y="217" text-anchor="middle" font-size="12">♨️</text>
+        <text x="65" y="244" text-anchor="middle" fill="#ff7a9a" font-size="10">1.7 kW</text>
+        <circle cx="195" cy="212" r="17" fill="rgba(88,225,255,.12)" stroke="#58e1ff"/><text x="195" y="217" text-anchor="middle" font-size="12">❄️</text>
+        <text x="195" y="244" text-anchor="middle" fill="#58e1ff" font-size="10">0.6 kW</text>
+      </svg></div>
+      <div class="row"><div class="g"><div class="n">Water today</div><div class="v">312 L</div></div><div class="g"><div class="n">Grid</div><div class="v" style="color:#8f7bff">−0.4 kW</div></div></div>
+    </div>
+    <div class="lab"><b>A · Sources on top, consumers below</b><br><span style="opacity:.7;font-size:12px">Top row: solar · battery · grid (1–3 nodes, spaced evenly). Bottom row: up to 4 biggest consumers, then a "+2 others" chip. Water leaves the diagram (it is not power) and becomes a card.</span></div>
+  </div>
+
+  <div class="option" data-choice="mockup" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph">
+      <h1>Energy</h1><div class="sub">Live · self-consumption 87%</div>
+      <div class="g"><svg viewBox="0 0 260 250" width="100%">
+        <path class="flow thick" stroke="#ffc457" d="M130 48 V106"/>
+        <path class="flow thin" stroke="#8f7bff" d="M106 130 H 48" />
+        <path class="flow" stroke="#ff7a9a" d="M152 140 Q 200 160 212 112"/>
+        <path class="flow thin" stroke="#58e1ff" d="M150 148 Q 190 200 212 205"/>
+        <circle cx="130" cy="28" r="20" fill="rgba(255,196,87,.18)" stroke="#ffc457"/><text x="130" y="33" text-anchor="middle" font-size="15">☀️</text>
+        <text x="160" y="28" fill="#ffc457" font-size="11" font-weight="700">3.2 kW</text>
+        <circle cx="130" cy="130" r="24" fill="rgba(255,255,255,.08)" stroke="#e8ecff"/><text x="130" y="136" text-anchor="middle" font-size="17">🏠</text>
+        <text x="112" y="172" fill="#e8ecff" font-size="11" font-weight="700">2.8 kW</text>
+        <circle cx="30" cy="130" r="18" fill="rgba(143,123,255,.18)" stroke="#8f7bff"/><text x="30" y="135" text-anchor="middle" font-size="13">🔌</text>
+        <text x="10" y="165" fill="#8f7bff" font-size="10" font-weight="700">↗ 0.4 kW</text>
+        <circle cx="222" cy="95" r="17" fill="rgba(255,122,154,.15)" stroke="#ff7a9a"/><text x="222" y="100" text-anchor="middle" font-size="12">♨️</text>
+        <text x="205" y="70" fill="#ff7a9a" font-size="10">1.7 kW</text>
+        <circle cx="222" cy="212" r="17" fill="rgba(88,225,255,.12)" stroke="#58e1ff"/><text x="222" y="217" text-anchor="middle" font-size="12">❄️</text>
+        <text x="205" y="244" fill="#58e1ff" font-size="10">0.6 kW</text>
+        <circle cx="40" cy="215" r="17" fill="rgba(88,225,255,.08)" stroke="#58e1ff" stroke-dasharray="3 3"/><text x="40" y="220" text-anchor="middle" font-size="12">💧</text>
+        <text x="22" y="246" fill="#58e1ff" font-size="10">312 L</text>
+      </svg></div>
+      <div class="row"><div class="g"><div class="n">Water heater</div><div class="v">1.7 kW</div></div><div class="g"><div class="n">Grid</div><div class="v" style="color:#8f7bff">−0.4 kW</div></div></div>
+    </div>
+    <div class="lab"><b>B · Approved mockup, consumers on an arc</b><br><span style="opacity:.7;font-size:12px">Keeps the original positions. Consumers sit on an arc to the right of the house (max 3, then "+N"). Battery takes the bottom-left slot, so water moves into a card when a battery exists.</span></div>
+  </div>
+
+  <div class="option" data-choice="split" onclick="toggleSelect(this)" style="display:block;padding:10px">
+    <div class="ph">
+      <h1>Energy</h1><div class="sub">Live · self-consumption 87%</div>
+      <div class="g"><svg viewBox="0 0 260 150" width="100%">
+        <path class="flow thick" stroke="#ffc457" d="M130 46 V 92"/>
+        <path class="flow thin" stroke="#8f7bff" d="M106 116 H 50"/>
+        <circle cx="130" cy="26" r="20" fill="rgba(255,196,87,.18)" stroke="#ffc457"/><text x="130" y="31" text-anchor="middle" font-size="15">☀️</text>
+        <text x="160" y="26" fill="#ffc457" font-size="11" font-weight="700">3.2 kW</text>
+        <circle cx="130" cy="116" r="24" fill="rgba(255,255,255,.08)" stroke="#e8ecff"/><text x="130" y="122" text-anchor="middle" font-size="17">🏠</text>
+        <text x="164" y="120" fill="#e8ecff" font-size="11" font-weight="700">2.8 kW</text>
+        <circle cx="32" cy="116" r="18" fill="rgba(143,123,255,.18)" stroke="#8f7bff"/><text x="32" y="121" text-anchor="middle" font-size="13">🔌</text>
+        <text x="12" y="148" fill="#8f7bff" font-size="10" font-weight="700">↗ 0.4 kW</text>
+      </svg></div>
+      <div class="g" style="margin-top:6px">
+        <div class="n">Where the house's 2.8 kW goes</div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px"><span>♨️ Water heater</span><b>1.7 kW</b></div>
+        <div class="bar" style="width:61%"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px"><span>❄️ AC</span><b>0.6 kW</b></div>
+        <div class="bar" style="width:21%;background:#58e1ff"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;opacity:.6"><span>Other</span><b>0.5 kW</b></div>
+        <div class="bar" style="width:18%;background:rgba(255,255,255,.3)"></div>
+      </div>
+      <div class="row"><div class="g"><div class="n">Water today</div><div class="v">312 L</div></div></div>
+    </div>
+    <div class="lab"><b>C · Small flow diagram + consumer bars</b><br><span style="opacity:.7;font-size:12px">The diagram only shows sources → house (solar, grid, battery: fixed slots, always fits). Consumers are a sorted bar list underneath with "Other" = house − sum. Scales to any number of consumers.</span></div>
+  </div>
+
+</div>
