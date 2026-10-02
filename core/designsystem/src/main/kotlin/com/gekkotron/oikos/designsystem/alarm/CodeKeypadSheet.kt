@@ -3,6 +3,7 @@ package com.gekkotron.oikos.designsystem.alarm
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -37,7 +38,8 @@ import com.gekkotron.oikos.designsystem.R
 import com.gekkotron.oikos.model.CodeFormat
 
 private const val DELETE = "⌫"
-private val KEYS = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(DELETE, "0"))
+private const val BLANK = ""
+private val KEYS = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(BLANK, "0", DELETE))
 
 /**
  * Asks for the alarm code (security spec §4.2). The code lives in plain `remember`, never saved state, so it
@@ -65,6 +67,10 @@ fun CodeKeypadSheet(format: CodeFormat, onSubmit: (String) -> Unit, onDismiss: (
                     for (row in KEYS) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             for (key in row) {
+                                if (key == BLANK) {
+                                    Spacer(Modifier.size(72.dp))
+                                    continue
+                                }
                                 val deleteLabel = stringResource(R.string.alarm_code_delete)
                                 FilledTonalButton(
                                     onClick = { code = if (key == DELETE) code.dropLast(1) else code + key },
