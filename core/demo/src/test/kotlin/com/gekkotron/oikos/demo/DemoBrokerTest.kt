@@ -34,7 +34,7 @@ class DemoBrokerTest {
     private val allIds = setOf(
         "demo_living_lamp", "demo_kitchen_spots", "demo_coffee", "demo_garage_plug", "demo_living_shutter",
         "demo_living_ac", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
-        "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_front_door", "demo_hallway_motion",
+        "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_water_heater_power", "demo_ac_power", "demo_front_door", "demo_hallway_motion",
         "demo_alarm", "demo_water_heater_target", "demo_vacuum_mode", "demo_vacuum_start",
     )
 
@@ -76,6 +76,8 @@ class DemoBrokerTest {
         assertEquals("hero_weather", e.getValue("demo_outdoor_temperature").ui.cardStyle)
         assertTrue(e.getValue("demo_living_lamp").ui.favorite)
         assertEquals(EnergyRole.SOLAR, e.getValue("demo_solar_power").ui.energyRole)
+        assertEquals(EnergyRole.CONSUMER, e.getValue("demo_water_heater_power").ui.energyRole)
+        assertEquals(EnergyRole.CONSUMER, e.getValue("demo_ac_power").ui.energyRole)
     }
 
     @Test
@@ -157,6 +159,18 @@ class DemoBrokerTest {
         assertNotEquals(before, StateValue.Numeric(solar))
         assertEquals(house - solar, grid)
         assertTrue(solar in 0.0..4200.0)
+    }
+
+    @Test
+    fun `ticking keeps the consumers known`() = runTest {
+        val h = start()
+        h.broker.startTicking(3.seconds)
+        repeat(3) {
+            advanceTimeBy(3_001)
+            runCurrent()
+        }
+        assertIs<StateValue.Numeric>(h.value("demo_water_heater_power"))
+        assertIs<StateValue.Numeric>(h.value("demo_ac_power"))
     }
 
     @Test
