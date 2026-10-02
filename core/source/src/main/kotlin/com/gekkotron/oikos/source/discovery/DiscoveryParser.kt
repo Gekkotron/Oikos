@@ -171,11 +171,16 @@ object DiscoveryParser {
 
     private fun capabilities(kind: Kind, b: MqttBindings): Capabilities = when (kind) {
         Kind.LIGHT -> if (b.str("schema") == "json") {
-            Capabilities(brightness = b.bool("brightness", false), colorModes = b.strList("supported_color_modes").orEmpty().toSet())
+            Capabilities(
+                brightness = b.bool("brightness", false),
+                colorModes = b.strList("supported_color_modes").orEmpty().toSet(),
+                effects = if (b.bool("effect", false)) b.strList("effect_list").orEmpty() else emptyList(),
+            )
         } else {
             Capabilities(
                 brightness = b.str("brightness_command_topic") != null,
                 colorModes = if (b.str("rgb_command_topic") != null) setOf("rgb") else emptySet(),
+                effects = if (b.str("effect_command_topic") != null) b.strList("effect_list").orEmpty() else emptyList(),
             )
         }
         Kind.COVER -> Capabilities(position = b.str("set_position_topic") != null)
