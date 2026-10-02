@@ -66,7 +66,10 @@ class OnboardingPayloadTest {
     fun `invalid gateway fields are named`() {
         val base = """{"v":1,"local":{"host":"h"},"gateway":"""
         assertEquals(PayloadError.InvalidField("gateway.url"), error("""$base{"url":"http://gw.example","key":"$key"}}"""))
-        for (url in listOf("https://my host", "https://h:99999", "https://", "https://:443", "https://h:0")) {
+        for (url in listOf(
+                "https://my host", "https://h:99999", "https://", "https://:443", "https://h:0",
+                "https://my_gw:99999", "https://my_gw:0", "https://my_gw:x", "https://:8443/athena", "https://..example",
+            )) {
             assertEquals(PayloadError.InvalidField("gateway.url"), error("""$base{"url":"$url","key":"$key"}}"""), url)
         }
         assertEquals(PayloadError.InvalidField("gateway.key"), error("""$base{"url":"https://gw.example","key":"${key.drop(1)}"}}"""))
@@ -77,7 +80,10 @@ class OnboardingPayloadTest {
     @Test
     fun `well-formed gateway URLs are accepted`() {
         val base = """{"v":1,"local":{"host":"h"},"gateway":"""
-        for (url in listOf("https://gw.example", "https://gw.example:8443/", "https://gw.example/athena", "https://192.168.1.10:443")) {
+        for (url in listOf(
+                "https://gw.example", "https://gw.example:8443/", "https://gw.example/athena", "https://192.168.1.10:443",
+                "https://my_gw.example", "https://my_gw.example:8443/athena", "https://bücher.example", "https://bücher.example:8443/",
+            )) {
             assertEquals(url, ok("""$base{"url":"$url","key":"$key"}}""").gateway?.url, url)
         }
     }

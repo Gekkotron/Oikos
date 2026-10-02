@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -46,6 +48,13 @@ class GatewayTransport(
     /** Shown instead of the stream's own link: `Reconnecting(n)` while reopening, `Offline` after a refusal. */
     private val overlay = MutableStateFlow<LinkState?>(null)
 
+    /** Reopen attempts since the live stream last stayed up; read by the link mapping in [start]. */
+    @Volatile
+    private var attempt = 0
+
+    /** [resubscribe] and [reconnect] open one stream at a time, so both never open the same set. */
+    private val opening = Mutex()
+
     @Volatile
     private var stopped = false
     private val jobs = mutableListOf<Job>()
@@ -54,9 +63,21 @@ class GatewayTransport(
 
     override fun start() {
         check(jobs.isEmpty()) { "already started" }
-        jobs += scope.launch { combine(handover.link, overlay) { link, over -> over ?: link }.collect { _link.value = it } }
+        jobs += scope.launch { combine(handover.link, overlay, ::shown).collect { _link.value = it } }
         jobs += scope.launch { resubscribe() }
         jobs += scope.launch { reconnect() }
+    }
+
+    /**
+     * A live stream that drops goes Offline(CLOSED) before [reconnect] has set its `Reconnecting` overlay,
+     * and nothing orders the two on a multi-threaded dispatcher. Offline is final to an outer [Handover]
+     * waiting on this transport, so that gap is shown as the reconnect it is while not [stopped]; a
+     * refusal sets its overlay (and [stopped]) before closing anything, and [close] sets [stopped] first.
+     */
+    private fun shown(link: LinkState, over: LinkState?): LinkState = when {
+        over != null -> over
+        !stopped && link == LinkState.Offline(LinkState.Offline.CLOSED) -> LinkState.Reconnecting(attempt + 1)
+        else -> link
     }
 
     override suspend fun close() {
@@ -85,7 +106,7 @@ class GatewayTransport(
      */
     private suspend fun resubscribe() {
         wanted.filter { it.isNotEmpty() }.debounce(resubscribeDebounce).collect { topics ->
-            var attempt = 0
+            var retry = 0
             while (!stopped && topics != live.value?.topics) {
                 val end = open(topics) ?: return@collect // live now
                 if (stopped) return@collect // closed, or refused meanwhile
@@ -93,8 +114,8 @@ class GatewayTransport(
                     refuse(end.reason)
                     return@collect
                 }
-                attempt++
-                val superseded = withTimeoutOrNull(backoff.delayFor(attempt)) { wanted.first { it != topics } } != null
+                retry++
+                val superseded = withTimeoutOrNull(backoff.delayFor(retry)) { wanted.first { it != topics } } != null
                 if (superseded) return@collect
             }
         }
@@ -113,7 +134,6 @@ class GatewayTransport(
     }
 
     private suspend fun reconnect() {
-        var attempt = 0
         live.filterNotNull().collectLatest { stream ->
             coroutineScope {
                 val watch = launch {
@@ -138,13 +158,17 @@ class GatewayTransport(
         }
     }
 
-    /** @return null once the new stream is live, else how it ended (the handover has disposed it). */
-    private suspend fun open(topics: Set<String>): GatewayStream.End? {
+    /**
+     * @return null once a stream for [topics] is live, else how the new one ended (the handover has disposed
+     * it). A caller that waited on [opening] finds the set already live when the other one just opened it.
+     */
+    private suspend fun open(topics: Set<String>): GatewayStream.End? = opening.withLock {
+        live.value?.let { if (it.topics == topics && !it.end.isCompleted) return@withLock null }
         val stream = GatewayStream(api, topics, scope)
         if (handover.switchTo(stream)) {
             live.value = stream
-            return null
+            return@withLock null
         }
-        return stream.end.await()
+        stream.end.await()
     }
 }

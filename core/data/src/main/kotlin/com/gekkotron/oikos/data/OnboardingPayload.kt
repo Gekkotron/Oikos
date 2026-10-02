@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
+import java.net.IDN
 import java.net.URI
 import java.net.URISyntaxException
 
@@ -66,9 +67,8 @@ object OnboardingPayload {
     /**
      * An https URL with a host and, if given, a port in 1..65535. The gateway SDK (OkHttp's `toHttpUrl()`)
      * throws on anything less, and a saved profile with such a URL must never reach it. java.net.URI, not
-     * OkHttp: this module has no OkHttp. URI is the stricter of the two on hosts (it leaves `host` null for
-     * a name with an underscore, for instance), so an odd-but-legal host is refused here rather than crashing
-     * later.
+     * OkHttp: this module has no OkHttp. URI leaves `host` null for names OkHttp takes fine (an underscore,
+     * a non-ASCII name it sends as punycode), so such an authority is checked here the way OkHttp does.
      */
     private fun isGatewayUrl(url: String): Boolean {
         val uri = try {
@@ -76,7 +76,24 @@ object OnboardingPayload {
         } catch (e: URISyntaxException) {
             return false
         }
-        return uri.scheme == "https" && !uri.host.isNullOrBlank() && (uri.port == -1 || uri.port in 1..65535)
+        if (uri.scheme != "https") return false
+        if (!uri.host.isNullOrBlank()) return uri.port == -1 || uri.port in 1..65535
+        val authority = uri.rawAuthority?.substringAfterLast('@') ?: return false
+        val host = authority.substringBeforeLast(':')
+        if (host != authority && authority.substringAfterLast(':').toIntOrNull() !in 1..65535) return false
+        return isLooseHost(host)
+    }
+
+    /** Dot-separated labels of letters, digits, `-` and `_` once converted to ASCII. */
+    private fun isLooseHost(host: String): Boolean {
+        val ascii = try {
+            IDN.toASCII(host)
+        } catch (e: IllegalArgumentException) {
+            return false
+        }
+        return ascii.isNotEmpty() && ascii.split('.').all { label ->
+            label.isNotEmpty() && label.all { it.isLetterOrDigit() && it.code < 128 || it == '-' || it == '_' }
+        }
     }
 
     private fun hexToBytes(hex: String): ByteArray? {

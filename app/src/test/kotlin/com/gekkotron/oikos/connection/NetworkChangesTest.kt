@@ -37,4 +37,25 @@ class NetworkChangesTest {
         runCurrent()
         assertTrue(shadow.networkCallbacks.isEmpty())
     }
+
+    @Test
+    fun `the registration callback for the current default network is not a change`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val shadow = shadowOf(connectivity)
+        var count = 0
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { context.networkChanges().collect { count++ } }
+        runCurrent()
+        val callback = shadow.networkCallbacks.single()
+        val current = checkNotNull(connectivity.activeNetwork)
+        callback.onAvailable(current) // what registerDefaultNetworkCallback does at once
+        runCurrent()
+        assertEquals(0, count)
+        callback.onLost(current)
+        runCurrent()
+        callback.onAvailable(current) // the same network coming back is a change
+        runCurrent()
+        assertEquals(2, count)
+        job.cancel()
+    }
 }

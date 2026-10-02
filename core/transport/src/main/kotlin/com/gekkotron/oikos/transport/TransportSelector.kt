@@ -26,7 +26,8 @@ import kotlin.time.Duration.Companion.seconds
  * until the next network change — even a direct candidate rejected before it ever becomes current (still
  * racing the gateway inside a pending [Handover.switchTo]) is marked rejected. A bad probe or transport
  * factory during one check is swallowed; the selector keeps whatever is current (Offline(FAILED) when
- * nothing is) and retries on the next trigger; on a fixed route a throwing factory leaves Offline(FAILED).
+ * nothing is) and retries on the next trigger; on a fixed route a throwing factory or start() leaves
+ * Offline(FAILED).
  * The foreground lifecycle stays with [ActiveTransport].
  */
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -89,7 +90,8 @@ class TransportSelector(
             handover.failIfIdle()
             return
         }
-        handover.switchTo(transport)
+        // false with nothing current (start() threw): Offline(FAILED), not the initial Connecting forever.
+        if (!handover.switchTo(transport)) handover.failIfIdle()
     }
 
     private fun newDirect(): ManagedTransport = direct(spec.direct).also { directNowFlow.value = it }
@@ -135,7 +137,7 @@ class TransportSelector(
             try {
                 val wantDirect = !directRejected && probe.reachable()
                 if (handover.current.value == null || wantDirect != onDirect()) {
-                    handover.switchTo(if (wantDirect) newDirect() else gateway(spec.gateway))
+                    if (!handover.switchTo(if (wantDirect) newDirect() else gateway(spec.gateway))) handover.failIfIdle()
                 }
             } catch (e: CancellationException) {
                 throw e
