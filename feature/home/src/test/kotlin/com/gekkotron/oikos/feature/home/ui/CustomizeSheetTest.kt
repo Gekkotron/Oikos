@@ -22,6 +22,7 @@ import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
@@ -43,8 +44,12 @@ class CustomizeSheetTest {
     private val saved = mutableListOf<UiOverride>()
     private val savedRooms = mutableListOf<List<Area>>()
 
+    // A device Energy or Security already shows is only on Home through search.
     private fun card(entity: Entity): CardUi =
-        HomeUiBuilder.build(mapOf(entity.uniqueId to entity), emptyMap(), rooms, if (entity.ui.hidden) RoomFilter.Hidden else RoomFilter.All, LinkState.Connecting, Locale.US).card(entity.uniqueId)!!
+        HomeUiBuilder.build(
+            mapOf(entity.uniqueId to entity), emptyMap(), rooms, if (entity.ui.hidden) RoomFilter.Hidden else RoomFilter.All, LinkState.Connecting, Locale.US,
+            query = if (entity.ui.hidden || Placement.onHome(entity.kind, entity.deviceClass, entity.ui)) "" else entity.name,
+        ).card(entity.uniqueId)!!
 
     private fun show(card: CardUi, fontScale: Float = 1f) = compose.setContent {
         CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
@@ -172,5 +177,29 @@ class CustomizeSheetTest {
     fun `other entities have no Show on Security switch`() {
         show(card(testEntity("lamp", Kind.LIGHT, "Lamp")))
         compose.onNodeWithText("Show on Security").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a device Security shows offers Show on Home instead of Hide from Home`() {
+        show(card(testEntity("mailbox", Kind.BINARY_SENSOR, "Mailbox", deviceClass = "door", ui = UiOverride(hidden = true))))
+        compose.onNodeWithText("Hide from Home").assertDoesNotExist()
+        compose.onNodeWithText("Show on Home").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(UiOverride(homePinned = true), saved.single())
+    }
+
+    @Test
+    fun `taking a device off Security brings back Hide from Home`() {
+        show(card(testEntity("mailbox", Kind.BINARY_SENSOR, "Mailbox", deviceClass = "door")))
+        compose.onNodeWithText("Show on Security").performScrollTo().performClick()
+        compose.onNodeWithText("Show on Home").assertDoesNotExist()
+        compose.onNodeWithText("Hide from Home").assertExists()
+    }
+
+    @Test
+    fun `other devices keep Hide from Home`() {
+        show(card(testEntity("lamp", Kind.LIGHT, "Lamp")))
+        compose.onNodeWithText("Show on Home").assertDoesNotExist()
+        compose.onNodeWithText("Hide from Home").assertExists()
     }
 }

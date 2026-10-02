@@ -8,6 +8,7 @@ import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
 import org.junit.Test
 import java.util.Locale
@@ -17,7 +18,8 @@ import kotlin.test.assertTrue
 
 class IconSpecTest {
     private fun spec(kind: Kind, value: StateValue?, deviceClass: String? = null, available: Boolean = true): IconSpec {
-        val e = testEntity("e", kind, deviceClass = deviceClass)
+        // Pinned: a door or motion sensor would otherwise only be on Security.
+        val e = testEntity("e", kind, deviceClass = deviceClass, ui = UiOverride(homePinned = true))
         val states = value?.let { mapOf("e" to EntityState("e", it, available = available)) } ?: emptyMap()
         val card = HomeUiBuilder.build(mapOf("e" to e), states, emptyList(), RoomFilter.All, LinkState.Connecting, Locale.US).card("e")!!
         return iconSpec(card)

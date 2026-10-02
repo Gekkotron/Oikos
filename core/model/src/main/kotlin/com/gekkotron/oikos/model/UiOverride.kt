@@ -24,6 +24,8 @@ data class UiOverride(
     val energyIcon: String? = null,
     /** Unique id of the energy counter shown on this power sensor's card; null = paired automatically. */
     val energyMeter: String? = null,
+    /** Kept on Home although Energy or Security already shows it ([Placement.elsewhere]). */
+    val homePinned: Boolean = false,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

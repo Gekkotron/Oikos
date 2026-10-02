@@ -33,7 +33,7 @@ class SecurityUiBuilderTest {
     }
 
     @Test
-    fun `hidden, security-hidden and folded entities are left out`() {
+    fun `security-hidden and folded entities are left out, hidden on Home is not`() {
         val ui = build(
             listOf(
                 sensor("a", "door", ui = UiOverride(hidden = true)),
@@ -43,7 +43,7 @@ class SecurityUiBuilderTest {
                 sensor("d", "door"),
             ),
         )
-        assertEquals(listOf("d"), ui.sensors.map { it.id })
+        assertEquals(setOf("a", "d"), ui.sensors.map { it.id }.toSet())
         assertTrue(ui.panels.isEmpty())
     }
 
