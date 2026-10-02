@@ -61,7 +61,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         override("demo_solar_power", """{"energyRole":"solar"}""")
         override("demo_grid_power", """{"energyRole":"grid"}""")
         override("demo_house_power", """{"energyRole":"house"}""")
-        override("demo_water_heater_power", """{"energyRole":"consumer"}""")
+        override("demo_water_heater_power", """{"energyRole":"consumer","energyIcon":"water_heater"}""")
         override("demo_ac_power", """{"energyRole":"consumer"}""")
     }
 

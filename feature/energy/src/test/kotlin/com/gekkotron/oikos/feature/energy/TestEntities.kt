@@ -19,9 +19,10 @@ fun energyEntity(
     name: String = id,
     invert: Boolean = false,
     order: Int? = null,
+    icon: String? = null,
 ) = Entity(
     id, null, name, Kind.SENSOR, "power", unit, null, Capabilities(), NoBindings, UNASSIGNED_AREA,
-    UiOverride(energyRole = role, energyInvert = invert, order = order),
+    UiOverride(energyRole = role, energyInvert = invert, order = order, energyIcon = icon),
 )
 
 fun numeric(id: String, value: Double, stale: Boolean = false, available: Boolean = true) =

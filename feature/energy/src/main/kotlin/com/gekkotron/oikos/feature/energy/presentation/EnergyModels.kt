@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.energy.presentation
 
+import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.transport.LinkState
 
@@ -27,6 +28,8 @@ data class EnergyNode(
     val count: Int = 0,
     /** The entities behind this node, by name; empty for a derived house. Keys of [EnergyUiState.sensors]. */
     val sensorIds: List<String> = emptyList(),
+    /** Consumers only: the user's chosen glyph; null draws the default plug. */
+    val icon: ConsumerIcon? = null,
 )
 
 /** One tagged entity as the details sheet shows it: its own value and unit, not the node's watts. */
@@ -38,6 +41,7 @@ data class SensorUi(
     val status: NodeStatus,
     val role: EnergyRole,
     val invert: Boolean,
+    val icon: ConsumerIcon?,
 )
 
 enum class EnergyHint { CHECK_SIGN }

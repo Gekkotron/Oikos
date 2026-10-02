@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.icons.StaticIcon
 import com.gekkotron.oikos.feature.energy.R
 import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import java.util.Locale
@@ -43,7 +45,8 @@ internal fun ConsumersSheet(consumers: List<EnergyNode>, locale: Locale, onSelec
                         .clickable(role = Role.Button) { onSelect(n) }.testTag("consumers-sheet-${n.id}"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(n.name.orEmpty(), style = OikosTheme.type.body, modifier = Modifier.weight(1f))
+                    StaticIcon(n.icon?.glyph ?: glyph(n.kind), modifier = Modifier.size(22.dp))
+                    Text(n.name.orEmpty(), style = OikosTheme.type.body, modifier = Modifier.weight(1f).padding(start = 12.dp))
                     Text(nodeValueText(n, locale), style = OikosTheme.type.body)
                 }
             }

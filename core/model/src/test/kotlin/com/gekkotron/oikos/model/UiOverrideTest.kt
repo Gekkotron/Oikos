@@ -89,4 +89,29 @@ class UiOverrideTest {
         assertEquals(o, UiOverrides.decode(json))
         assertEquals("{}", UiOverrides.encode(UiOverride(securityHidden = false)))
     }
+
+    @Test
+    fun `energyIcon round-trips`() {
+        val o = UiOverride(energyRole = EnergyRole.CONSUMER, energyIcon = "oven")
+        val json = UiOverrides.encode(o)
+        assertTrue(json.contains("\"energyIcon\":\"oven\""), json)
+        val decoded = UiOverrides.decode(json)!!
+        assertEquals(o, decoded)
+        assertEquals(ConsumerIcon.OVEN, ConsumerIcon.of(decoded.energyIcon))
+    }
+
+    @Test
+    fun `unknown energyIcon decodes and maps to no icon`() {
+        val decoded = UiOverrides.decode("""{"energyIcon":"toaster","favorite":true}""")!!
+        assertEquals("toaster", decoded.energyIcon)
+        assertTrue(decoded.favorite)
+        assertNull(ConsumerIcon.of(decoded.energyIcon))
+        assertNull(ConsumerIcon.of(null))
+    }
+
+    @Test
+    fun `absent energyIcon is null and omitted`() {
+        assertNull(UiOverrides.decode("{}")!!.energyIcon)
+        assertFalse(UiOverrides.encode(UiOverride()).contains("energyIcon"))
+    }
 }

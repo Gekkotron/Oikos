@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.energy.presentation
 
+import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -64,7 +65,7 @@ object EnergyFlowBuilder {
         val consumerNodes = consumerEntities.associate { e ->
             val r = sum(listOf(e), states)!!
             val w = r.watts?.coerceAtLeast(0.0)
-            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status, sensorIds = listOf(e.uniqueId))
+            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status, sensorIds = listOf(e.uniqueId), icon = ConsumerIcon.of(e.ui.energyIcon))
         }
         val fresh = rank(consumerEntities, consumerNodes)
         val order = if (previous != null && nowMillis - previous.atMillis < REORDER_MS && previous.ids.toSet() == fresh.toSet()) {
@@ -106,7 +107,7 @@ object EnergyFlowBuilder {
     private fun sensor(e: Entity, state: EntityState?): SensorUi {
         val status = status(state)
         val value = (state?.value as? StateValue.Numeric)?.value.takeIf { status != NodeStatus.UNAVAILABLE }
-        return SensorUi(e.uniqueId, e.name, value, e.unit, status, e.ui.energyRole!!, e.ui.energyInvert)
+        return SensorUi(e.uniqueId, e.name, value, e.unit, status, e.ui.energyRole!!, e.ui.energyInvert, ConsumerIcon.of(e.ui.energyIcon))
     }
 
     /** Summed watts of [entities] (null if any is unknown), or null when the role has no entity. */

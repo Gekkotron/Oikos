@@ -22,6 +22,7 @@ import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import com.gekkotron.oikos.feature.energy.presentation.EnergyUiState
 import com.gekkotron.oikos.feature.energy.presentation.NodeKind
 import com.gekkotron.oikos.feature.energy.presentation.SensorEdit
+import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -136,6 +137,23 @@ class EnergyScreenTest {
         compose.onNode(hasSetTextAction() and hasText("Name")).performTextReplacement("Boiler")
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertEquals(listOf("heater" to SensorEdit("Boiler", EnergyRole.CONSUMER, invert = false)), saves)
+    }
+
+    @Test
+    fun `picking an icon in a consumer's editor saves it`() {
+        showDetails(state(house, houseStates))
+        compose.onNodeWithTag("energy-card-consumer:heater").performScrollTo().performClick()
+        compose.onNodeWithTag("energy-icon-default").performScrollTo().assertExists()
+        compose.onNodeWithTag("energy-icon-oven").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("heater" to SensorEdit("Water heater", EnergyRole.CONSUMER, invert = false, icon = ConsumerIcon.OVEN)), saves)
+    }
+
+    @Test
+    fun `a non-consumer editor has no icon picker`() {
+        showDetails(state(house, houseStates))
+        compose.onNodeWithTag("energy-card-solar").performScrollTo().performClick()
+        compose.onNodeWithTag("energy-icon-default").assertDoesNotExist()
     }
 
     @Test

@@ -34,6 +34,13 @@ enum class OikosGlyph(private val parts: List<Part>) {
     SEARCH(listOf(area("M15.5 10.5a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"), line("M14.3 14.3 20 20"))),
     CLOSE(listOf(line("M6 6l12 12M18 6 6 18"))),
     DOT(listOf(area("M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"))),
+    WATER_HEATER(listOf(area("M8 4h8a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"), line("M10 4V3M14 4V3M12 9c1.5 1.8 2 2.6 2 3.5a2 2 0 0 1-4 0c0-.9.5-1.7 2-3.5zM9 20v1M15 20v1"))),
+    HEAT_PUMP(listOf(area("M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"), line("M13 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM9 9v6M6 12h6M15.5 9H18M15.5 12H18M15.5 15H18M6 18v2M18 18v2"))),
+    OVEN(listOf(area("M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"), line("M4 9h16M7.5 6.5h.5M11.5 6.5h.5M15.5 6.5h.5M7 12h10v5H7z"))),
+    FRIDGE(listOf(area("M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M6 10h12M9 6v2M9 13v3"))),
+    WASHER(listOf(area("M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M4 8h16M7 5.5h3M16 5.5h1M16.5 14.5a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0zM9.5 15c.9-.8 1.6-.8 2.5 0s1.6.8 2.5 0"))),
+    DRYER(listOf(area("M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M4 8h16M7 5.5h.5M10 5.5h.5M17 5.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM16.5 14.5a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0zM10.5 12.5c.6.6.6 1.2 0 1.8s-.6 1.2 0 1.8M13.5 12.5c.6.6.6 1.2 0 1.8s-.6 1.2 0 1.8"))),
+    DISHWASHER(listOf(area("M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M4 7h16M8 5h.5M11 5h.5M9 10h6M7 14h10M7 18h10M10 14v4M14 14v4"))),
     ;
 
     /** Parsed once per glyph. */

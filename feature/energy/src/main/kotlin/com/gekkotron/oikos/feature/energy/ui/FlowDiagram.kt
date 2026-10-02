@@ -139,7 +139,7 @@ internal fun NodeBubble(n: EnergyNode, locale: Locale, modifier: Modifier) {
         Box(
             Modifier.size(NODE).background(edgeColor(n.kind, colors).copy(alpha = 0.18f), CircleShape).border(1.dp, edgeColor(n.kind, colors), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { StaticIcon(glyph(n.kind), modifier = Modifier.size(22.dp)) }
+        ) { StaticIcon(n.icon?.glyph ?: glyph(n.kind), modifier = Modifier.size(22.dp)) }
         Text(nodeValueText(n, locale), style = OikosTheme.type.label, color = colors.content, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
         // Every bubble is named: the role ("Solar", "Grid"…) or the consumer's name (spec §2).
         Text(nodeLabel(n), style = OikosTheme.type.label, color = colors.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)

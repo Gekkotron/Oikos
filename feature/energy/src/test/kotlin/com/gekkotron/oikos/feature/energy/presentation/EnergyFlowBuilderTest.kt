@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.energy.presentation
 import com.gekkotron.oikos.feature.energy.energyEntity
 import com.gekkotron.oikos.feature.energy.numeric
 import com.gekkotron.oikos.feature.energy.unknown
+import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -256,7 +257,7 @@ class EnergyFlowBuilderTest {
         assertEquals(listOf("exp", "imp"), s.node("grid")!!.sensorIds)
         assertEquals(emptyList(), s.node("house")!!.sensorIds)
         val a = s.sensors.getValue("s2")
-        assertEquals(SensorUi("s2", "Inverter A", 0.5, "kW", NodeStatus.LIVE, EnergyRole.SOLAR, invert = false), a)
+        assertEquals(SensorUi("s2", "Inverter A", 0.5, "kW", NodeStatus.LIVE, EnergyRole.SOLAR, invert = false, icon = null), a)
     }
 
     @Test
@@ -272,5 +273,22 @@ class EnergyFlowBuilderTest {
     fun `a measured house lists its meter`() {
         val s = build(house + energyEntity("load", EnergyRole.HOUSE), houseStates + numeric("load", 2500.0))
         assertEquals(listOf("load"), s.node("house")!!.sensorIds)
+    }
+
+    @Test
+    fun `a consumer's icon reaches its node and sensor`() {
+        val s = build(listOf(energyEntity("oven", EnergyRole.CONSUMER, icon = "oven")), listOf(numeric("oven", 900.0)))
+        assertEquals(ConsumerIcon.OVEN, s.node("consumer:oven")!!.icon)
+        assertEquals(ConsumerIcon.OVEN, s.sensors.getValue("oven").icon)
+    }
+
+    @Test
+    fun `an unknown or absent icon key is no icon`() {
+        val s = build(
+            listOf(energyEntity("a", EnergyRole.CONSUMER, icon = "toaster"), energyEntity("b", EnergyRole.CONSUMER)),
+            listOf(numeric("a", 100.0), numeric("b", 50.0)),
+        )
+        assertNull(s.node("consumer:a")!!.icon)
+        assertNull(s.node("consumer:b")!!.icon)
     }
 }
