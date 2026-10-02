@@ -64,7 +64,7 @@ Colour is carried as hue + saturation because that is what the wheel edits and w
 
 - `hsToRgb(Hs): Rgb` at full value; `rgbToHs(Rgb): Hs` (value dropped).
 - `rgbToXy(Rgb): Pair<Double, Double>` and `xyToRgb(x, y): Rgb` with the sRGB D65 matrices and gamma, xy rounded to 4 decimals. Brightness is never folded in (Y = 1 when going back to RGB, then normalised to the largest channel).
-- Round trips (hs → rgb → hs, hs → xy → hs) land within 1° of hue and 0.01 of saturation for saturations ≥ 0.05; hue is meaningless below that and is not asserted.
+- Round trips (hs → xy → hs) land within 1° of hue and 0.01 of saturation for saturations ≥ 0.2; below that the xy rounding dominates and hue is not asserted. The xy path works on doubles; only the rgb wire mode rounds to 0..255.
 
 ### 3.3 `LightMapper`, JSON schema
 
@@ -108,7 +108,7 @@ Entities with `partOf` are already excluded from the grid and search (`HomeUiBui
 3. **Companions** — each companion's existing control, reusing `NumberControls` (slider, sends `SetNumber` on release) and `SelectControls`, each under its display name and sent to the companion's id.
 4. **Colour** (`capabilities.colorModes` not empty) — the hue wheel (§4.3). Release → `TurnOn(color = hs)`.
 
-A section header uses the existing sheet label style. Unavailable or stale disables every control as today (stale sends are already refused in the view model).
+A section header uses the existing sheet label style. Availability is handled as today: the sheet does not disable controls, and the view model refuses sends on stale cards.
 
 ### 4.3 The hue wheel (`HueWheel`, `feature:home`)
 
@@ -116,7 +116,7 @@ A section header uses the existing sheet label style. Unavailable or stale disab
 - Hue 0° is at the top and increases clockwise; saturation is the distance from the centre over the radius, clamped to 1.
 - A ring marker sits at the current colour (`state.color`, or the centre when null). Dragging or tapping moves the marker locally; the command is sent once, on release.
 - The geometry is a pure `WheelMath`: `hsAt(point, size): Hs` and `pointOf(hs, size): Offset`, unit-tested without Compose.
-- Semantics: content description "Colour" and a state description such as "Hue 210°, saturation 80 %". Adjusting the colour with TalkBack gestures is out of scope.
+- Semantics: content description "Color" (the app's English strings use US spelling) and a state description such as "Hue 210°, saturation 80 %". Adjusting the colour with TalkBack gestures is out of scope.
 - Size: the sheet width minus padding, capped at 280 dp.
 
 ## 5. Demo house
@@ -144,7 +144,7 @@ Every caller of `Command.TurnOn(color = Rgb)` moves to `Hs` (only `LightMapper` 
 - `LightAttachment`: numbers and selects fold into a device's single light; nothing folds when the device has two lights; sensors never fold; devices without a light are untouched.
 - `HomeUiBuilder`: companions attached, sorted, absent from the grid and from search, found by `card(id)`.
 - `WheelMath`: centre → saturation 0; top rim → hue 0, saturation 1; right rim → hue 90; `pointOf(hsAt(p)) ≈ p`.
-- Compose (`HomeScreenTest` / a `ControlSheetTest`): the strip's sheet shows effect chips with the current one selected, tapping "Rainbow" sends `TurnOn(effect = "rainbow")`, companion sliders appear under their names, the wheel is present only with a colour mode, everything is disabled when unavailable.
+- Compose (`HomeScreenTest` / a `ControlSheetTest`): the strip's sheet shows effect chips with the current one selected, tapping "Rainbow" sends `TurnOn(effect = "rainbow")`, companion sliders appear under their names, the wheel is present only with a colour mode.
 - On device: the user's Pixel 6a against the real strip — pick an effect, change speed (after the converter fix), drag the wheel, check Z2M's state follows.
 
 ## 8. Risks
