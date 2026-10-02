@@ -89,4 +89,21 @@ class DemoHouseTest {
             assertTrue(configs.any { """"device_class":"$c"""" in it }, c)
         }
     }
+
+    @Test
+    fun `each energy-role power sensor has a kWh counter on its device and the counters advance`() {
+        val house = DemoHouse()
+        val configs = house.retainedMessages().filter { it.topic.endsWith("/config") }.map { Json.parseToJsonElement(it.payload).jsonObject }
+        fun device(id: String) = configs.single { it["unique_id"]?.jsonPrimitive?.content == id }.getValue("device").jsonObject.getValue("identifiers").toString()
+        for (name in listOf("solar", "grid", "house", "water_heater", "ac")) {
+            val counter = configs.single { it["unique_id"]?.jsonPrimitive?.content == "demo_${name}_energy" }
+            assertEquals("kWh", counter.getValue("unit_of_measurement").jsonPrimitive.content)
+            assertEquals("total_increasing", counter.getValue("state_class").jsonPrimitive.content)
+            assertEquals(device("demo_${name}_power"), device("demo_${name}_energy"))
+        }
+        fun kwh(): Double = Json.parseToJsonElement(house.current("demo/energy")!!.payload).jsonObject.getValue("house_kwh").jsonPrimitive.content.toDouble()
+        val before = kwh()
+        repeat(5) { house.tick() }
+        assertTrue(kwh() > before)
+    }
 }

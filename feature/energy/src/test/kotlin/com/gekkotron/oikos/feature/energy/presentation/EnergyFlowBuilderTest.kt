@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.energy.presentation
 import com.gekkotron.oikos.feature.energy.energyEntity
 import com.gekkotron.oikos.feature.energy.numeric
 import com.gekkotron.oikos.feature.energy.unknown
+import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -256,7 +257,7 @@ class EnergyFlowBuilderTest {
         assertEquals(listOf("exp", "imp"), s.node("grid")!!.sensorIds)
         assertEquals(emptyList(), s.node("house")!!.sensorIds)
         val a = s.sensors.getValue("s2")
-        assertEquals(SensorUi("s2", "Inverter A", 0.5, "kW", NodeStatus.LIVE, EnergyRole.SOLAR, invert = false), a)
+        assertEquals(SensorUi("s2", "Inverter A", 0.5, "kW", NodeStatus.LIVE, EnergyRole.SOLAR, invert = false, icon = null), a)
     }
 
     @Test
@@ -272,5 +273,104 @@ class EnergyFlowBuilderTest {
     fun `a measured house lists its meter`() {
         val s = build(house + energyEntity("load", EnergyRole.HOUSE), houseStates + numeric("load", 2500.0))
         assertEquals(listOf("load"), s.node("house")!!.sensorIds)
+    }
+
+    @Test
+    fun `a consumer's icon reaches its node and sensor`() {
+        val s = build(listOf(energyEntity("oven", EnergyRole.CONSUMER, icon = "oven")), listOf(numeric("oven", 900.0)))
+        assertEquals(ConsumerIcon.OVEN, s.node("consumer:oven")!!.icon)
+        assertEquals(ConsumerIcon.OVEN, s.sensors.getValue("oven").icon)
+    }
+
+    @Test
+    fun `an unknown or absent icon key is no icon`() {
+        val s = build(
+            listOf(energyEntity("a", EnergyRole.CONSUMER, icon = "toaster"), energyEntity("b", EnergyRole.CONSUMER)),
+            listOf(numeric("a", 100.0), numeric("b", 50.0)),
+        )
+        assertNull(s.node("consumer:a")!!.icon)
+        assertNull(s.node("consumer:b")!!.icon)
+    }
+
+    private fun counter(id: String, device: String? = "d", unit: String = "kWh", name: String = id): Entity =
+        energyEntity(id, null, unit = unit, name = name).copy(deviceId = device)
+
+    private fun onDevice(e: Entity, device: String = "d"): Entity = e.copy(deviceId = device)
+
+    @Test
+    fun `a consumer's card carries its paired lifetime total`() {
+        val heater = onDevice(energyEntity("heater", EnergyRole.CONSUMER, name = "Heater"))
+        val s = build(listOf(heater, counter("heater_kwh")), listOf(numeric("heater", 900.0), numeric("heater_kwh", 1234.5)))
+        val n = s.node("consumer:heater")!!
+        assertTrue(n.hasMeter)
+        assertEquals(1234.5, n.totalKwh)
+        assertEquals(NodeStatus.LIVE, n.totalStatus)
+        assertEquals(900.0, n.value)
+    }
+
+    @Test
+    fun `a Wh meter is converted to kWh`() {
+        val heater = onDevice(energyEntity("heater", EnergyRole.CONSUMER))
+        val s = build(listOf(heater, counter("m", unit = "Wh")), listOf(numeric("heater", 100.0), numeric("m", 2500.0)))
+        assertEquals(2.5, s.node("consumer:heater")!!.totalKwh)
+    }
+
+    @Test
+    fun `an unknown meter gives no total and an unavailable status`() {
+        val heater = onDevice(energyEntity("heater", EnergyRole.CONSUMER))
+        val s = build(listOf(heater, counter("m")), listOf(numeric("heater", 100.0), numeric("m", 1.0, available = false)))
+        val n = s.node("consumer:heater")!!
+        assertTrue(n.hasMeter)
+        assertNull(n.totalKwh)
+        assertEquals(NodeStatus.UNAVAILABLE, n.totalStatus)
+        val unknownState = build(listOf(heater, counter("m")), listOf(numeric("heater", 100.0), unknown("m")))
+        assertNull(unknownState.node("consumer:heater")!!.totalKwh)
+    }
+
+    @Test
+    fun `a stale meter marks the total stale`() {
+        val heater = onDevice(energyEntity("heater", EnergyRole.CONSUMER))
+        val s = build(listOf(heater, counter("m")), listOf(numeric("heater", 100.0), numeric("m", 5.0, stale = true)))
+        assertEquals(NodeStatus.STALE, s.node("consumer:heater")!!.totalStatus)
+    }
+
+    @Test
+    fun `a derived house has no meter`() {
+        val s = build(house + counter("x", device = "other"), houseStates)
+        assertEquals(false, s.node("house")!!.hasMeter)
+    }
+
+    @Test
+    fun `grid totals ignore the export counter`() {
+        val grid = onDevice(energyEntity("grid", EnergyRole.GRID), "g")
+        val export = onDevice(energyEntity("export", EnergyRole.GRID_EXPORT), "x")
+        val s = build(
+            listOf(grid, export, counter("grid_kwh", device = "g"), counter("export_kwh", device = "x")),
+            listOf(numeric("grid", 100.0), numeric("export", 50.0), numeric("grid_kwh", 10.0), numeric("export_kwh", 99.0)),
+        )
+        assertEquals(10.0, s.node("grid")!!.totalKwh)
+        val exportOnly = build(listOf(export, counter("export_kwh", device = "x")), listOf(numeric("export", 50.0), numeric("export_kwh", 99.0)))
+        assertEquals(false, exportOnly.node("grid")!!.hasMeter)
+    }
+
+    @Test
+    fun `solar sums its inverters' meters`() {
+        val a = onDevice(energyEntity("s1", EnergyRole.SOLAR), "a")
+        val b = onDevice(energyEntity("s2", EnergyRole.SOLAR), "b")
+        val s = build(
+            listOf(a, b, counter("k1", device = "a"), counter("k2", device = "b")),
+            listOf(numeric("s1", 1.0), numeric("s2", 1.0), numeric("k1", 10.0), numeric("k2", 5.0)),
+        )
+        assertEquals(15.0, s.node("solar")!!.totalKwh)
+    }
+
+    @Test
+    fun `the sheet gets every counter by name and each sensor's pairing`() {
+        val heater = onDevice(energyEntity("heater", EnergyRole.CONSUMER).let { it.copy(ui = it.ui.copy(energyMeter = "z")) })
+        val s = build(listOf(heater, counter("a", name = "Zeta"), counter("z", device = null, name = "Alpha")), listOf(numeric("heater", 1.0)))
+        assertEquals(listOf("z", "a"), s.meters.map { it.id })
+        val ui = s.sensors.getValue("heater")
+        assertEquals("z", ui.meterId)
+        assertEquals("a", ui.autoMeterId)
     }
 }

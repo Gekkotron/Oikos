@@ -31,6 +31,18 @@
     <string name="energy_details_role_none">None</string>
     <string name="energy_details_invert">Invert sign</string>
     <string name="energy_details_unit_hint">Needs a power unit (W, kW)</string>
+    <string name="energy_details_meter">Energy meter</string>
+    <string name="energy_meter_auto">Automatic</string>
+    <string name="energy_no_meter">No energy meter</string>
+    <string name="energy_details_icon">Icon</string>
+    <string name="energy_icon_default">Default</string>
+    <string name="energy_icon_water_heater">Water heater</string>
+    <string name="energy_icon_heat_pump">Heat pump</string>
+    <string name="energy_icon_oven">Oven</string>
+    <string name="energy_icon_fridge">Fridge</string>
+    <string name="energy_icon_washer">Washing machine</string>
+    <string name="energy_icon_dryer">Dryer</string>
+    <string name="energy_icon_dishwasher">Dishwasher</string>
     <string name="energy_details_save">Save</string>
     <string name="energy_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>
 </resources>

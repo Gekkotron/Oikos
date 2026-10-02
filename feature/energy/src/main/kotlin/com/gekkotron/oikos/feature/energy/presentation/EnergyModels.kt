@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.energy.presentation
 
+import com.gekkotron.oikos.model.ConsumerIcon
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.transport.LinkState
 
@@ -27,6 +28,14 @@ data class EnergyNode(
     val count: Int = 0,
     /** The entities behind this node, by name; empty for a derived house. Keys of [EnergyUiState.sensors]. */
     val sensorIds: List<String> = emptyList(),
+    /** Consumers only: the user's chosen glyph; null draws the default plug. */
+    val icon: ConsumerIcon? = null,
+    /** Cards only: lifetime energy in kWh summed over the node's paired meters; null when unknown or [hasMeter] is false. */
+    val totalKwh: Double? = null,
+    /** Worst status of the paired meters. */
+    val totalStatus: NodeStatus = NodeStatus.LIVE,
+    /** At least one of the node's sensors has an energy meter. */
+    val hasMeter: Boolean = false,
 )
 
 /** One tagged entity as the details sheet shows it: its own value and unit, not the node's watts. */
@@ -38,7 +47,17 @@ data class SensorUi(
     val status: NodeStatus,
     val role: EnergyRole,
     val invert: Boolean,
+    val icon: ConsumerIcon?,
+    /** The explicit energy meter ([com.gekkotron.oikos.model.UiOverride.energyMeter]). */
+    val meterId: String? = null,
+    /** The meter automatic pairing would pick, ignoring [meterId]. */
+    val autoMeterId: String? = null,
+    /** The sensor's device, so the meter picker lists that device's counters first. */
+    val deviceId: String? = null,
 )
+
+/** An energy counter the user can pair with a power sensor. */
+data class MeterOption(val id: String, val name: String, val deviceId: String?)
 
 enum class EnergyHint { CHECK_SIGN }
 
@@ -63,6 +82,8 @@ data class EnergyUiState(
     val order: ConsumerOrder? = null,
     /** Every tagged entity, by unique id, for the details sheet. */
     val sensors: Map<String, SensorUi> = emptyMap(),
+    /** Every energy counter, by name, for the meter picker. */
+    val meters: List<MeterOption> = emptyList(),
 ) {
     fun node(id: String): EnergyNode? = diagram.firstOrNull { it.id == id } ?: cards.firstOrNull { it.id == id }
 }

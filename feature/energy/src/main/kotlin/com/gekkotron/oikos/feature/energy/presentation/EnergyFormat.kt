@@ -12,6 +12,9 @@ object EnergyFormat {
     fun spokenNumber(watts: Double, locale: Locale): String =
         if (watts >= 1_000) number(watts / 1_000, locale, 1, 1) else number(watts, locale, 0, 0)
 
+    /** A lifetime energy counter: "1,234.5 kWh". */
+    fun energy(kwh: Double, locale: Locale): String = "${number(kwh, locale, 0, 1)} kWh"
+
     fun amount(value: Double, unit: String?, locale: Locale): String =
         listOfNotNull(number(value, locale, 0, 1), unit?.takeIf { it.isNotBlank() }).joinToString(" ")
 
