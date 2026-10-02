@@ -22,4 +22,15 @@
     <string name="energy_cd_battery_out">La batterie se charge à %1$s.</string>
     <string name="energy_cd_consumer">%1$s %2$s.</string>
     <string name="energy_cd_water">Eau %1$s.</string>
+    <string name="energy_details_sensors">Capteurs</string>
+    <string name="energy_details_calculated">Calculé : %1$s</string>
+    <string name="energy_details_edit">Modifier</string>
+    <string name="energy_details_name">Nom</string>
+    <string name="energy_details_name_hint">Laisser vide pour le nom découvert</string>
+    <string name="energy_details_role">Rôle énergie</string>
+    <string name="energy_details_role_none">Aucun</string>
+    <string name="energy_details_invert">Inverser le signe</string>
+    <string name="energy_details_unit_hint">Nécessite une unité de puissance (W, kW)</string>
+    <string name="energy_details_save">Enregistrer</string>
+    <string name="energy_save_failed">Impossible d\'enregistrer vos modifications. Vérifiez la connexion et réessayez.</string>
 </resources>

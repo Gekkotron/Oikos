@@ -58,10 +58,13 @@ object EnergyFlowBuilder {
             }
         }
 
+        val byName = compareBy<Entity>({ it.name }, { it.uniqueId })
+        fun ids(vararg roles: EnergyRole) = roles.flatMap { byRole[it].orEmpty() }.sortedWith(byName).map { it.uniqueId }
+
         val consumerNodes = consumerEntities.associate { e ->
             val r = sum(listOf(e), states)!!
             val w = r.watts?.coerceAtLeast(0.0)
-            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status)
+            e.uniqueId to EnergyNode(CONSUMER_PREFIX + e.uniqueId, NodeKind.CONSUMER, name = e.name, value = w, flow = outward(w), status = r.status, sensorIds = listOf(e.uniqueId))
         }
         val fresh = rank(consumerEntities, consumerNodes)
         val order = if (previous != null && nowMillis - previous.atMillis < REORDER_MS && previous.ids.toSet() == fresh.toSet()) {
@@ -72,10 +75,10 @@ object EnergyFlowBuilder {
         val consumers = order.ids.map(consumerNodes::getValue)
         val arc = if (consumers.size <= ARC_SLOTS) consumers else consumers.take(ARC_SLOTS - 1) + more(consumers.drop(ARC_SLOTS - 1))
 
-        val solarNode = solar?.let { EnergyNode("solar", NodeKind.SOLAR, value = it.watts, flow = inward(it.watts), status = it.status) }
-        val gridNode = grid?.let { EnergyNode("grid", NodeKind.GRID, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status) }
-        val batteryNode = battery?.let { EnergyNode("battery", NodeKind.BATTERY, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status) }
-        val houseNode = house?.let { EnergyNode("house", NodeKind.HOUSE, value = it.watts, status = it.status) }
+        val solarNode = solar?.let { EnergyNode("solar", NodeKind.SOLAR, value = it.watts, flow = inward(it.watts), status = it.status, sensorIds = ids(EnergyRole.SOLAR)) }
+        val gridNode = grid?.let { EnergyNode("grid", NodeKind.GRID, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.GRID, EnergyRole.GRID_EXPORT)) }
+        val batteryNode = battery?.let { EnergyNode("battery", NodeKind.BATTERY, value = it.watts?.let(::abs), flow = signed(it.watts), status = it.status, sensorIds = ids(EnergyRole.BATTERY)) }
+        val houseNode = house?.let { EnergyNode("house", NodeKind.HOUSE, value = it.watts, status = it.status, sensorIds = ids(EnergyRole.HOUSE)) }
         val waterNode = byRole[EnergyRole.WATER]?.firstOrNull()?.let { e -> water(e, states[e.uniqueId]) }
 
         val roles = listOfNotNull(solarNode, gridNode, batteryNode, houseNode)
@@ -96,7 +99,14 @@ object EnergyFlowBuilder {
             hint = hint,
             link = link,
             order = order,
+            sensors = byRole.values.flatten().associate { e -> e.uniqueId to sensor(e, states[e.uniqueId]) },
         )
+    }
+
+    private fun sensor(e: Entity, state: EntityState?): SensorUi {
+        val status = status(state)
+        val value = (state?.value as? StateValue.Numeric)?.value.takeIf { status != NodeStatus.UNAVAILABLE }
+        return SensorUi(e.uniqueId, e.name, value, e.unit, status, e.ui.energyRole!!, e.ui.energyInvert)
     }
 
     /** Summed watts of [entities] (null if any is unknown), or null when the role has no entity. */
@@ -155,12 +165,15 @@ object EnergyFlowBuilder {
 
     private fun more(rest: List<EnergyNode>): EnergyNode {
         val total = if (rest.any { it.value == null }) null else rest.sumOf { it.value!! }
-        return EnergyNode("more", NodeKind.MORE, value = total, flow = outward(total), status = worst(rest.map { it.status }), count = rest.size)
+        return EnergyNode(
+            "more", NodeKind.MORE, value = total, flow = outward(total), status = worst(rest.map { it.status }),
+            count = rest.size, sensorIds = rest.flatMap { it.sensorIds },
+        )
     }
 
     private fun water(e: Entity, state: EntityState?): EnergyNode {
         val status = status(state)
         val value = (state?.value as? StateValue.Numeric)?.value.takeIf { status != NodeStatus.UNAVAILABLE }
-        return EnergyNode("water", NodeKind.WATER, value = value, unit = e.unit, status = status)
+        return EnergyNode("water", NodeKind.WATER, value = value, unit = e.unit, status = status, sensorIds = listOf(e.uniqueId))
     }
 }

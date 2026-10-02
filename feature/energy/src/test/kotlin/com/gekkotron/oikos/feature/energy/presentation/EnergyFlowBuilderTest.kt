@@ -242,4 +242,35 @@ class EnergyFlowBuilderTest {
         assertEquals(500.0, s.node("house")!!.value)
         assertEquals(200.0, s.node("consumer:house")!!.value)
     }
+
+    @Test
+    fun `role nodes list their sensors and the sensors carry raw values`() {
+        val s = build(
+            listOf(
+                energyEntity("s1", EnergyRole.SOLAR, name = "Inverter B"), energyEntity("s2", EnergyRole.SOLAR, unit = "kW", name = "Inverter A"),
+                energyEntity("imp", EnergyRole.GRID, name = "Import"), energyEntity("exp", EnergyRole.GRID_EXPORT, name = "Export", invert = false),
+            ),
+            listOf(numeric("s1", 1000.0), numeric("s2", 0.5), numeric("imp", 0.0), numeric("exp", 700.0)),
+        )
+        assertEquals(listOf("s2", "s1"), s.node("solar")!!.sensorIds)
+        assertEquals(listOf("exp", "imp"), s.node("grid")!!.sensorIds)
+        assertEquals(emptyList(), s.node("house")!!.sensorIds)
+        val a = s.sensors.getValue("s2")
+        assertEquals(SensorUi("s2", "Inverter A", 0.5, "kW", NodeStatus.LIVE, EnergyRole.SOLAR, invert = false), a)
+    }
+
+    @Test
+    fun `consumers and the fold list their sensors`() {
+        val four = house + energyEntity("ev", EnergyRole.CONSUMER, name = "EV") + energyEntity("pump", EnergyRole.CONSUMER, name = "Pump")
+        val s = build(four, houseStates + numeric("ev", 3000.0) + numeric("pump", 50.0))
+        assertEquals(listOf("heater"), s.node("consumer:heater")!!.sensorIds)
+        assertEquals(listOf("ac", "pump"), s.node("more")!!.sensorIds)
+        assertTrue(s.sensors.keys.containsAll(listOf("grid", "solar", "ac", "heater", "ev", "pump")))
+    }
+
+    @Test
+    fun `a measured house lists its meter`() {
+        val s = build(house + energyEntity("load", EnergyRole.HOUSE), houseStates + numeric("load", 2500.0))
+        assertEquals(listOf("load"), s.node("house")!!.sensorIds)
+    }
 }

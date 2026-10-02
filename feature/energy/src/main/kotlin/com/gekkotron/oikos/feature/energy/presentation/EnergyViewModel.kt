@@ -4,20 +4,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.source.EntitySource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.scan
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class EnergyViewModel internal constructor(
-    source: EntitySource,
+    private val source: EntitySource,
     dispatcher: CoroutineDispatcher,
     clock: () -> Long,
 ) : ViewModel() {
@@ -31,4 +36,26 @@ class EnergyViewModel internal constructor(
         .scan(EnergyUiState()) { last, (entities, states, link) -> EnergyFlowBuilder.build(entities, states, link, clock(), last.order) }
         .flowOn(dispatcher)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EnergyUiState())
+
+    private val _events = Channel<EnergyEvent>(Channel.BUFFERED)
+    val events: Flow<EnergyEvent> = _events.receiveAsFlow()
+
+    /** Writes the sensor's override from the details sheet; an offline broker becomes [EnergyEvent.SaveFailed]. */
+    fun save(id: String, edit: SensorEdit) {
+        val entity = source.entities.value[id] ?: return
+        viewModelScope.launch {
+            // Like Home's OverrideEditor: offline (PublishFailed) or a bad id becomes an event, never a crash.
+            try {
+                source.setOverride(id, EnergyEdit.apply(entity, edit))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _events.send(EnergyEvent.SaveFailed)
+            }
+        }
+    }
+}
+
+sealed interface EnergyEvent {
+    data object SaveFailed : EnergyEvent
 }

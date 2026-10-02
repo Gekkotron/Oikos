@@ -3,7 +3,10 @@ package com.gekkotron.oikos.feature.energy.ui
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -18,6 +21,7 @@ import com.gekkotron.oikos.feature.energy.presentation.EnergyFlowBuilder
 import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
 import com.gekkotron.oikos.feature.energy.presentation.EnergyUiState
 import com.gekkotron.oikos.feature.energy.presentation.NodeKind
+import com.gekkotron.oikos.feature.energy.presentation.SensorEdit
 import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -116,5 +120,51 @@ class EnergyScreenTest {
             }
         }
         compose.onNodeWithText("Water heater").assertExists()
+    }
+
+    private val saves = mutableListOf<Pair<String, SensorEdit>>()
+
+    private fun showDetails(state: EnergyUiState) = compose.setContent {
+        OikosTheme(ThemeChoice.NIGHT_GLASS) { EnergyScreen(state, onOpenHome = {}, locale = Locale.US, onSave = { id, edit -> saves += id to edit }) }
+    }
+
+    @Test
+    fun `tapping a consumer card opens its details with the editor`() {
+        showDetails(state(house, houseStates))
+        compose.onNodeWithTag("energy-card-consumer:heater").performScrollTo().performClick()
+        compose.onNodeWithText("Sensors").assertExists()
+        compose.onNode(hasSetTextAction() and hasText("Name")).performTextReplacement("Boiler")
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("heater" to SensorEdit("Boiler", EnergyRole.CONSUMER, invert = false)), saves)
+    }
+
+    @Test
+    fun `solar details list both inverters`() {
+        val s = state(
+            listOf(energyEntity("s1", EnergyRole.SOLAR, name = "Inverter A"), energyEntity("s2", EnergyRole.SOLAR, name = "Inverter B")),
+            listOf(numeric("s1", 1000.0), numeric("s2", 500.0)),
+        )
+        showDetails(s)
+        compose.onNodeWithTag("energy-card-solar").performScrollTo().performClick()
+        compose.onNodeWithText("Inverter A").assertExists()
+        compose.onNodeWithText("Inverter B").assertExists()
+    }
+
+    @Test
+    fun `a derived house says how it is calculated`() {
+        showDetails(state(house, houseStates))
+        compose.onNodeWithTag("energy-card-house").performScrollTo().performClick()
+        compose.onNodeWithText("Calculated: Solar + Grid").assertExists()
+    }
+
+    @Test
+    fun `a row in the consumers list opens its details`() {
+        val four = house + energyEntity("ev", EnergyRole.CONSUMER, name = "EV") + energyEntity("pump", EnergyRole.CONSUMER, name = "Pump")
+        showDetails(state(four, houseStates + numeric("ev", 3000.0) + numeric("pump", 50.0)))
+        compose.onNodeWithContentDescription("Show all 4 consumers").performClick()
+        compose.onNodeWithTag("consumers-sheet-consumer:pump").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Sensors").assertExists()
+        compose.onNode(hasSetTextAction() and hasText("Name")).assertExists()
     }
 }

@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.energy.presentation
 
+import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.transport.LinkState
 
 enum class NodeKind { SOLAR, GRID, BATTERY, HOUSE, CONSUMER, MORE, WATER }
@@ -24,6 +25,19 @@ data class EnergyNode(
     val status: NodeStatus = NodeStatus.LIVE,
     /** [NodeKind.MORE] only: how many consumers it folds. */
     val count: Int = 0,
+    /** The entities behind this node, by name; empty for a derived house. Keys of [EnergyUiState.sensors]. */
+    val sensorIds: List<String> = emptyList(),
+)
+
+/** One tagged entity as the details sheet shows it: its own value and unit, not the node's watts. */
+data class SensorUi(
+    val id: String,
+    val name: String,
+    val value: Double?,
+    val unit: String?,
+    val status: NodeStatus,
+    val role: EnergyRole,
+    val invert: Boolean,
 )
 
 enum class EnergyHint { CHECK_SIGN }
@@ -47,6 +61,8 @@ data class EnergyUiState(
     val hint: EnergyHint? = null,
     val link: LinkState = LinkState.Connecting,
     val order: ConsumerOrder? = null,
+    /** Every tagged entity, by unique id, for the details sheet. */
+    val sensors: Map<String, SensorUi> = emptyMap(),
 ) {
     fun node(id: String): EnergyNode? = diagram.firstOrNull { it.id == id } ?: cards.firstOrNull { it.id == id }
 }

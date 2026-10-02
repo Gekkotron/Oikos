@@ -22,4 +22,15 @@
     <string name="energy_cd_battery_out">Battery charging at %1$s.</string>
     <string name="energy_cd_consumer">%1$s %2$s.</string>
     <string name="energy_cd_water">Water %1$s.</string>
+    <string name="energy_details_sensors">Sensors</string>
+    <string name="energy_details_calculated">Calculated: %1$s</string>
+    <string name="energy_details_edit">Edit</string>
+    <string name="energy_details_name">Name</string>
+    <string name="energy_details_name_hint">Leave empty for the discovered name</string>
+    <string name="energy_details_role">Energy role</string>
+    <string name="energy_details_role_none">None</string>
+    <string name="energy_details_invert">Invert sign</string>
+    <string name="energy_details_unit_hint">Needs a power unit (W, kW)</string>
+    <string name="energy_details_save">Save</string>
+    <string name="energy_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>
 </resources>

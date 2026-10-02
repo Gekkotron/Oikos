@@ -60,7 +60,7 @@ private val DASH = 6.dp
 private val BUBBLE = 88.dp
 
 @Composable
-internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Unit, modifier: Modifier = Modifier) {
+internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Unit, onNode: (EnergyNode) -> Unit = {}, modifier: Modifier = Modifier) {
     val positions = remember(state.diagram) { FlowLayout.positions(state.diagram) }
     val description = energyDescription(state, locale)
     // A frame clock runs only while some edge actually moves; the time is read in the draw phase, so frames
@@ -103,7 +103,8 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
             }
             state.diagram.filter { it.kind != NodeKind.MORE }.forEach { n ->
                 val p = positions[n.id] ?: return@forEach
-                NodeBubble(n, locale, Modifier.placeBubble(p, w, h))
+                // Touch only: the cards below are the accessible way into the same details (the diagram is one sentence).
+                NodeBubble(n, locale, Modifier.placeBubble(p, w, h).clickable { onNode(n) })
             }
         }
         state.diagram.firstOrNull { it.kind == NodeKind.MORE }?.let { more ->

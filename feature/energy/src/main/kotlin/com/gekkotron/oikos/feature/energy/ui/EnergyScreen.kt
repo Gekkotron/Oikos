@@ -19,15 +19,20 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -41,6 +46,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.LinkPill
 import com.gekkotron.oikos.designsystem.components.OikosCard
 import com.gekkotron.oikos.feature.energy.R
+import com.gekkotron.oikos.feature.energy.presentation.EnergyEvent
 import com.gekkotron.oikos.feature.energy.presentation.EnergyFormat
 import com.gekkotron.oikos.feature.energy.presentation.EnergyHint
 import com.gekkotron.oikos.feature.energy.presentation.EnergyNode
@@ -49,6 +55,7 @@ import com.gekkotron.oikos.feature.energy.presentation.EnergyViewModel
 import com.gekkotron.oikos.feature.energy.presentation.Flow
 import com.gekkotron.oikos.feature.energy.presentation.NodeKind
 import com.gekkotron.oikos.feature.energy.presentation.NodeStatus
+import com.gekkotron.oikos.feature.energy.presentation.SensorEdit
 import java.util.Locale
 import com.gekkotron.oikos.designsystem.R as DsR
 
@@ -59,7 +66,16 @@ fun EnergyRoute(
     viewModel: EnergyViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    EnergyScreen(state, onOpenHome, windowInsets)
+    val snackbar = remember { SnackbarHostState() }
+    val resources = LocalContext.current.resources
+    LaunchedEffect(viewModel, snackbar) {
+        viewModel.events.collect { event ->
+            when (event) {
+                EnergyEvent.SaveFailed -> snackbar.showSnackbar(resources.getString(R.string.energy_save_failed))
+            }
+        }
+    }
+    EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, snackbarHostState = snackbar)
 }
 
 @Composable
@@ -68,10 +84,18 @@ fun EnergyScreen(
     onOpenHome: () -> Unit,
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     locale: Locale = Locale.getDefault(),
+    onSave: (String, SensorEdit) -> Unit = { _, _ -> },
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var consumersSheet by rememberSaveable { mutableStateOf(false) }
-    Scaffold(containerColor = Color.Transparent, contentColor = OikosTheme.colors.content, contentWindowInsets = windowInsets) { padding ->
+    var detailId by rememberSaveable { mutableStateOf<String?>(null) }
+    Scaffold(
+        containerColor = Color.Transparent,
+        contentColor = OikosTheme.colors.content,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = windowInsets,
+    ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
@@ -101,15 +125,22 @@ fun EnergyScreen(
                     }
                     item(key = "diagram", span = { GridItemSpan(maxLineSpan) }) {
                         OikosCard(Modifier.fillMaxWidth()) {
-                            FlowDiagram(state, locale, onMore = { consumersSheet = true }, modifier = Modifier.padding(8.dp))
+                            FlowDiagram(state, locale, onMore = { consumersSheet = true }, onNode = { detailId = it.id }, modifier = Modifier.padding(8.dp))
                         }
                     }
-                    items(state.cards, key = { "card-${it.id}" }) { node -> EnergyValueCard(node, locale) }
+                    items(state.cards, key = { "card-${it.id}" }) { node -> EnergyValueCard(node, locale, onClick = { detailId = node.id }) }
                 }
             }
         }
     }
-    if (consumersSheet) ConsumersSheet(state.consumers, locale, onDismiss = { consumersSheet = false })
+    if (consumersSheet) {
+        ConsumersSheet(state.consumers, locale, onSelect = { consumersSheet = false; detailId = it.id }, onDismiss = { consumersSheet = false })
+    }
+    // A node that left Energy (its role was cleared) closes its sheet.
+    val detail = detailId?.let { id -> state.node(id) ?: state.consumers.firstOrNull { it.id == id } }
+    if (detail != null) {
+        EnergyDetailSheet(detail, state, locale, onSave = onSave, onDismiss = { detailId = null })
+    }
 }
 
 @Composable
@@ -127,7 +158,7 @@ private fun EnergyHeader(state: EnergyUiState) {
 }
 
 @Composable
-private fun EnergyValueCard(node: EnergyNode, locale: Locale) {
+private fun EnergyValueCard(node: EnergyNode, locale: Locale, onClick: () -> Unit) {
     val staleText = stringResource(R.string.energy_stale)
     OikosCard(
         Modifier
@@ -135,6 +166,7 @@ private fun EnergyValueCard(node: EnergyNode, locale: Locale) {
             .testTag("energy-card-${node.id}")
             .alpha(statusAlpha(node.status))
             .semantics(mergeDescendants = true) { if (node.status == NodeStatus.STALE) stateDescription = staleText },
+        onClick = onClick,
     ) {
         Column(Modifier.padding(12.dp)) {
             Text(nodeLabel(node), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)

@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.energy.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosDimens
@@ -29,7 +30,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ConsumersSheet(consumers: List<EnergyNode>, locale: Locale, onDismiss: () -> Unit) {
+internal fun ConsumersSheet(consumers: List<EnergyNode>, locale: Locale, onSelect: (EnergyNode) -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -38,7 +39,8 @@ internal fun ConsumersSheet(consumers: List<EnergyNode>, locale: Locale, onDismi
             Text(stringResource(R.string.energy_consumers_title), style = OikosTheme.type.display.copy(fontSize = 22.sp))
             consumers.forEach { n ->
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).alpha(statusAlpha(n.status)).testTag("consumers-sheet-${n.id}").semantics(mergeDescendants = true) {},
+                    Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).alpha(statusAlpha(n.status))
+                        .clickable(role = Role.Button) { onSelect(n) }.testTag("consumers-sheet-${n.id}"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(n.name.orEmpty(), style = OikosTheme.type.body, modifier = Modifier.weight(1f))

@@ -4,6 +4,7 @@ import com.gekkotron.oikos.feature.energy.FakeEntitySource
 import com.gekkotron.oikos.feature.energy.energyEntity
 import com.gekkotron.oikos.feature.energy.numeric
 import com.gekkotron.oikos.model.EnergyRole
+import com.gekkotron.oikos.model.UiOverride
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -56,5 +57,22 @@ class EnergyViewModelTest {
         now = 6_000
         source.stateMap.value += "heater" to numeric("heater", 1600.0)
         assertEquals(listOf("consumer:ac", "consumer:heater"), vm.state.value.consumers.map { it.id })
+    }
+
+    @Test
+    fun `save writes the merged override`() = runTest(dispatcher) {
+        val vm = EnergyViewModel(source, dispatcher) { now }
+        vm.save("heater", SensorEdit("Water heater", EnergyRole.CONSUMER, invert = false))
+        assertEquals(UiOverride(name = "Water heater", energyRole = EnergyRole.CONSUMER), source.overrides["heater"])
+    }
+
+    @Test
+    fun `a failed save sends an event`() = runTest(dispatcher) {
+        val vm = EnergyViewModel(source, dispatcher) { now }
+        source.failWrites = true
+        val events = mutableListOf<EnergyEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.save("heater", SensorEdit("Water heater", EnergyRole.CONSUMER, invert = false))
+        assertEquals(listOf<EnergyEvent>(EnergyEvent.SaveFailed), events)
     }
 }
