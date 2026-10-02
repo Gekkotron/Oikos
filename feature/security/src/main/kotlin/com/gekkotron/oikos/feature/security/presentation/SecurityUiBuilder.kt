@@ -33,6 +33,7 @@ object SecurityUiBuilder {
                     deviceClass = e.deviceClass, group = group,
                     active = (s?.value as? StateValue.OnOff)?.on,
                     available = s?.available ?: true,
+                    stale = s?.stale == true,
                 )
             }
             .sortedWith(compareBy<SensorRow>({ rank(it) }, { it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))

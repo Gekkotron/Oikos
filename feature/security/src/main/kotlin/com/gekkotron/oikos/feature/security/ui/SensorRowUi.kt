@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.OikosCard
@@ -31,9 +33,15 @@ import com.gekkotron.oikos.model.SensorGroup
 @Composable
 internal fun SensorRowCard(row: SensorRow, onClick: () -> Unit) {
     val accent = activeColor(row)
+    val staleText = stringResource(R.string.security_stale)
     OikosCard(
-        Modifier.fillMaxWidth().testTag("sensor-${row.id}").alpha(if (row.available) 1f else 0.55f),
+        Modifier
+            .fillMaxWidth()
+            .testTag("sensor-${row.id}")
+            .alpha(if (!row.available) 0.55f else if (row.stale) 0.6f else 1f)
+            .then(if (row.stale) Modifier.semantics { stateDescription = staleText } else Modifier),
         accent = row.available && row.active == true,
+        accentColor = if (row.group.danger) OikosTheme.colors.heat else null,
         onClick = onClick,
     ) {
         Row(

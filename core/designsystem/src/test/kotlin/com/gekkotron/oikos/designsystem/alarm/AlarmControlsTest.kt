@@ -1,5 +1,8 @@
 package com.gekkotron.oikos.designsystem.alarm
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -35,6 +38,24 @@ class AlarmControlsTest {
 
     private fun hero(state: AlarmState?, available: Boolean = true) = compose.setContent {
         OikosTheme(ThemeChoice.NIGHT_GLASS) { AlarmHero("Alarm", state, available, pending = false, caps = caps, onSend = { sent += it }) }
+    }
+
+    @Test
+    fun `a stale hero exposes the last known value`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                AlarmHero("Alarm", AlarmState.DISARMED, true, pending = false, stale = true, caps = caps, onSend = { sent += it })
+            }
+        }
+        compose.onNode(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Last known value") and hasText("Alarm"),
+        ).assertExists()
+    }
+
+    @Test
+    fun `a live hero has no state description`() {
+        hero(AlarmState.DISARMED)
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.StateDescription)).assertDoesNotExist()
     }
 
     @Test

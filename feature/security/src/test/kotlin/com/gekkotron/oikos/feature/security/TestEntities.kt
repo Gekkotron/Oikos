@@ -21,6 +21,7 @@ fun panel(id: String = "alarm", name: String = "Alarm", order: Int? = null, ui: 
     Capabilities(alarmModes = setOf(AlarmMode.HOME, AlarmMode.AWAY), codeDisarmRequired = true), NoBindings, UNASSIGNED_AREA, ui,
 )
 
-fun on(id: String, on: Boolean, available: Boolean = true) = EntityState(id, StateValue.OnOff(on), available = available)
+fun on(id: String, on: Boolean, available: Boolean = true, stale: Boolean = false) =
+    EntityState(id, StateValue.OnOff(on), available = available, stale = stale)
 
 fun alarm(id: String, state: AlarmState, stale: Boolean = false) = EntityState(id, StateValue.Alarm(state), stale = stale)

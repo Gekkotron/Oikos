@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
@@ -28,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosColors
@@ -48,6 +50,7 @@ fun AlarmHero(
     state: AlarmState?,
     available: Boolean,
     pending: Boolean,
+    stale: Boolean = false,
     caps: Capabilities,
     onSend: (Command) -> Unit,
     modifier: Modifier = Modifier,
@@ -72,7 +75,8 @@ fun AlarmHero(
         state == null -> stringResource(R.string.alarm_unknown)
         else -> stringResource(alarmHeroLabel(state))
     }
-    OikosCard(modifier.fillMaxWidth().testTag("alarm-hero")) {
+    val staleText = stringResource(R.string.alarm_stale)
+    OikosCard(modifier.fillMaxWidth().testTag("alarm-hero").alpha(if (stale) 0.6f else 1f)) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -83,6 +87,7 @@ fun AlarmHero(
             Row(
                 Modifier.semantics(mergeDescendants = true) {
                     liveRegion = if (triggered) LiveRegionMode.Assertive else LiveRegionMode.Polite
+                    if (stale) stateDescription = staleText
                 },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),

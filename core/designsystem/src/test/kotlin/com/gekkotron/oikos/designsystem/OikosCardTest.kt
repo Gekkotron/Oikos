@@ -112,4 +112,11 @@ class OikosCardTest {
         assertEquals(c.cardOnBorder, cardBorderColor(c, on = true, accent = true))
         assertEquals(c.cardBorder, cardBorderColor(c, on = false, accent = false))
     }
+
+    @Test
+    fun `an accent colour replaces the warning border, and only when accented`() {
+        val c = NightGlassColors
+        assertEquals(c.heat.copy(alpha = 0.35f), cardBorderColor(c, on = false, accent = true, accentColor = c.heat))
+        assertEquals(c.cardBorder, cardBorderColor(c, on = false, accent = false, accentColor = c.heat))
+    }
 }

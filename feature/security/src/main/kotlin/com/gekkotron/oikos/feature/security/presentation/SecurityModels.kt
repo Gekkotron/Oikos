@@ -26,6 +26,7 @@ data class SensorRow(
     val group: SensorGroup,
     val active: Boolean?,
     val available: Boolean,
+    val stale: Boolean = false,
 )
 
 data class GroupCount(val group: SensorGroup, val count: Int)

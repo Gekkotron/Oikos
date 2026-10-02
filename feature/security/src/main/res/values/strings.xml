@@ -38,4 +38,5 @@
     <plurals name="security_count_sos"><item quantity="one">%1$d SOS</item><item quantity="other">%1$d SOS</item></plurals>
     <plurals name="security_count_vibration"><item quantity="one">%1$d vibration</item><item quantity="other">%1$d vibrations</item></plurals>
     <plurals name="security_count_tamper"><item quantity="one">%1$d tamper</item><item quantity="other">%1$d tampers</item></plurals>
+    <string name="security_stale">Last known value</string>
 </resources>

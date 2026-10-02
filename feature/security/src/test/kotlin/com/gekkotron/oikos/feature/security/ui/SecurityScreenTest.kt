@@ -1,5 +1,8 @@
 package com.gekkotron.oikos.feature.security.ui
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -53,6 +56,14 @@ class SecurityScreenTest {
         compose.onNodeWithText("Garage door").assertExists()
         compose.onNodeWithText("Closed").performScrollTo().assertExists()
         compose.onNodeWithText("Recent alerts").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun `a stale sensor row exposes the last known value`() {
+        show(ui(listOf(sensor("door", "door", "Entrance")), listOf(on("door", true, stale = true))))
+        compose.onNode(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Last known value") and hasText("Entrance"),
+        ).assertExists()
     }
 
     @Test

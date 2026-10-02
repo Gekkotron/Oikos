@@ -103,6 +103,19 @@ class SecurityUiBuilderTest {
     }
 
     @Test
+    fun `stale is carried onto sensor rows and panels, and does not change sorting or counting`() {
+        val ui = build(
+            listOf(panel(), sensor("a", "door"), sensor("b", "door")),
+            listOf(alarm("alarm", AlarmState.DISARMED, stale = true), on("a", true, stale = true), on("b", false)),
+        )
+        assertTrue(ui.panels[0].stale)
+        assertEquals(listOf("a", "b"), ui.sensors.map { it.id })
+        assertTrue(ui.sensors[0].stale)
+        assertFalse(ui.sensors[1].stale)
+        assertEquals(listOf(GroupCount(SensorGroup.OPENING, 1)), ui.summary)
+    }
+
+    @Test
     fun `nothing yields empty lists`() {
         val ui = build(listOf(sensor("lamp", null).copy(kind = Kind.LIGHT)))
         assertTrue(ui.panels.isEmpty() && ui.sensors.isEmpty() && ui.summary.isEmpty())

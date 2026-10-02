@@ -122,7 +122,7 @@ fun SecurityScreen(
                         }
                     }
                     items(state.panels, key = { "panel-${it.id}" }) { p ->
-                        AlarmHero(p.name, p.state, p.available, p.pending, p.capabilities, onSend = { onSend(p.id, it) })
+                        AlarmHero(p.name, p.state, p.available, p.pending, p.stale, p.capabilities, onSend = { onSend(p.id, it) })
                     }
                     item(key = "summary") {
                         Text(

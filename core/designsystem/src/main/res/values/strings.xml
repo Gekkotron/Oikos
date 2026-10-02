@@ -14,6 +14,7 @@
     <string name="energy_house">House</string>
     <string name="energy_consumer">Consumer</string>
     <string name="energy_water">Water</string>
+    <string name="alarm_stale">Last known value</string>
     <string name="alarm_disarmed">Disarmed</string>
     <string name="alarm_armed_home">Armed · Home</string>
     <string name="alarm_armed_away">Armed · Away</string>
