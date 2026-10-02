@@ -73,4 +73,13 @@ class OverrideDraftTest {
         val styled = card(testEntity("sw", Kind.SWITCH, ui = UiOverride(cardStyle = "future_style")))
         assertEquals(UiOverride(cardStyle = "future_style", favorite = true), OverrideDraft.from(styled).copy(favorite = true).applyTo(styled))
     }
+
+    @Test
+    fun `invert is kept for grid and dropped for roles without a sign`() {
+        val sensor = card(testEntity("power", Kind.SENSOR, deviceClass = "power"))
+        val grid = OverrideDraft.from(sensor).copy(energyRole = EnergyRole.GRID, energyInvert = true).applyTo(sensor)
+        assertEquals(true, grid.energyInvert)
+        val solar = OverrideDraft.from(sensor).copy(energyRole = EnergyRole.SOLAR, energyInvert = true).applyTo(sensor)
+        assertEquals(false, solar.energyInvert)
+    }
 }

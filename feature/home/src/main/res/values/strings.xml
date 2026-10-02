@@ -97,7 +97,8 @@
     <string name="customize_style_hero">Header temperature</string>
     <string name="customize_energy">Energy role</string>
     <string name="customize_energy_none">None</string>
-    <string name="energy_water_heater">Water heater</string>
+    <string name="customize_energy_invert">Invert sign</string>
+    <string name="customize_energy_unit_hint">Needs a power unit (W, kW)</string>
     <string name="customize_save">Save</string>
     <string name="customize_reset">Reset to defaults</string>
     <string name="room_none">No room</string>
