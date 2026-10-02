@@ -18,6 +18,8 @@ data class UiOverride(
     val energyRole: EnergyRole? = null,
     /** Flips the sign of a [EnergyRole.signed] entity; meters and HA integrations differ (energy spec §2). */
     val energyInvert: Boolean = false,
+    /** Left out of the Security tab only; Home still shows it (security spec §2). */
+    val securityHidden: Boolean = false,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

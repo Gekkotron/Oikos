@@ -19,7 +19,12 @@ data class Capabilities(
     val options: List<String> = emptyList(),
     val alarmModes: Set<AlarmMode> = emptySet(),
     val codeArmRequired: Boolean = false,
+    val codeDisarmRequired: Boolean = false,
+    /** Keypad (digits) or text field for the alarm code (security spec §3.1). */
+    val codeFormat: CodeFormat = CodeFormat.NUMBER,
 )
+
+enum class CodeFormat { NUMBER, TEXT }
 
 data class Entity(
     val uniqueId: String,
