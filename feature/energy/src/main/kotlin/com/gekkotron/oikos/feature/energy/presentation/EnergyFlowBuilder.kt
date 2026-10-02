@@ -138,7 +138,8 @@ object EnergyFlowBuilder {
     private val NO_TOTAL = Total(false, null, NodeStatus.LIVE)
 
     /**
-     * A house without its own sensor: Σsolar + Σgrid import − Σgrid export, like its live watts (spec §3). Every solar
+     * A house without its own sensor: Σsolar + Σgrid import − Σgrid export − Σinverter draw, like its live watts
+     * (spec §3). Every solar
      * and grid sensor needs a counter, and solar needs an export counter too (else the export would count as
      * consumption); a battery has no counter pairing yet, so a house with one has no total.
      */
@@ -149,10 +150,11 @@ object EnergyFlowBuilder {
         val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
         if (solar.isEmpty() && grid.isEmpty()) return NO_TOTAL
         val added = (solar + grid).map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
-        val exports = grid.mapNotNull { EnergyMeters.exportFor(it, all) } + gridExport.map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
+        val exports = grid.mapNotNull { EnergyMeters.reverseFor(it, all) } + gridExport.map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
         if (solar.isNotEmpty() && exports.isEmpty()) return NO_TOTAL
+        val draws = solar.mapNotNull { EnergyMeters.reverseFor(it, all) }
         val plus = added.distinctBy { it.uniqueId }.map { kwh(it, states) }
-        val minus = exports.distinctBy { it.uniqueId }.map { kwh(it, states) }
+        val minus = (exports + draws).distinctBy { it.uniqueId }.map { kwh(it, states) }
         val parts = plus + minus
         val kwh = if (parts.any { it.watts == null }) null else plus.sumOf { it.watts!! } - minus.sumOf { it.watts!! }
         return Total(true, kwh?.coerceAtLeast(0.0), worst(parts.map { it.status }))

@@ -352,17 +352,18 @@ class EnergyFlowBuilderTest {
     private val clampStates = listOf(
         numeric("0x_power_a_z", 300.0), numeric("0x_power_b_z", 500.0),
         numeric("0x_energy_a_z", 100.0), numeric("0x_energy_b_z", 40.0),
-        numeric("0x_energy_produced_a_z", 30.0), numeric("0x_energy_produced_b_z", 0.0),
+        numeric("0x_energy_produced_a_z", 30.0), numeric("0x_energy_produced_b_z", 200.0),
     )
 
     @Test
-    fun `a derived house totals solar plus grid import minus grid export`() {
+    fun `a derived house totals grid import minus export plus solar production minus the inverter's draw`() {
         val s = build(clamp, clampStates)
         assertEquals(100.0, s.node("grid")!!.totalKwh)
-        assertEquals(40.0, s.node("solar")!!.totalKwh)
+        // A clamp on the inverter line: energy_produced_b is the production, energy_b the inverter's standby draw.
+        assertEquals(200.0, s.node("solar")!!.totalKwh)
         val house = s.node("house")!!
         assertTrue(house.hasMeter)
-        assertEquals(110.0, house.totalKwh)
+        assertEquals(100.0 - 30.0 + 200.0 - 40.0, house.totalKwh)
     }
 
     @Test

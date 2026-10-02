@@ -61,9 +61,20 @@ class EnergyMetersTest {
         val grid = energyEntity("0x_power_a_z", EnergyRole.GRID).copy(deviceId = "d1")
         val heater = power("0x_power_b_z", "Heater")
         val all = listOf(grid, heater, counter("0x_energy_a_z", "x"), counter("0x_energy_produced_a_z", "x"), counter("0x_energy_produced_b_z", "x"))
-        assertEquals("0x_energy_produced_a_z", EnergyMeters.exportFor(grid, all)?.uniqueId)
+        assertEquals("0x_energy_produced_a_z", EnergyMeters.reverseFor(grid, all)?.uniqueId)
         assertEquals("0x_energy_a_z", meter(grid, all))
-        assertNull(EnergyMeters.exportFor(heater, all))
+        assertNull(EnergyMeters.reverseFor(heater, all))
+    }
+
+    @Test
+    fun `a solar sensor pairs with its production counter and draws from its energy twin`() {
+        val solar = energyEntity("0x_power_b_z", EnergyRole.SOLAR).copy(deviceId = "d1")
+        val all = listOf(solar, counter("0x_energy_b_z", "x"), counter("0x_energy_produced_b_z", "x"))
+        assertEquals("0x_energy_produced_b_z", meter(solar, all))
+        assertEquals("0x_energy_b_z", EnergyMeters.reverseFor(solar, all)?.uniqueId)
+        val single = listOf(solar, counter("k", "Total"))
+        assertEquals("k", meter(solar, single))
+        assertNull(EnergyMeters.reverseFor(solar, single))
     }
 
     @Test

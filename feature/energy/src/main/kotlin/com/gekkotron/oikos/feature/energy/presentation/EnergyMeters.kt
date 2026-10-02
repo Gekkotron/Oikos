@@ -26,6 +26,8 @@ object EnergyMeters {
         val device = power.deviceId ?: return null
         val onDevice = entities.filter { it.deviceId == device }
         val counters = onDevice.filter { EnergyUnits.factor(it.unit) != null }
+        // A clamp on the inverter line counts the production as "produced"; its plain counter is the standby draw.
+        if (power.ui.energyRole == EnergyRole.SOLAR) twin(power, counters, PRODUCED)?.let { return it }
         val wanted = normalize(labelOf(power)).replace("power", "energy")
         counters.firstOrNull { normalize(labelOf(it)) == wanted }?.let { return it }
         twin(power, counters, "energy")?.let { return it }
@@ -34,19 +36,26 @@ object EnergyMeters {
     }
 
     /**
-     * A grid sensor's export counter on the same device, the unique-id twin of its import counter (a bidirectional
-     * Z2M clamp: `…_power_a_…` ↔ `…_energy_produced_a_…`); null for any other role.
+     * The counter of the opposite direction on the same device, subtracted from a derived house: a grid sensor's
+     * export (`…_power_a_…` ↔ `…_energy_produced_a_…`), or the inverter's draw when [meterFor] picked a solar
+     * sensor's production twin (`…_energy_b_…`). Null for any other role or pairing.
      */
-    fun exportFor(power: Entity, entities: Collection<Entity>): Entity? {
-        if (power.ui.energyRole != EnergyRole.GRID) return null
+    fun reverseFor(power: Entity, entities: Collection<Entity>): Entity? {
         val device = power.deviceId ?: return null
-        return twin(power, entities.filter { it.deviceId == device && EnergyUnits.factor(it.unit) != null }, "energy_produced")
+        val counters = entities.filter { it.deviceId == device && EnergyUnits.factor(it.unit) != null }
+        return when (power.ui.energyRole) {
+            EnergyRole.GRID -> twin(power, counters, PRODUCED)
+            EnergyRole.SOLAR -> twin(power, counters, "energy").takeIf { meterFor(power, entities) == twin(power, counters, PRODUCED) }
+            else -> null
+        }
     }
 
     private fun twin(power: Entity, counters: List<Entity>, replacement: String): Entity? {
         val wanted = power.uniqueId.replace(POWER_TOKEN, replacement)
         return if (wanted == power.uniqueId) null else counters.firstOrNull { it.uniqueId.equals(wanted, ignoreCase = true) }
     }
+
+    private const val PRODUCED = "energy_produced"
 
     /** "power" as a word of an id ("_power_a_"), not inside one ("powers/…"). */
     private val POWER_TOKEN = Regex("(?<![a-z0-9])power(?![a-z])", RegexOption.IGNORE_CASE)
