@@ -58,7 +58,6 @@
     <string name="link_key_rejected">La passerelle n\'a pas accepté la clé de ce téléphone. Configurez à nouveau la connexion avec un nouveau code.</string>
     <string name="link_clock_skew">La passerelle a refusé la requête car l\'horloge de ce téléphone est décalée. Activez la date et l\'heure automatiques.</string>
     <string name="link_gateway_refused">La passerelle a refusé l\'accès au broker.</string>
-    <string name="link_set_up_again">Reconfigurer la connexion</string>
     <string name="chip_hidden">Masqués (%1$d)</string>
     <string name="home_save_failed">Impossible d\'enregistrer vos modifications. Vérifiez la connexion et réessayez.</string>
     <string name="card_description_hidden">%1$s, %2$s, %3$s, masqué</string>
@@ -87,7 +86,8 @@
     <string name="room_none">Aucune pièce</string>
     <string name="room_new">Nouvelle pièce</string>
     <string name="room_add">Ajouter</string>
-    <string name="link_assign_rooms">Attribuer les pièces</string>
+    <string name="settings_open">Réglages</string>
+    <string name="link_settings">Réglages de connexion</string>
     <string name="rooms_title">Dans quelle pièce est chaque appareil ?</string>
     <string name="rooms_subtitle">Les pièces viennent des appareils qui les indiquent. Vous pourrez tout modifier plus tard par un appui long sur une carte.</string>
     <plurals name="rooms_progress">

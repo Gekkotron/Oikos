@@ -5,13 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.connection.EntitySourceSession
 import com.gekkotron.oikos.connection.routeChoice
 import com.gekkotron.oikos.connection.toPreference
+import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.designsystem.ThemeChoice
 import com.gekkotron.oikos.transport.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,8 +23,14 @@ import javax.inject.Inject
 class AppViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     private val sources: EntitySourceSession,
+    private val preferences: AppPreferences,
 ) : ViewModel() {
     val profile: StateFlow<ProfileState> = profiles.state
+
+    /** The theme picked on this phone; System until the store has loaded (settings spec §3.2). */
+    val theme: StateFlow<ThemeChoice> = preferences.theme
+        .map { pref -> pref?.let { ThemeChoice.valueOf(it.name) } ?: ThemeChoice.SYSTEM }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeChoice.SYSTEM)
 
     /** The link sheet's route row; null hides it (no gateway in the profile). */
     val route: StateFlow<Route?> =

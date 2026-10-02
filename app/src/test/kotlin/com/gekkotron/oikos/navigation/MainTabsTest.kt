@@ -20,6 +20,14 @@ class MainTabsTest {
     val compose = createComposeRule()
 
     @Test
+    fun `push does not stack the same key twice`() {
+        val stack = mutableListOf<NavKey>(HomeKey)
+        push(stack, SettingsKey)
+        push(stack, SettingsKey)
+        assertEquals(listOf<NavKey>(HomeKey, SettingsKey), stack)
+    }
+
+    @Test
     fun `energy stacks on home and home pops it`() {
         val stack = mutableListOf<NavKey>(HomeKey)
         selectTab(stack, EnergyKey)

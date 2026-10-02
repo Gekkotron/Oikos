@@ -58,7 +58,6 @@
     <string name="link_key_rejected">The gateway didn\'t accept this phone\'s key. Set up the connection again with a new setup code.</string>
     <string name="link_clock_skew">The gateway refused the request because this phone\'s clock is off. Turn on automatic date and time.</string>
     <string name="link_gateway_refused">The gateway refused access to the broker.</string>
-    <string name="link_set_up_again">Set up connection again</string>
     <string name="chip_hidden">Hidden (%1$d)</string>
     <string name="home_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>
     <string name="card_description_hidden">%1$s, %2$s, %3$s, hidden</string>
@@ -87,7 +86,8 @@
     <string name="room_none">No room</string>
     <string name="room_new">New room</string>
     <string name="room_add">Add</string>
-    <string name="link_assign_rooms">Assign rooms</string>
+    <string name="settings_open">Settings</string>
+    <string name="link_settings">Connection settings</string>
     <string name="rooms_title">Which room is each device in?</string>
     <string name="rooms_subtitle">Rooms come from the devices where they say so. You can change any of this later by long-pressing a card.</string>
     <plurals name="rooms_progress">

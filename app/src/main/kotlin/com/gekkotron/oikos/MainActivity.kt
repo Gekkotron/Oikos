@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.designsystem.OikosBackground
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.navigation.OikosNavHost
@@ -16,8 +19,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) TesterUpdates.check(this)
         setContent {
-            OikosTheme {
-                OikosBackground { OikosNavHost() }
+            val app: AppViewModel = hiltViewModel()
+            val theme by app.theme.collectAsStateWithLifecycle()
+            OikosTheme(theme) {
+                OikosBackground { OikosNavHost(app) }
             }
         }
     }

@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -20,12 +21,16 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.gekkotron.oikos.AppViewModel
+import com.gekkotron.oikos.R
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.feature.energy.ui.EnergyRoute
 import com.gekkotron.oikos.feature.security.ui.SecurityRoute
 import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
 import com.gekkotron.oikos.feature.home.ui.HomeRoute
 import com.gekkotron.oikos.feature.onboarding.ui.OnboardingRoute
+import com.gekkotron.oikos.feature.settings.licences.LicencesRoute
+import com.gekkotron.oikos.feature.settings.rooms.RoomOrderRoute
+import com.gekkotron.oikos.feature.settings.ui.SettingsRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -42,6 +47,20 @@ data object EnergyKey : NavKey
 
 @Serializable
 data object SecurityKey : NavKey
+
+@Serializable
+data object SettingsKey : NavKey
+
+@Serializable
+data object RoomOrderKey : NavKey
+
+@Serializable
+data object LicencesKey : NavKey
+
+/** Pushes [key] unless it is already on top (a double tap on the gear opens Settings once). */
+internal fun push(stack: MutableList<NavKey>, key: NavKey) {
+    if (stack.lastOrNull() != key) stack.add(key)
+}
 
 /** The saved profile picks the root: Ready → Home; none or locked → onboarding (spec §2). */
 @Composable
@@ -88,11 +107,30 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 }
                 entry<HomeKey> {
                     HomeRoute(
-                        onSetUpAgain = viewModel::setUpAgain,
-                        onAssignRooms = { if (backStack.lastOrNull() != RoomsKey) backStack.add(RoomsKey) },
+                        onOpenSettings = { push(backStack, SettingsKey) },
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         windowInsets = tabInsets,
+                    )
+                }
+                entry<SettingsKey> {
+                    SettingsRoute(
+                        route = route,
+                        onRouteChange = viewModel::setRoute,
+                        onSetUpAgain = viewModel::setUpAgain,
+                        onOpenRooms = { push(backStack, RoomOrderKey) },
+                        onOpenLicences = { push(backStack, LicencesKey) },
+                        onBack = { backStack.removeLastOrNull() },
+                    )
+                }
+                entry<RoomOrderKey> {
+                    RoomOrderRoute(onAssignRooms = { push(backStack, RoomsKey) }, onBack = { backStack.removeLastOrNull() })
+                }
+                entry<LicencesKey> {
+                    val context = LocalContext.current
+                    LicencesRoute(
+                        loadJson = { context.resources.openRawResource(R.raw.aboutlibraries).bufferedReader().use { it.readText() } },
+                        onBack = { backStack.removeLastOrNull() },
                     )
                 }
                 entry<EnergyKey> {

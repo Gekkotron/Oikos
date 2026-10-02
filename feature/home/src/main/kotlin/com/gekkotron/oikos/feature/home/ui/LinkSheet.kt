@@ -8,8 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,26 +25,21 @@ import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.Route
 import com.gekkotron.oikos.transport.TransportMode
 
-/**
- * Link status, the route choice when the profile has a gateway, and the Plan 1 way out of a profile.
- * Settings takes this over later (spec §5.2; gateway spec §5).
- */
+/** Link status and the route choice when the profile has a gateway; everything else lives in Settings (settings spec §5.3). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LinkSheet(
     link: LinkState,
     route: Route?,
     onRouteChange: (Route) -> Unit,
-    onSetUpAgain: () -> Unit,
-    onAssignRooms: () -> Unit,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(linkDescription(link), style = OikosTheme.type.body, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             if (route != null) RoutePicker(route, onRouteChange)
-            OutlinedButton(onClick = onAssignRooms, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_assign_rooms)) }
-            OutlinedButton(onClick = onSetUpAgain, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.link_set_up_again)) }
+            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.link_settings)) }
         }
     }
 }
