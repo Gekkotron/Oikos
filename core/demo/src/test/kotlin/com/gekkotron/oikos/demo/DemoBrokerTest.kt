@@ -128,7 +128,7 @@ class DemoBrokerTest {
         assertEquals("cool", ac.mode)
         assertEquals(StateValue.Numeric(58.0), h.value("demo_water_heater_target"))
         assertEquals(StateValue.Text("turbo"), h.value("demo_vacuum_mode"))
-        // Alarm state transitions are tested in DemoHouseTest with explicit tick() calls
+        assertEquals(StateValue.Alarm(AlarmState.ARMING), h.value("demo_alarm"))
     }
 
     @Test
