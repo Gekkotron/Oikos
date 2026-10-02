@@ -1,5 +1,6 @@
 package com.gekkotron.oikos
 
+import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.FileEntityCache
 import com.gekkotron.oikos.data.ProfileRepository
@@ -22,6 +23,11 @@ object TestDataModule {
     @Singleton
     fun profiles(@ApplicationScope scope: CoroutineScope): ProfileRepository =
         ProfileRepository.create(Files.createTempDirectory("oikos").resolve("profile.json").toFile(), PassThrough, scope)
+
+    @Provides
+    @Singleton
+    fun preferences(@ApplicationScope scope: CoroutineScope): AppPreferences =
+        AppPreferences.create(Files.createTempDirectory("oikos").resolve("app-preferences.json").toFile(), scope)
 
     @Provides
     @Singleton
