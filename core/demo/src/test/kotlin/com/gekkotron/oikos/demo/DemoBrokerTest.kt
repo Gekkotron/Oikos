@@ -33,7 +33,7 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class DemoBrokerTest {
     private val allIds = setOf(
-        "demo_living_lamp", "demo_kitchen_spots", "demo_coffee", "demo_garage_plug", "demo_living_shutter",
+        "demo_living_lamp", "demo_kitchen_spots", "demo_coffee", "demo_garage_plug", "demo_siren", "demo_living_shutter",
         "demo_living_ac", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
         "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_water_heater_power", "demo_ac_power", "demo_solar_energy", "demo_grid_energy", "demo_house_energy", "demo_water_heater_energy", "demo_ac_energy", "demo_front_door", "demo_hallway_motion",
         "demo_bedroom_window", "demo_kitchen_smoke", "demo_garage_leak",
@@ -81,6 +81,10 @@ class DemoBrokerTest {
         assertEquals(EnergyRole.SOLAR, e.getValue("demo_solar_power").ui.energyRole)
         assertEquals(EnergyRole.CONSUMER, e.getValue("demo_water_heater_power").ui.energyRole)
         assertEquals(EnergyRole.CONSUMER, e.getValue("demo_ac_power").ui.energyRole)
+        assertTrue(e.getValue("demo_siren").ui.securityAction)
+        assertTrue(e.getValue("demo_siren").ui.securityAsk)
+        assertTrue(e.getValue("demo_alarm_intrusion").ui.securityAction)
+        assertFalse(e.getValue("demo_alarm_intrusion").ui.securityAsk)
     }
 
     @Test

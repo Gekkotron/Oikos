@@ -34,6 +34,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         ledStrip("demo_bedroom_strip", "LED strip", "Bedroom", "demo/bedroom/strip")
         switch("demo_coffee", "Coffee machine", "Kitchen", "demo/kitchen/coffee", on = false, available = true)
         switch("demo_garage_plug", "Garage plug", "Garage", "demo/garage/plug", on = false, available = false)
+        switch("demo_siren", "Siren", "Hallway", "demo/hallway/siren", on = false, available = true)
         cover("demo_living_shutter", "Shutter", "Living room", "demo/living/shutter")
         climate("demo_living_ac", "Air conditioner", "Living room", "demo/living/ac")
         sensor("demo_bedroom_temperature", "Bedroom", "Temperature", "Bedroom", "demo/bedroom/climate", "temperature", "temperature", "°C")
@@ -75,6 +76,8 @@ class DemoHouse(private val random: Random = Random(7)) {
         override("demo_house_power", """{"energyRole":"house"}""")
         override("demo_water_heater_power", """{"energyRole":"consumer","energyIcon":"water_heater"}""")
         override("demo_ac_power", """{"energyRole":"consumer"}""")
+        override("demo_siren", """{"securityAction":true}""")
+        override("demo_alarm_intrusion", """{"securityAction":true,"securityAsk":false}""")
     }
 
     /** Configs first, then overrides and areas, then state: the order a real broker replays retained messages. */
