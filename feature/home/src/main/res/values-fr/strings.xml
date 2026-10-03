@@ -161,4 +161,5 @@
     <string name="search_hint">Rechercher un appareil ou une pièce</string>
     <string name="search_no_match">Aucun appareil ne correspond à « %1$s »</string>
     <string name="customize_show_on_security">Afficher dans Sécurité</string>
+    <string name="customize_ask_before">Demander avant d\'allumer</string>
 </resources>

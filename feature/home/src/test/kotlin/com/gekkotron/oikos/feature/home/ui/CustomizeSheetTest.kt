@@ -202,4 +202,33 @@ class CustomizeSheetTest {
         compose.onNodeWithText("Show on Home").assertDoesNotExist()
         compose.onNodeWithText("Hide from Home").assertExists()
     }
+
+    @Test
+    fun `a switch can be put on Security, asking by default`() {
+        show(card(testEntity("siren", Kind.SWITCH, "Siren")))
+        compose.onNodeWithText("Ask before turning on").assertDoesNotExist()
+        compose.onNodeWithText("Show on Security").performScrollTo().performClick()
+        compose.onNodeWithText("Ask before turning on").performScrollTo().assertExists()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(UiOverride(securityAction = true), saved.single())
+    }
+
+    @Test
+    fun `an opted-in switch offers Keep on Home and Ask before, and turning Show on Security off hides both`() {
+        show(card(testEntity("siren", Kind.SWITCH, "Siren", ui = UiOverride(securityAction = true))))
+        compose.onNodeWithText("Show on Home").performScrollTo().assertExists()
+        compose.onNodeWithText("Ask before turning on").performScrollTo().performClick()
+        compose.onNodeWithText("Show on Security").performScrollTo().performClick()
+        compose.onNodeWithText("Ask before turning on").assertDoesNotExist()
+        compose.onNodeWithText("Show on Home").assertDoesNotExist()
+        compose.onNodeWithText("Hide from Home").performScrollTo().assertExists()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(UiOverride(securityAsk = false), saved.single())
+    }
+
+    @Test
+    fun `lights offer no Security switch`() {
+        show(card(testEntity("lamp", Kind.LIGHT)))
+        compose.onNodeWithText("Show on Security").assertDoesNotExist()
+    }
 }
