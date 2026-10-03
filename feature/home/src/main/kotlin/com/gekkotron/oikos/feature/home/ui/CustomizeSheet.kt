@@ -64,6 +64,8 @@ internal fun CustomizeSheet(
     var hidden by rememberSaveable(card.id) { mutableStateOf(start.hidden) }
     var securityHidden by rememberSaveable(card.id) { mutableStateOf(start.securityHidden) }
     var homePinned by rememberSaveable(card.id) { mutableStateOf(start.homePinned) }
+    var securityAction by rememberSaveable(card.id) { mutableStateOf(start.securityAction) }
+    var securityAsk by rememberSaveable(card.id) { mutableStateOf(start.securityAsk) }
     var order by rememberSaveable(card.id) { mutableStateOf(start.order) }
     var cardStyle by rememberSaveable(card.id) { mutableStateOf(start.cardStyle) }
     var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
@@ -71,7 +73,7 @@ internal fun CustomizeSheet(
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -100,7 +102,8 @@ internal fun CustomizeSheet(
             )
             SwitchRow(stringResource(R.string.customize_favorite), favorite) { favorite = it }
             // Energy or Security already shows it, so Home leaves it out unless pinned back.
-            val elsewhere = energyRole != null || (Placement.securityKind(card.kind, card.deviceClass) && !securityHidden)
+            val onSecurity = Placement.onSecurity(card.kind, card.deviceClass, UiOverride(securityHidden = securityHidden, securityAction = securityAction))
+            val elsewhere = energyRole != null || onSecurity
             if (elsewhere) {
                 SwitchRow(stringResource(R.string.customize_show_on_home), homePinned && !hidden) { homePinned = it; if (it) hidden = false }
             } else {
@@ -108,6 +111,10 @@ internal fun CustomizeSheet(
             }
             if (Placement.securityKind(card.kind, card.deviceClass)) {
                 SwitchRow(stringResource(R.string.customize_show_on_security), !securityHidden) { securityHidden = !it }
+            }
+            if (Placement.actionKind(card.kind)) {
+                SwitchRow(stringResource(R.string.customize_show_on_security), securityAction) { securityAction = it }
+                if (securityAction) SwitchRow(stringResource(R.string.customize_ask_before), securityAsk) { securityAsk = it }
             }
             OutlinedTextField(
                 value = order,

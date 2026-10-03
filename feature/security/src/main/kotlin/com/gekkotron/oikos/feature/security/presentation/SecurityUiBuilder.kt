@@ -39,11 +39,25 @@ object SecurityUiBuilder {
                 )
             }
             .sortedWith(compareBy<SensorRow>({ rank(it) }, { it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))
+        val actions = visible.filter { Placement.actionKind(it.kind) }
+            .map { e ->
+                val s = states[e.uniqueId]
+                ActionRow(
+                    e.uniqueId, e.name,
+                    areaName = if (e.area == UNASSIGNED_AREA) null else areaNames[e.area] ?: e.area,
+                    kind = e.kind,
+                    on = (s?.value as? StateValue.OnOff)?.on,
+                    available = s?.available ?: true,
+                    stale = s?.stale == true,
+                    ask = e.ui.securityAsk,
+                )
+            }
+            .sortedWith(compareBy<ActionRow>({ it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))
         val counts = sensors.filter { it.available && it.active == true }.groupingBy { it.group }.eachCount()
         val summary = SensorGroup.entries.mapNotNull { g -> counts[g]?.let { GroupCount(g, it) } }
         val bySection = sensors.groupBy { SensorSection.of(it.group) }
         val sections = SensorSection.entries.mapNotNull { sec -> bySection[sec]?.let { SectionUi(sec, it) } }
-        return SecurityUi(link, panels, summary, sensors, sections, loading = false)
+        return SecurityUi(link, panels, summary, sensors, sections, actions, loading = false)
     }
 
     /** 0 active danger, 1 active intrusion, 2 inactive or unknown, 3 unavailable. */

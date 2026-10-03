@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.security.presentation
 
+import com.gekkotron.oikos.feature.security.action
 import com.gekkotron.oikos.feature.security.FakeEntitySource
 import com.gekkotron.oikos.feature.security.alarm
 import com.gekkotron.oikos.feature.security.on
@@ -92,6 +93,32 @@ class SecurityViewModelTest {
         assertEquals(UiOverride(favorite = true, securityHidden = true), source.overrides["door"])
         source.failWrites = true
         vm.setSecurityHidden("door", false)
+        assertEquals(listOf<SecurityEvent>(SecurityEvent.SaveFailed), events)
+    }
+
+    @Test
+    fun `a stale action waits for the connection`() = runTest(dispatcher) {
+        source.entities.value += "siren" to action("siren")
+        source.stateMap.value += "siren" to on("siren", false, stale = true)
+        val vm = SecurityViewModel(source, dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<SecurityEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.send("siren", Command.TurnOn())
+        assertTrue(source.sent.isEmpty())
+        assertEquals(listOf<SecurityEvent>(SecurityEvent.WaitingForConnection), events)
+    }
+
+    @Test
+    fun `setAction saves both flags, keeps the rest, and a failed write is an event`() = runTest(dispatcher) {
+        source.entities.value += "siren" to action("siren", ui = UiOverride(favorite = true, securityAction = true))
+        val vm = SecurityViewModel(source, dispatcher)
+        val events = mutableListOf<SecurityEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.setAction("siren", show = true, ask = false)
+        assertEquals(UiOverride(favorite = true, securityAction = true, securityAsk = false), source.overrides["siren"])
+        source.failWrites = true
+        vm.setAction("siren", show = false, ask = false)
         assertEquals(listOf<SecurityEvent>(SecurityEvent.SaveFailed), events)
     }
 }

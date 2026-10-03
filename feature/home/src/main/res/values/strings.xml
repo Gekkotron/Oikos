@@ -161,4 +161,5 @@
     <string name="search_hint">Search a device or room</string>
     <string name="search_no_match">No device matches “%1$s”</string>
     <string name="customize_show_on_security">Show on Security</string>
+    <string name="customize_ask_before">Ask before turning on</string>
 </resources>

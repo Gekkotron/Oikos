@@ -1,5 +1,15 @@
 package com.gekkotron.oikos.feature.security.ui
 
+import kotlin.test.assertTrue
+import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.feature.security.action
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.longClick
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasText
@@ -39,8 +49,26 @@ class SecurityScreenTest {
         entities.associateBy { it.uniqueId }, states.associateBy { it.uniqueId }, listOf(Area("garage", "Garage")), LinkState.Connecting,
     )
 
+    private val sent = mutableListOf<Pair<String, Command>>()
+    private val actionSettings = mutableListOf<Triple<String, Boolean, Boolean>>()
+
     private fun show(state: SecurityUi) = compose.setContent {
-        OikosTheme(ThemeChoice.NIGHT_GLASS) { SecurityScreen(state, onSetHidden = { id, h -> hidden += id to h }) }
+        OikosTheme(ThemeChoice.NIGHT_GLASS) {
+            SecurityScreen(
+                state,
+                onSend = { id, c -> sent += id to c },
+                onSetHidden = { id, h -> hidden += id to h },
+                onSetAction = { id, s, a -> actionSettings += Triple(id, s, a) },
+            )
+        }
+    }
+
+    private fun showLive(initial: SecurityUi): MutableState<SecurityUi> {
+        val holder = mutableStateOf(initial)
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) { SecurityScreen(holder.value, onSend = { id, c -> sent += id to c }) }
+        }
+        return holder
     }
 
     @Test
@@ -114,5 +142,78 @@ class SecurityScreenTest {
         compose.onNodeWithText("Openings").assertExists()
         compose.onNodeWithText("Motion").assertDoesNotExist()
         compose.onNode(hasText("Garage door") and hasText("Garage") and hasText("Open")).assertExists()
+    }
+
+    @Test
+    fun `actions sit in their own section and an action alone is not the empty state`() {
+        show(ui(listOf(action("siren", name = "Siren", area = "garage")), listOf(on("siren", false))))
+        compose.onNodeWithText("Actions").assertExists()
+        compose.onNode(hasText("Siren") and hasText("Garage") and hasText("Off")).assertExists()
+        compose.onNodeWithText("No alarm panel or security sensor yet. Publish an MQTT alarm_control_panel, or pair door, motion, smoke or leak sensors.").assertDoesNotExist()
+    }
+
+    @Test
+    fun `turning an action on asks first and sends only on confirm`() {
+        show(ui(listOf(action("siren", name = "Siren")), listOf(on("siren", false))))
+        compose.onNodeWithTag("action-siren").performClick()
+        assertTrue(sent.isEmpty())
+        compose.onNodeWithText("Turn on Siren?").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        assertTrue(sent.isEmpty())
+        compose.onNodeWithTag("action-siren").performClick()
+        compose.onNodeWithText("Turn on").performClick()
+        assertEquals(listOf<Pair<String, Command>>("siren" to Command.TurnOn()), sent)
+        compose.onNodeWithText("Turn on Siren?").assertDoesNotExist()
+    }
+
+    @Test
+    fun `turning an action off is immediate, and ask off fires at once`() {
+        show(
+            ui(
+                listOf(action("siren", name = "Siren"), action("panic", Kind.BUTTON, name = "Panic", ui = UiOverride(securityAction = true, securityAsk = false))),
+                listOf(on("siren", true)),
+            ),
+        )
+        compose.onNodeWithTag("action-siren").performClick()
+        compose.onNodeWithTag("action-panic").performClick()
+        assertEquals(listOf<Pair<String, Command>>("siren" to Command.TurnOff, "panic" to Command.Press), sent)
+    }
+
+    @Test
+    fun `the confirm dialog closes when its action goes unavailable`() {
+        val entities = listOf(action("siren", name = "Siren"))
+        val live = showLive(ui(entities, listOf(on("siren", false))))
+        compose.onNodeWithTag("action-siren").performClick()
+        compose.onNodeWithText("Turn on Siren?").assertExists()
+        live.value = ui(entities, listOf(on("siren", false, available = false)))
+        compose.onNodeWithText("Turn on Siren?").assertDoesNotExist()
+        assertTrue(sent.isEmpty())
+    }
+
+    @Test
+    fun `an unavailable action is not tappable but its sheet opens`() {
+        show(ui(listOf(action("siren", name = "Siren")), listOf(on("siren", false, available = false))))
+        compose.onNodeWithTag("action-siren").performClick()
+        compose.onNodeWithText("Turn on Siren?").assertDoesNotExist()
+        compose.onNodeWithTag("action-siren").performTouchInput { longClick() }
+        compose.onNodeWithText("Ask before turning on").assertExists()
+    }
+
+    @Test
+    fun `the action sheet saves ask and removes from Security`() {
+        show(ui(listOf(action("siren", name = "Siren")), listOf(on("siren", false))))
+        compose.onNodeWithTag("action-siren").performTouchInput { longClick() }
+        compose.onNodeWithText("Ask before turning on").performClick()
+        compose.onNodeWithText("Show on Security").performClick()
+        assertEquals(listOf(Triple("siren", true, false), Triple("siren", false, true)), actionSettings)
+    }
+
+    @Test
+    fun `a stale action skips the question and goes straight to the waiting message`() {
+        show(ui(listOf(action("siren", name = "Siren")), listOf(on("siren", false, stale = true))))
+        compose.onNodeWithTag("action-siren").performClick()
+        compose.onNodeWithText("Turn on Siren?").assertDoesNotExist()
+        // The view model refuses a stale send and shows "Waiting for the connection…" (SecurityViewModelTest).
+        assertEquals(listOf<Pair<String, Command>>("siren" to Command.TurnOn()), sent)
     }
 }

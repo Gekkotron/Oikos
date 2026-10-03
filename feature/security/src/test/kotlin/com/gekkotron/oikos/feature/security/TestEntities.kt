@@ -25,3 +25,7 @@ fun on(id: String, on: Boolean, available: Boolean = true, stale: Boolean = fals
     EntityState(id, StateValue.OnOff(on), available = available, stale = stale)
 
 fun alarm(id: String, state: AlarmState, stale: Boolean = false) = EntityState(id, StateValue.Alarm(state), stale = stale)
+
+/** A switch (or button) opted onto Security as an action. */
+fun action(id: String, kind: Kind = Kind.SWITCH, name: String = id, area: String = UNASSIGNED_AREA, ui: UiOverride = UiOverride(securityAction = true)) =
+    Entity(id, null, name, kind, null, null, null, Capabilities(), NoBindings, area, ui)

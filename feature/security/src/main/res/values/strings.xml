@@ -44,4 +44,14 @@
     <string name="security_section_openings">Openings</string>
     <string name="security_section_motion">Motion</string>
     <string name="security_section_other">Other</string>
+    <string name="security_section_actions">Actions</string>
+    <string name="security_action_on">On</string>
+    <string name="security_action_off">Off</string>
+    <string name="security_action_confirm_on">Turn on %1$s?</string>
+    <string name="security_action_confirm_press">Press %1$s?</string>
+    <string name="security_action_turn_on">Turn on</string>
+    <string name="security_action_press">Press</string>
+    <string name="security_action_ask">Ask before turning on</string>
+    <string name="security_action_settings">Settings</string>
+    <string name="security_cancel">Cancel</string>
 </resources>

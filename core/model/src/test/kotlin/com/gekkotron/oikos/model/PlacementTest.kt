@@ -35,4 +35,30 @@ class PlacementTest {
         assertTrue(Placement.onHome(Kind.BINARY_SENSOR, "door", UiOverride(homePinned = true)))
         assertFalse(Placement.onHome(Kind.BINARY_SENSOR, "door", UiOverride(homePinned = true, hidden = true)))
     }
+
+    @Test
+    fun `switches and buttons can be actions`() {
+        assertTrue(Placement.actionKind(Kind.SWITCH))
+        assertTrue(Placement.actionKind(Kind.BUTTON))
+        assertFalse(Placement.actionKind(Kind.LIGHT))
+        assertFalse(Placement.actionKind(Kind.BINARY_SENSOR))
+    }
+
+    @Test
+    fun `an opted-in action is on Security and leaves Home unless pinned`() {
+        assertFalse(Placement.onSecurity(Kind.SWITCH, null, UiOverride()))
+        assertTrue(Placement.onSecurity(Kind.SWITCH, null, UiOverride(securityAction = true)))
+        assertTrue(Placement.onSecurity(Kind.BUTTON, null, UiOverride(securityAction = true)))
+        assertTrue(Placement.onHome(Kind.SWITCH, null, UiOverride()))
+        assertFalse(Placement.onHome(Kind.SWITCH, null, UiOverride(securityAction = true)))
+        assertTrue(Placement.onHome(Kind.SWITCH, null, UiOverride(securityAction = true, homePinned = true)))
+    }
+
+    @Test
+    fun `securityAction only applies to switches and buttons`() {
+        assertFalse(Placement.onSecurity(Kind.LIGHT, null, UiOverride(securityAction = true)))
+        assertTrue(Placement.onHome(Kind.LIGHT, null, UiOverride(securityAction = true)))
+        // A sensor's own rule is unchanged: securityHidden still wins over a stray securityAction.
+        assertFalse(Placement.onSecurity(Kind.BINARY_SENSOR, "door", UiOverride(securityHidden = true, securityAction = true)))
+    }
 }

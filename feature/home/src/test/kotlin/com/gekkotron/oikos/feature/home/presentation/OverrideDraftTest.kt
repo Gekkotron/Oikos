@@ -102,4 +102,14 @@ class OverrideDraftTest {
         assertEquals(UiOverride(securityHidden = true), OverrideDraft.from(door).applyTo(door))
         assertEquals(UiOverride(), OverrideDraft.from(door).copy(securityHidden = false).applyTo(door))
     }
+
+    @Test
+    fun `action flags are read from and written back to the override`() {
+        val sw = card(testEntity("siren", Kind.SWITCH, "Siren", ui = UiOverride(securityAction = true, securityAsk = false)))
+        val draft = OverrideDraft.from(sw)
+        assertTrue(draft.securityAction)
+        assertFalse(draft.securityAsk)
+        assertEquals(UiOverride(securityAction = true, securityAsk = false), draft.applyTo(sw))
+        assertEquals(UiOverride(), draft.copy(securityAction = false, securityAsk = true).applyTo(sw))
+    }
 }

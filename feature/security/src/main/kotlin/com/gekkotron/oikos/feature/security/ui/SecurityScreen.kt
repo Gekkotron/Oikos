@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,7 +53,9 @@ import com.gekkotron.oikos.feature.security.presentation.SecurityEvent
 import com.gekkotron.oikos.feature.security.presentation.SecurityUi
 import com.gekkotron.oikos.feature.security.presentation.SecurityViewModel
 import com.gekkotron.oikos.feature.security.presentation.SensorSection
+import com.gekkotron.oikos.feature.security.presentation.tap
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Kind
 
 @Composable
 fun SecurityRoute(
@@ -77,7 +81,7 @@ fun SecurityRoute(
             }
         }
     }
-    SecurityScreen(state, windowInsets, onSend = viewModel::send, onSetHidden = viewModel::setSecurityHidden, snackbarHostState = snackbar)
+    SecurityScreen(state, windowInsets, onSend = viewModel::send, onSetHidden = viewModel::setSecurityHidden, onSetAction = viewModel::setAction, snackbarHostState = snackbar)
 }
 
 @Composable
@@ -86,10 +90,13 @@ fun SecurityScreen(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     onSend: (String, Command) -> Unit = { _, _ -> },
     onSetHidden: (String, Boolean) -> Unit = { _, _ -> },
+    onSetAction: (String, Boolean, Boolean) -> Unit = { _, _, _ -> },
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var actionSheetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -115,7 +122,7 @@ fun SecurityScreen(
             }
             when {
                 state.loading -> Unit
-                state.panels.isEmpty() && state.sensors.isEmpty() -> item(key = "empty") {
+                state.isEmpty -> item(key = "empty") {
                     Text(stringResource(R.string.security_empty), style = OikosTheme.type.body, modifier = Modifier.padding(vertical = 24.dp))
                 }
                 else -> {
@@ -128,6 +135,33 @@ fun SecurityScreen(
                     }
                     items(state.panels, key = { "panel-${it.id}" }) { p ->
                         AlarmHero(p.name, p.state, p.available, p.pending, p.stale, p.capabilities, onSend = { onSend(p.id, it) })
+                    }
+                    if (state.actions.isNotEmpty()) {
+                        item(key = "section-actions") {
+                            Text(
+                                stringResource(R.string.security_section_actions),
+                                style = OikosTheme.type.label,
+                                color = OikosTheme.colors.contentMuted,
+                                modifier = Modifier.padding(top = 8.dp).semantics { heading() },
+                            )
+                        }
+                        items(state.actions.chunked(2), key = { "actions-${it.first().id}" }) { pair ->
+                            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap)) {
+                                pair.forEach { row ->
+                                    ActionTile(
+                                        row,
+                                        onClick = {
+                                            val tap = row.tap()
+                                            // A stale action can't send: let the view model say so now, not after asking.
+                                            if (tap.confirm && !row.stale) confirmId = row.id else onSend(row.id, tap.command)
+                                        },
+                                        onLongClick = { actionSheetId = row.id },
+                                        Modifier.weight(1f).fillMaxHeight(),
+                                    )
+                                }
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
                     }
                     item(key = "summary") {
                         Text(
@@ -171,6 +205,31 @@ fun SecurityScreen(
     val sheetRow = sheetId?.let { id -> state.sensors.firstOrNull { it.id == id } }
     if (sheetRow != null) {
         SensorSheet(sheetRow, onHide = { onSetHidden(sheetRow.id, true); sheetId = null }, onDismiss = { sheetId = null })
+    }
+    // An action that left Security closes its sheet.
+    val actionRow = actionSheetId?.let { state.action(it) }
+    if (actionRow != null) {
+        ActionSheet(
+            actionRow,
+            onSet = { show, ask -> onSetAction(actionRow.id, show, ask); if (!show) actionSheetId = null },
+            onDismiss = { actionSheetId = null },
+        )
+    }
+    // Asked at tap time; an action that left Security or went unavailable meanwhile closes the dialog unsent.
+    val confirmRow = confirmId?.let { state.action(it) }?.takeIf { it.available }
+    if (confirmId != null && confirmRow == null) LaunchedEffect(confirmId) { confirmId = null }
+    if (confirmRow != null) {
+        val button = confirmRow.kind == Kind.BUTTON
+        AlertDialog(
+            onDismissRequest = { confirmId = null },
+            title = { Text(stringResource(if (button) R.string.security_action_confirm_press else R.string.security_action_confirm_on, confirmRow.name)) },
+            confirmButton = {
+                TextButton(onClick = { confirmId = null; onSend(confirmRow.id, if (button) Command.Press else Command.TurnOn()) }) {
+                    Text(stringResource(if (button) R.string.security_action_press else R.string.security_action_turn_on))
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmId = null }) { Text(stringResource(R.string.security_cancel)) } },
+        )
     }
 }
 
