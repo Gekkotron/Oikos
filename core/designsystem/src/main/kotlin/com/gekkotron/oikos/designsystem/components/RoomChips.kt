@@ -31,7 +31,8 @@ fun RoomChips(items: List<ChipItem>, selectedKey: String, onSelect: (String) -> 
             Box(
                 Modifier
                     .heightIn(min = OikosDimens.minTouch)
-                    .selectable(selected = selected, role = Role.Tab) { onSelect(item.key) },
+                    // No ripple: it filled the rectangular touch area, not the pill (the pill's colour shows the selection).
+                    .selectable(selected = selected, interactionSource = null, indication = null, role = Role.Tab) { onSelect(item.key) },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

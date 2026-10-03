@@ -118,7 +118,8 @@ internal fun FlowDiagram(state: EnergyUiState, locale: Locale, onMore: () -> Uni
                 val p = positions[n.id] ?: return@forEach
                 // Touch only: the cards below are the accessible way into the same details (the diagram is one sentence).
                 val measure = if (n.kind == NodeKind.SOLAR) Modifier.onSizeChanged { solarHeight.intValue = it.height } else Modifier
-                NodeBubble(n, locale, Modifier.placeBubble(p, w, h).then(measure).clickable { onNode(n) })
+                // No ripple: it filled the bubble's rectangle (circle plus labels).
+                NodeBubble(n, locale, Modifier.placeBubble(p, w, h).then(measure).clickable(interactionSource = null, indication = null) { onNode(n) })
             }
         }
         state.diagram.firstOrNull { it.kind == NodeKind.MORE }?.let { more ->
