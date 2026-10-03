@@ -26,6 +26,10 @@ data class UiOverride(
     val energyMeter: String? = null,
     /** Kept on Home although Energy or Security already shows it ([Placement.elsewhere]). */
     val homePinned: Boolean = false,
+    /** A SWITCH or BUTTON shown in Security's Actions section; opt-in (security actions spec §2). */
+    val securityAction: Boolean = false,
+    /** Ask before turning this action on or pressing it; only read when [securityAction]. */
+    val securityAsk: Boolean = true,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

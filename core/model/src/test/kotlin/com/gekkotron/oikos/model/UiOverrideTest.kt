@@ -129,4 +129,13 @@ class UiOverrideTest {
         assertNull(UiOverrides.decode("{}")!!.energyMeter)
         assertFalse(UiOverrides.encode(UiOverride()).contains("energyMeter"))
     }
+
+    @Test
+    fun `action flags round-trip and only non-defaults are encoded`() {
+        val o = UiOverride(securityAction = true, securityAsk = false)
+        val json = UiOverrides.encode(o)
+        assertEquals(o, UiOverrides.decode(json))
+        assertEquals("""{"securityAction":true,"securityAsk":false}""", json)
+        assertEquals(true, UiOverrides.decode("{}")?.securityAsk)
+    }
 }
