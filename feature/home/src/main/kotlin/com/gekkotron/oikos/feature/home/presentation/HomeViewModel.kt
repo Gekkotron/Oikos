@@ -65,21 +65,9 @@ class HomeViewModel @Inject constructor(
 
     private val editor = OverrideEditor(source)
 
-    /**
-     * [newRooms] are rooms the override sheet's picker created but never published (spec §5.2): they
-     * are published first, so the override's area id resolves to a declared room, and only once that
-     * publish succeeds is the override itself sent. A failed areas publish leaves the override unsent.
-     */
+    /** Saves the override sheet through [OverrideEditor.customize]; a failure is a [HomeEvent.SaveFailed]. */
     fun customize(id: String, newRooms: List<Area>, override: UiOverride) {
-        // A room typed and then left for another one is dropped: only the room the override uses is declared.
-        val used = newRooms.filter { it.id == override.area }
-        viewModelScope.launch {
-            if (used.isNotEmpty() && !editor.addRooms(used)) {
-                _events.send(HomeEvent.SaveFailed)
-                return@launch
-            }
-            if (!editor.save(id, override)) _events.send(HomeEvent.SaveFailed)
-        }
+        viewModelScope.launch { if (!editor.customize(id, newRooms, override)) _events.send(HomeEvent.SaveFailed) }
     }
 
     /** Home search; blank ends it. */

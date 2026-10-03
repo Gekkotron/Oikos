@@ -30,6 +30,17 @@ class OverrideEditor(private val source: EntitySource) {
         source.setAreas(rooms.fold(source.areas.value) { areas, room -> AreaNames.withArea(areas, room) })
     }
 
+    /**
+     * The override sheet's save (spec §5.2): [newRooms] the picker created but never published go out
+     * first, so the override's area id resolves to a declared room; a failed areas publish leaves the
+     * override unsent. A room typed and then left for another one is dropped.
+     */
+    suspend fun customize(id: String, newRooms: List<Area>, override: UiOverride): Boolean {
+        val used = newRooms.filter { it.id == override.area }
+        if (used.isNotEmpty() && !addRooms(used)) return false
+        return save(id, override)
+    }
+
     private suspend fun attempt(write: suspend () -> Unit): Boolean = try {
         write()
         true
