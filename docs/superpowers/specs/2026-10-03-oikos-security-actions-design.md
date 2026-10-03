@@ -105,12 +105,12 @@ Once an action leaves Home, the Security long-press sheet is where its settings 
 
 ## 5. Demo house (`:core:demo`)
 
-- A new switch `demo_siren` "Siren" in the Hall, retained override `{"securityAction":true}` (asks before ringing).
+- A new switch `demo_siren` "Siren" in the Hallway, retained override `{"securityAction":true}` (asks before ringing).
 - `demo_alarm_intrusion` "Simulate intrusion" gets `{"securityAction":true,"securityAsk":false}`.
 
 ## 6. Strings
 
-`:feature:security`: `security_section_actions` "Actions", `security_action_on` "On", `security_action_off` "Off", `security_action_confirm_on` "Turn on %1$s?", `security_action_confirm_press` "Press %1$s?", `security_action_turn_on` "Turn on", `security_action_press` "Press", `security_action_show` "Show on Security", `security_action_ask` "Ask before turning on", `security_action_settings` "Settings". Existing "Cancel" / "Unavailable" strings are reused where the module already has them.
+`:feature:security`: `security_section_actions` "Actions", `security_action_on` "On", `security_action_off` "Off", `security_action_confirm_on` "Turn on %1$s?", `security_action_confirm_press` "Press %1$s?", `security_action_turn_on` "Turn on", `security_action_press` "Press", `security_action_ask` "Ask before turning on", `security_action_settings` "Settings", `security_cancel` "Cancel" (as Settings has `settings_cancel`). `security_show` ("Show on Security") and `security_unavailable` already exist and are reused.
 
 `:feature:home`: `customize_ask_before` "Ask before turning on" (reuses `customize_show_on_security`).
 
