@@ -207,4 +207,13 @@ class SecurityScreenTest {
         compose.onNodeWithText("Show on Security").performClick()
         assertEquals(listOf(Triple("siren", true, false), Triple("siren", false, true)), actionSettings)
     }
+
+    @Test
+    fun `a stale action skips the question and goes straight to the waiting message`() {
+        show(ui(listOf(action("siren", name = "Siren")), listOf(on("siren", false, stale = true))))
+        compose.onNodeWithTag("action-siren").performClick()
+        compose.onNodeWithText("Turn on Siren?").assertDoesNotExist()
+        // The view model refuses a stale send and shows "Waiting for the connection…" (SecurityViewModelTest).
+        assertEquals(listOf<Pair<String, Command>>("siren" to Command.TurnOn()), sent)
+    }
 }

@@ -152,7 +152,8 @@ fun SecurityScreen(
                                         row,
                                         onClick = {
                                             val tap = row.tap()
-                                            if (tap.confirm) confirmId = row.id else onSend(row.id, tap.command)
+                                            // A stale action can't send: let the view model say so now, not after asking.
+                                            if (tap.confirm && !row.stale) confirmId = row.id else onSend(row.id, tap.command)
                                         },
                                         onLongClick = { actionSheetId = row.id },
                                         Modifier.weight(1f).fillMaxHeight(),
