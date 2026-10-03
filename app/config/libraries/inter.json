@@ -1,0 +1,10 @@
+{
+  "uniqueId": "rsms:inter",
+  "artifactVersion": "variable",
+  "name": "Inter",
+  "description": "Inter typeface, bundled by Oikos.",
+  "website": "https://github.com/rsms/inter",
+  "licenses": [
+    "OFL-1.1"
+  ]
+}

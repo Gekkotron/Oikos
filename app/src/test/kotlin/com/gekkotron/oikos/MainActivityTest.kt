@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -49,6 +50,17 @@ class MainActivityTest {
         compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
     }
 
+    private fun openSettings() {
+        compose.onNode(hasContentDescription("Settings")).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Theme"), timeoutMillis = 10_000)
+    }
+
+    private fun setUpAgain() {
+        openSettings()
+        compose.onNodeWithText("Set up connection again").performScrollTo().performClick()
+        compose.onNodeWithText("Set up again").performClick()
+    }
+
     @Test
     fun `fresh install opens onboarding and the demo shows the demo house`() {
         openDemo()
@@ -59,16 +71,14 @@ class MainActivityTest {
     @Test
     fun `set up connection again returns to welcome`() {
         openDemo()
-        compose.onNodeWithText("Demo").performClick()
-        compose.onNodeWithText("Set up connection again").performClick()
+        setUpAgain()
         compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
     }
 
     @Test
     fun `after set up again onboarding starts fresh and the demo opens again`() {
         openDemo()
-        compose.onNodeWithText("Demo").performClick()
-        compose.onNodeWithText("Set up connection again").performClick()
+        setUpAgain()
         compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
         compose.onNodeWithText("Try the demo").assertIsEnabled()
         compose.onNodeWithText("Scan setup code").assertIsEnabled()
@@ -105,8 +115,7 @@ class MainActivityTest {
     @Test
     fun `after the demo, a direct broker shows only its own house`() {
         openDemo()
-        compose.onNodeWithText("Demo").performClick()
-        compose.onNodeWithText("Set up connection again").performClick()
+        setUpAgain()
         connectToBroker(kettle)
         finishRooms("Skip")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
@@ -133,9 +142,32 @@ class MainActivityTest {
     fun `the demo goes straight to Home, and Assign rooms opens the step and returns`() {
         openDemo()
         compose.onNodeWithText("Which room is each device in?").assertDoesNotExist()
-        compose.onNodeWithText("Demo").performClick()
+        openSettings()
+        compose.onNodeWithText("Rooms").performScrollTo().performClick()
         compose.onNodeWithText("Assign rooms").performClick()
         finishRooms("Skip")
+        compose.waitUntilAtLeastOneExists(hasText("Assign rooms"), timeoutMillis = 10_000) // back on the Rooms screen
+    }
+
+    @Test
+    fun `settings opens from the gear, the theme sticks, and back returns Home`() {
+        openDemo()
+        openSettings()
+        compose.onNodeWithText("Warm Minimal").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Warm Minimal") and isSelected(), timeoutMillis = 10_000) // the store write is async
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
+    }
+
+    @Test
+    fun `a double tap on the gear opens Settings once`() {
+        openDemo()
+        val gear = compose.onNode(hasContentDescription("Settings"))
+        gear.performClick()
+        // Compose's test clock settles between clicks, so Settings may already have replaced Home and the gear left the tree.
+        runCatching { gear.performClick() }
+        compose.waitUntilAtLeastOneExists(hasText("Theme"), timeoutMillis = 10_000)
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
     }
 }

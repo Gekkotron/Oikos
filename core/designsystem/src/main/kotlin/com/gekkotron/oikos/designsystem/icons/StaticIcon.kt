@@ -41,6 +41,8 @@ enum class OikosGlyph(private val parts: List<Part>) {
     WASHER(listOf(area("M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M4 8h16M7 5.5h3M16 5.5h1M16.5 14.5a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0zM9.5 15c.9-.8 1.6-.8 2.5 0s1.6.8 2.5 0"))),
     DRYER(listOf(area("M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M4 8h16M7 5.5h.5M10 5.5h.5M17 5.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zM16.5 14.5a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0zM10.5 12.5c.6.6.6 1.2 0 1.8s-.6 1.2 0 1.8M13.5 12.5c.6.6.6 1.2 0 1.8s-.6 1.2 0 1.8"))),
     DISHWASHER(listOf(area("M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"), line("M4 7h16M8 5h.5M11 5h.5M9 10h6M7 14h10M7 18h10M10 14v4M14 14v4"))),
+    GEAR(listOf(area("M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"), line("M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0z"))),
+    DRAG_HANDLE(listOf(line("M5 9h14M5 15h14"))),
     ;
 
     /** Parsed once per glyph. */

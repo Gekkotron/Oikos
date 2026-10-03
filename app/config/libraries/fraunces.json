@@ -1,0 +1,10 @@
+{
+  "uniqueId": "undercasetype:fraunces",
+  "artifactVersion": "variable",
+  "name": "Fraunces",
+  "description": "Fraunces typeface, bundled by Oikos.",
+  "website": "https://github.com/undercasetype/Fraunces",
+  "licenses": [
+    "OFL-1.1"
+  ]
+}

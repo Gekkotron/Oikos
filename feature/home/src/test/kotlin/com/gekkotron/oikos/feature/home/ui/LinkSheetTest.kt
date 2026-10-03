@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -31,14 +32,14 @@ class LinkSheetTest {
 
     private fun show(
         link: LinkState,
-        onSetUpAgain: () -> Unit = {},
+        onOpenSettings: () -> Unit = {},
         route: Route? = null,
         onRouteChange: (Route) -> Unit = {},
     ) = compose.setContent {
         OikosTheme {
             HomeScreen(
                 HomeUiState(loading = false, link = link), {}, {}, { _, _ -> },
-                onSetUpAgain = onSetUpAgain, route = route, onRouteChange = onRouteChange,
+                onOpenSettings = onOpenSettings, route = route, onRouteChange = onRouteChange,
             )
         }
     }
@@ -46,13 +47,23 @@ class LinkSheetTest {
     private fun openSheet() = compose.onNodeWithText("Offline").performClick()
 
     @Test
-    fun `tapping the pill opens the sheet and set up again calls back`() {
-        var called = false
-        show(LinkState.Connected(TransportMode.DEMO), onSetUpAgain = { called = true })
+    fun `the sheet explains the link and links to Settings, without set-up or rooms buttons`() {
+        var opened = false
+        show(LinkState.Connected(TransportMode.DEMO), onOpenSettings = { opened = true })
         compose.onNodeWithText("Demo").performClick()
         compose.onNodeWithText("exploring the demo house", substring = true).assertExists()
-        compose.onNodeWithText("Set up connection again").performClick()
-        assertTrue(called)
+        compose.onNodeWithText("Set up connection again").assertDoesNotExist()
+        compose.onNodeWithText("Assign rooms").assertDoesNotExist()
+        compose.onNodeWithText("Connection settings").performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun `the gear opens Settings`() {
+        var opened = 0
+        show(LinkState.Connected(TransportMode.DEMO), onOpenSettings = { opened++ })
+        compose.onNode(hasContentDescription("Settings")).performClick()
+        assertEquals(1, opened)
     }
 
     @Test
@@ -66,7 +77,7 @@ class LinkSheetTest {
     fun `offline reasons are described in words, not as raw constants`() {
         var link by mutableStateOf<LinkState>(LinkState.Offline(LinkState.Offline.CLOSED))
         compose.setContent {
-            OikosTheme { HomeScreen(HomeUiState(loading = false, link = link), {}, {}, { _, _ -> }, onSetUpAgain = {}) }
+            OikosTheme { HomeScreen(HomeUiState(loading = false, link = link), {}, {}, { _, _ -> }) }
         }
         compose.onNodeWithText("Offline").performClick()
         compose.onNodeWithText("The connection was closed.").assertExists()
@@ -101,18 +112,6 @@ class LinkSheetTest {
         compose.onNodeWithText("Wi-Fi direct").performClick()
         val statusNode = compose.onNodeWithText("Connected directly to your broker.")
         assertEquals(LiveRegionMode.Polite, statusNode.fetchSemanticsNode().config[SemanticsProperties.LiveRegion])
-    }
-
-    @Test
-    fun `assign rooms calls back and closes the sheet`() {
-        var called = false
-        compose.setContent {
-            OikosTheme { HomeScreen(HomeUiState(loading = false, link = LinkState.Connected(TransportMode.DIRECT)), {}, {}, { _, _ -> }, onAssignRooms = { called = true }) }
-        }
-        compose.onNodeWithText("Wi-Fi direct").performClick()
-        compose.onNodeWithText("Assign rooms").performClick()
-        assertTrue(called)
-        compose.onNodeWithText("Connected directly to your broker.").assertDoesNotExist()
     }
 
     @Test

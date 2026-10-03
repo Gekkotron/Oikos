@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">Follow the system</string>
+    <string name="settings_theme_night">Night Glass</string>
+    <string name="settings_theme_warm">Warm Minimal</string>
+    <string name="settings_rooms">Rooms</string>
+    <string name="settings_rooms_summary">Order of the room chips, room assignment</string>
+    <string name="settings_connection">Connection</string>
+    <string name="settings_demo">Demo house</string>
+    <string name="settings_broker">Broker</string>
+    <string name="settings_tls">TLS</string>
+    <string name="settings_ws">WebSocket</string>
+    <string name="settings_user">User</string>
+    <string name="settings_prefix">Discovery prefix</string>
+    <string name="settings_gateway">Gateway</string>
+    <string name="settings_none">—</string>
+    <string name="settings_set_up_again">Set up connection again</string>
+    <string name="settings_set_up_again_title">Set up again?</string>
+    <string name="settings_set_up_again_body">This forgets the connection on this phone. You\'ll need the setup QR code.</string>
+    <string name="settings_set_up_again_confirm">Set up again</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Oikos %1$s</string>
+    <string name="settings_notice">Copyright 2026 Gekkotron. Oikos bundles the Inter and Fraunces typefaces, licensed under the SIL Open Font License 1.1.</string>
+    <string name="settings_licences">Open-source licences</string>
+    <string name="rooms_order_hint">Drag to change the order of the room chips on Home.</string>
+    <string name="rooms_unassigned">Unassigned</string>
+    <string name="rooms_move_up">Move up</string>
+    <string name="rooms_move_down">Move down</string>
+    <string name="rooms_save_failed">Couldn\'t save the order. Check the connection.</string>
+    <string name="rooms_assign">Assign rooms</string>
+    <string name="licences_title">Open-source licences</string>
+    <string name="licences_close">Close</string>
+</resources>

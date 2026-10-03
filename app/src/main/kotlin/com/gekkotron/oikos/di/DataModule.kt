@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.di
 
 import android.content.Context
+import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.FileEntityCache
 import com.gekkotron.oikos.data.KeystoreSecretStore
@@ -25,6 +26,11 @@ object DataModule {
     @Singleton
     fun profiles(@ApplicationContext context: Context, secrets: SecretStore, @ApplicationScope scope: CoroutineScope): ProfileRepository =
         ProfileRepository.create(context, secrets, scope)
+
+    @Provides
+    @Singleton
+    fun preferences(@ApplicationContext context: Context, @ApplicationScope scope: CoroutineScope): AppPreferences =
+        AppPreferences.create(context, scope)
 
     @Provides
     @Singleton

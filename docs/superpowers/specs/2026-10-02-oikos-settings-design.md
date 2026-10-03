@@ -23,6 +23,7 @@ Out of scope (parent §5.2 lists them; the user left them out):
 ## 2. Navigation
 
 - A **gear icon** sits next to the search icon in the Home header (content description "Settings"). It pushes `SettingsKey`.
+- `push` / `pop` helpers guard the back stack: a double tap on the gear opens Settings once, and a double tap on a back arrow pops one screen, never the whole stack.
 - `SettingsKey` shows no tab bar (`showsTabBar` stays Home / Energy / Security). Back pops to Home.
 - Settings → Rooms pushes `RoomOrderKey`. "Assign rooms" there pushes the existing `RoomsKey` (unchanged; its `onDone` pops back).
 - New module **`:feature:settings`** (plugins `oikos.android.library`, `oikos.android.compose`, `oikos.hilt`; depends on `:core:source`, `:core:data`, `:core:designsystem`). The app wires its routes in `OikosNavHost`.
@@ -60,7 +61,7 @@ The order already exists: `Area.order` in the retained `oikos/ui/_areas` documen
 - `areas` is `source.areas` (the computed list); `newOrder` is the room ids in their new order ("Unassigned" is never in it).
 - Returns the document to publish: every room in `newOrder` with `order = index`, keeping its name and icon. An implicit room (shown but not yet in the document) is added with its current displayed name.
 
-The declared document itself is not exposed by `EntitySource`, so every shown room becomes declared on the first reorder. This is what `OverrideEditor.addRoom` already does. A room created later (order null) sorts after the ordered ones until the next reorder. A declared room that no entity uses is not in `areas`, and so is dropped from the document on reorder. That is acceptable: it had no cards, and assigning a device to it later recreates it implicitly.
+The declared document itself is not exposed by `EntitySource`, so every shown room becomes declared on the first reorder. This is what `OverrideEditor.addRoom` already does. A room created later (order null) sorts after the ordered ones until the next reorder. A declared room that no entity uses is still in `areas` (`computeAreas` keeps every declared room), so it shows in the list and keeps its place. `RoomOrder.apply` also keeps a room that appeared during the drag (after the ordered ones) and skips an id that is gone.
 
 ### 4.2 Screen
 
@@ -84,7 +85,7 @@ The password and the gateway key are **never** shown, or copied into the UI stat
 
 ### 5.2 Controls
 
-- **Route** picker (Auto / Direct / Gateway), shown only when the profile has a gateway (same rule as `AppViewModel.route` today). The `RoutePicker` composable moves from `:feature:home` to `:core:designsystem`, so both screens share it.
+- **Route** picker (Auto / Direct / Gateway), shown only when the profile has a gateway (same rule as `AppViewModel.route` today). `RoutePicker` and the `OikosRadioRow` it uses move from `:feature:home` to `:core:designsystem/components`, with the route strings, so both screens share them.
 - **Set up again**: opens an `AlertDialog`: "Set up again? This forgets the connection on this phone. You'll need the setup QR code." with Cancel / "Set up again". Confirming calls the existing `AppViewModel.setUpAgain()`.
 
 ### 5.3 Link sheet (status pill)
@@ -93,9 +94,9 @@ It keeps the link status text and the route picker, and gains a "Connection sett
 
 ## 6. About
 
-- **Version**: "Oikos 0.<code>" (`BuildConfig.VERSION_NAME`), plus " · debug" on debug builds. The app passes these to the screen; `:feature:settings` has no `BuildConfig` of its own.
+- **Version**: "Oikos 0.<code>", plus " · debug" on debuggable builds, read from `PackageManager` (`appVersion(context)`), so `:feature:settings` needs no `BuildConfig`.
 - **Licence notice**: the NOTICE text (copyright Gekkotron, bundled fonts).
-- **Open-source licences**: a row that pushes `LicencesKey`, an Oikos-themed `LazyColumn` built from **AboutLibraries** (`com.mikepenz.aboutlibraries.plugin` in `:app`, `aboutlibraries-core` for reading the generated JSON; not its Compose UI module). Rows show library name, version, licence name; tapping one opens a sheet with the licence text. The two OFL fonts (Inter, Fraunces) are added as custom entries from `core/designsystem/licenses/`.
+- **Open-source licences**: a row that pushes `LicencesKey`, an Oikos-themed `LazyColumn` built from **AboutLibraries** (the `com.mikepenz.aboutlibraries.plugin.android` Gradle plugin in `:app`, offline mode). `aboutlibraries-core` is **not** used: 15.x needs compileSdk 37 and Java 21 bytecode, so `licenceRows(json)` parses the generated JSON with kotlinx.serialization; the app passes the JSON in (`LicencesRoute(loadJson)`). Licence texts the plugin does not bundle are committed under `app/config/licenses/` so every row has its text. Rows show library name, version, licence name; tapping one opens a sheet with the licence text. The two OFL fonts (Inter, Fraunces) are added as custom entries from `core/designsystem/licenses/`.
 
 ## 7. Architecture summary
 

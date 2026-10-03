@@ -5,23 +5,40 @@ import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.connection.EntitySourceSession
 import com.gekkotron.oikos.connection.routeChoice
 import com.gekkotron.oikos.connection.toPreference
+import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.data.ThemePreference
+import com.gekkotron.oikos.designsystem.ThemeChoice
 import com.gekkotron.oikos.transport.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/** The stored preference as the design system's choice; exhaustive, so a new value fails the build instead of crashing. */
+internal fun ThemePreference.toChoice(): ThemeChoice = when (this) {
+    ThemePreference.SYSTEM -> ThemeChoice.SYSTEM
+    ThemePreference.NIGHT_GLASS -> ThemeChoice.NIGHT_GLASS
+    ThemePreference.WARM_MINIMAL -> ThemeChoice.WARM_MINIMAL
+}
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     private val sources: EntitySourceSession,
+    private val preferences: AppPreferences,
 ) : ViewModel() {
     val profile: StateFlow<ProfileState> = profiles.state
+
+    /** The theme picked on this phone; null until the store has loaded (settings spec §3.2). */
+    val theme: StateFlow<ThemeChoice?> = preferences.theme
+        .map { it?.toChoice() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, preferences.theme.value?.toChoice())
 
     /** The link sheet's route row; null hides it (no gateway in the profile). */
     val route: StateFlow<Route?> =

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Réglages</string>
+    <string name="settings_back">Retour</string>
+    <string name="settings_theme">Thème</string>
+    <string name="settings_theme_system">Suivre le système</string>
+    <string name="settings_theme_night">Night Glass</string>
+    <string name="settings_theme_warm">Warm Minimal</string>
+    <string name="settings_rooms">Pièces</string>
+    <string name="settings_rooms_summary">Ordre des pièces, attribution des appareils</string>
+    <string name="settings_connection">Connexion</string>
+    <string name="settings_demo">Maison de démonstration</string>
+    <string name="settings_broker">Broker</string>
+    <string name="settings_tls">TLS</string>
+    <string name="settings_ws">WebSocket</string>
+    <string name="settings_user">Utilisateur</string>
+    <string name="settings_prefix">Préfixe de découverte</string>
+    <string name="settings_gateway">Passerelle</string>
+    <string name="settings_none">—</string>
+    <string name="settings_set_up_again">Reconfigurer la connexion</string>
+    <string name="settings_set_up_again_title">Reconfigurer ?</string>
+    <string name="settings_set_up_again_body">La connexion sera oubliée sur ce téléphone. Il faudra le QR code de configuration.</string>
+    <string name="settings_set_up_again_confirm">Reconfigurer</string>
+    <string name="settings_cancel">Annuler</string>
+    <string name="settings_about">À propos</string>
+    <string name="settings_version">Oikos %1$s</string>
+    <string name="settings_notice">Copyright 2026 Gekkotron. Oikos inclut les polices Inter et Fraunces, sous licence SIL Open Font License 1.1.</string>
+    <string name="settings_licences">Licences open source</string>
+    <string name="rooms_order_hint">Faites glisser pour changer l\'ordre des pièces sur l\'accueil.</string>
+    <string name="rooms_unassigned">Non assigné</string>
+    <string name="rooms_move_up">Monter</string>
+    <string name="rooms_move_down">Descendre</string>
+    <string name="rooms_save_failed">Impossible d\'enregistrer l\'ordre. Vérifiez la connexion.</string>
+    <string name="rooms_assign">Attribuer les pièces</string>
+    <string name="licences_title">Licences open source</string>
+    <string name="licences_close">Fermer</string>
+</resources>

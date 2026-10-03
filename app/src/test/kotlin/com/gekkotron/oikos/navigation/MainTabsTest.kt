@@ -20,6 +20,36 @@ class MainTabsTest {
     val compose = createComposeRule()
 
     @Test
+    fun `push does not stack the same key twice`() {
+        val stack = mutableListOf<NavKey>(HomeKey)
+        push(stack, SettingsKey)
+        push(stack, SettingsKey)
+        assertEquals(listOf<NavKey>(HomeKey, SettingsKey), stack)
+    }
+
+    @Test
+    fun `pop removes the key once however often it fires`() {
+        val stack = mutableListOf<NavKey>(HomeKey, SettingsKey)
+        pop(stack, SettingsKey)
+        pop(stack, SettingsKey)
+        assertEquals(listOf<NavKey>(HomeKey), stack)
+    }
+
+    @Test
+    fun `pop ignores a key that is not on top`() {
+        val stack = mutableListOf<NavKey>(HomeKey, SettingsKey, RoomOrderKey)
+        pop(stack, SettingsKey)
+        assertEquals(listOf<NavKey>(HomeKey, SettingsKey, RoomOrderKey), stack)
+    }
+
+    @Test
+    fun `pop never empties the stack`() {
+        val stack = mutableListOf<NavKey>(HomeKey)
+        pop(stack, HomeKey)
+        assertEquals(listOf<NavKey>(HomeKey), stack)
+    }
+
+    @Test
     fun `energy stacks on home and home pops it`() {
         val stack = mutableListOf<NavKey>(HomeKey)
         selectTab(stack, EnergyKey)

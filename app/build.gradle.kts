@@ -8,6 +8,7 @@ plugins {
     id("oikos.serialization")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+    id("com.mikepenz.aboutlibraries.plugin.android")
 }
 
 val versionPropsFile = file("version.properties")
@@ -76,6 +77,7 @@ dependencies {
     implementation(project(":feature:energy"))
     implementation(project(":feature:security"))
     implementation(project(":feature:onboarding"))
+    implementation(project(":feature:settings"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
@@ -98,4 +100,17 @@ googleServices {
 }
 tasks.configureEach {
     if (name == "processDebugGoogleServices") enabled = false
+}
+
+aboutLibraries {
+    // Reproducible builds: no network lookups; licence texts come from the plugin and app/config.
+    offlineMode = true
+    collect {
+        configPath = file("config")
+        // Debug-only tooling (ui-tooling, test manifest) is not shipped to testers.
+        filterVariants.addAll("release")
+    }
+    export {
+        excludeFields.addAll("developers", "funding")
+    }
 }

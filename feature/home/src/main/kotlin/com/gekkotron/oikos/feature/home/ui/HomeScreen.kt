@@ -78,8 +78,7 @@ import java.time.LocalTime
 
 @Composable
 fun HomeRoute(
-    onSetUpAgain: () -> Unit = {},
-    onAssignRooms: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -90,9 +89,8 @@ fun HomeRoute(
     HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send)
     HomeScreen(
         state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
-        onSetUpAgain = onSetUpAgain,
         onCustomize = viewModel::customize,
-        onAssignRooms = onAssignRooms,
+        onOpenSettings = onOpenSettings,
         route = route,
         onRouteChange = onRouteChange,
         windowInsets = windowInsets,
@@ -109,9 +107,8 @@ fun HomeScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     now: LocalTime = LocalTime.now(),
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
-    onSetUpAgain: () -> Unit = {},
     onCustomize: (String, List<Area>, UiOverride) -> Unit = { _, _, _ -> },
-    onAssignRooms: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     onSearch: (String) -> Unit = {},
@@ -146,7 +143,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings) }
                 item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
                     if (searching) SearchField(state.query, onSearch, onClose = closeSearch) else HomeChips(state, onSelect)
                 }
@@ -201,15 +198,14 @@ fun HomeScreen(
             state.link,
             route = route,
             onRouteChange = onRouteChange,
-            onSetUpAgain = { linkSheet = false; onSetUpAgain() },
-            onAssignRooms = { linkSheet = false; onAssignRooms() },
+            onOpenSettings = { linkSheet = false; onOpenSettings() },
             onDismiss = { linkSheet = false },
         )
     }
 }
 
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
@@ -245,6 +241,10 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Un
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onSearchClick) {
                 StaticIcon(OikosGlyph.SEARCH, modifier = Modifier.size(24.dp).semantics { contentDescription = searchLabel })
+            }
+            val settingsLabel = stringResource(R.string.settings_open)
+            IconButton(onClick = onSettingsClick) {
+                StaticIcon(OikosGlyph.GEAR, modifier = Modifier.size(24.dp).semantics { contentDescription = settingsLabel })
             }
         }
     }
