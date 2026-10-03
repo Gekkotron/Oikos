@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -56,10 +57,17 @@ import com.gekkotron.oikos.feature.security.presentation.SensorSection
 import com.gekkotron.oikos.feature.security.presentation.tap
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
+import kotlinx.coroutines.launch
 
+/**
+ * [customizeSheet] is Home's override sheet for an entity, passed in by the app so this module does not
+ * depend on Home; it reports a failed save through `onSaveFailed`, after the sheet has closed. Null: the
+ * sheets offer no "Customize…" link.
+ */
 @Composable
 fun SecurityRoute(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    customizeSheet: (@Composable (id: String, onDismiss: () -> Unit, onSaveFailed: () -> Unit) -> Unit)? = null,
     viewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -81,7 +89,16 @@ fun SecurityRoute(
             }
         }
     }
-    SecurityScreen(state, windowInsets, onSend = viewModel::send, onSetHidden = viewModel::setSecurityHidden, onSetAction = viewModel::setAction, snackbarHostState = snackbar)
+    val scope = rememberCoroutineScope()
+    val saveFailed = { scope.launch { snackbar.showSnackbar(resources.getString(R.string.security_save_failed)) }; Unit }
+    SecurityScreen(
+        state, windowInsets,
+        onSend = viewModel::send,
+        onSetHidden = viewModel::setSecurityHidden,
+        onSetAction = viewModel::setAction,
+        customizeSheet = customizeSheet?.let { sheet -> { id, onDismiss -> sheet(id, onDismiss, saveFailed) } },
+        snackbarHostState = snackbar,
+    )
 }
 
 @Composable
@@ -91,12 +108,14 @@ fun SecurityScreen(
     onSend: (String, Command) -> Unit = { _, _ -> },
     onSetHidden: (String, Boolean) -> Unit = { _, _ -> },
     onSetAction: (String, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    customizeSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var actionSheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
+    var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -204,7 +223,12 @@ fun SecurityScreen(
     // A sensor that left Security (hidden here or elsewhere) closes its sheet.
     val sheetRow = sheetId?.let { id -> state.sensors.firstOrNull { it.id == id } }
     if (sheetRow != null) {
-        SensorSheet(sheetRow, onHide = { onSetHidden(sheetRow.id, true); sheetId = null }, onDismiss = { sheetId = null })
+        SensorSheet(
+            sheetRow,
+            onHide = { onSetHidden(sheetRow.id, true); sheetId = null },
+            onDismiss = { sheetId = null },
+            onCustomize = customizeSheet?.let { { sheetId = null; customizeId = sheetRow.id } },
+        )
     }
     // An action that left Security closes its sheet.
     val actionRow = actionSheetId?.let { state.action(it) }
@@ -213,8 +237,10 @@ fun SecurityScreen(
             actionRow,
             onSet = { show, ask -> onSetAction(actionRow.id, show, ask); if (!show) actionSheetId = null },
             onDismiss = { actionSheetId = null },
+            onCustomize = customizeSheet?.let { { actionSheetId = null; customizeId = actionRow.id } },
         )
     }
+    customizeId?.let { id -> customizeSheet?.invoke(id) { customizeId = null } }
     // Asked at tap time; an action that left Security or went unavailable meanwhile closes the dialog unsent.
     val confirmRow = confirmId?.let { state.action(it) }?.takeIf { it.available }
     if (confirmId != null && confirmRow == null) LaunchedEffect(confirmId) { confirmId = null }

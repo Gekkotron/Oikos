@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,10 +25,10 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.security.R
 import com.gekkotron.oikos.feature.security.presentation.SensorRow
 
-/** Name, room and state, and the one setting Security owns: whether the sensor is listed here (security spec §4.4). */
+/** Name, room and state, the one setting Security owns (whether the sensor is listed here, security spec §4.4), and a way to Home's customise sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SensorSheet(row: SensorRow, onHide: () -> Unit, onDismiss: () -> Unit) {
+internal fun SensorSheet(row: SensorRow, onHide: () -> Unit, onDismiss: () -> Unit, onCustomize: (() -> Unit)? = null) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -49,6 +50,7 @@ internal fun SensorSheet(row: SensorRow, onHide: () -> Unit, onDismiss: () -> Un
                 Switch(checked = true, onCheckedChange = null)
             }
             Text(stringResource(R.string.security_hide_hint), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
+            if (onCustomize != null) CustomizeLink(onCustomize)
         }
     }
 }

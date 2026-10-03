@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.security.ui
 
+import androidx.compose.material3.Text
 import kotlin.test.assertTrue
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.model.Kind
@@ -60,6 +61,14 @@ class SecurityScreenTest {
                 onSetHidden = { id, h -> hidden += id to h },
                 onSetAction = { id, s, a -> actionSettings += Triple(id, s, a) },
             )
+        }
+    }
+
+    private val customized = mutableListOf<String>()
+
+    private fun showWithCustomize(state: SecurityUi) = compose.setContent {
+        OikosTheme(ThemeChoice.NIGHT_GLASS) {
+            SecurityScreen(state, customizeSheet = { id, _ -> customized += id; Text("Customizing $id") })
         }
     }
 
@@ -215,5 +224,31 @@ class SecurityScreenTest {
         compose.onNodeWithText("Turn on Siren?").assertDoesNotExist()
         // The view model refuses a stale send and shows "Waiting for the connection…" (SecurityViewModelTest).
         assertEquals(listOf<Pair<String, Command>>("siren" to Command.TurnOn()), sent)
+    }
+
+    @Test
+    fun `Customize from a sensor sheet opens the customise sheet over Security`() {
+        showWithCustomize(ui(listOf(sensor("mailbox", "door", "Mailbox")), listOf(on("mailbox", false))))
+        compose.onNodeWithText("Mailbox").performClick()
+        compose.onNodeWithText("Customize…").performClick()
+        compose.onNodeWithText("Customizing mailbox").assertExists()
+        compose.onNodeWithText("Show on Security").assertDoesNotExist()
+        assertEquals("mailbox", customized.last())
+    }
+
+    @Test
+    fun `Customize from an action sheet opens the customise sheet over Security`() {
+        showWithCustomize(ui(listOf(action("siren", name = "Siren")), listOf(on("siren", false))))
+        compose.onNodeWithTag("action-siren").performTouchInput { longClick() }
+        compose.onNodeWithText("Customize…").performClick()
+        compose.onNodeWithText("Customizing siren").assertExists()
+        compose.onNodeWithText("Ask before turning on").assertDoesNotExist()
+    }
+
+    @Test
+    fun `without a customise sheet the sheets offer no link`() {
+        show(ui(listOf(sensor("mailbox", "door", "Mailbox")), listOf(on("mailbox", false))))
+        compose.onNodeWithText("Mailbox").performClick()
+        compose.onNodeWithText("Customize…").assertDoesNotExist()
     }
 }

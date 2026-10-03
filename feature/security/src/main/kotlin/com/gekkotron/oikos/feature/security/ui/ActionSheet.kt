@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +28,7 @@ import com.gekkotron.oikos.feature.security.presentation.ActionRow
 /** Name, room and state, and the two settings an action has here (security actions spec §3.4). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ActionSheet(row: ActionRow, onSet: (show: Boolean, ask: Boolean) -> Unit, onDismiss: () -> Unit) {
+internal fun ActionSheet(row: ActionRow, onSet: (show: Boolean, ask: Boolean) -> Unit, onDismiss: () -> Unit, onCustomize: (() -> Unit)? = null) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -41,8 +42,15 @@ internal fun ActionSheet(row: ActionRow, onSet: (show: Boolean, ask: Boolean) ->
             SheetSwitch(stringResource(R.string.security_show), true) { onSet(false, row.ask) }
             SheetSwitch(stringResource(R.string.security_action_ask), row.ask) { onSet(true, it) }
             Text(stringResource(R.string.security_hide_hint), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
+            if (onCustomize != null) CustomizeLink(onCustomize)
         }
     }
+}
+
+/** Home's control-sheet link, the same words and widget. */
+@Composable
+internal fun CustomizeLink(onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.security_customize)) }
 }
 
 @Composable

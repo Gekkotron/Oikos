@@ -54,4 +54,5 @@
     <string name="security_action_ask">Demander avant d\'allumer</string>
     <string name="security_action_settings">Réglages</string>
     <string name="security_cancel">Annuler</string>
+    <string name="security_customize">Personnaliser…</string>
 </resources>
