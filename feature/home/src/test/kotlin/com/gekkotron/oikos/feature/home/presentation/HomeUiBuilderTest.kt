@@ -342,4 +342,20 @@ class HomeUiBuilderTest {
         val all = listOf(testEntity("ambiance", Kind.LIGHT, "Ambiance", capabilities = Capabilities(colorModes = setOf("color_temp")))).associateBy { it.uniqueId }
         assertFalse(HomeUiBuilder.build(all, emptyMap(), areas, RoomFilter.All, link, Locale.US).cards.single().hasSheet)
     }
+
+    @Test
+    fun `cardFor builds a card for a device Home does not show, and null for an unknown or attached id`() {
+        val entities = listOf(
+            testEntity("door", Kind.BINARY_SENSOR, "Front door", area = "garage", deviceClass = "door"),
+            testEntity("speed", Kind.NUMBER, "Speed", partOf = "lamp"),
+        ).associateBy { it.uniqueId }
+        val states = mapOf("door" to EntityState("door", StateValue.OnOff(true)))
+        assertNull(build(*entities.values.toTypedArray(), states = states).card("door"))
+        val card = HomeUiBuilder.cardFor(entities, states, areas, "door", Locale.US)
+        assertEquals("Front door", card?.name)
+        assertEquals("Garage", card?.areaName)
+        assertEquals(StateValue.OnOff(true), card?.state)
+        assertNull(HomeUiBuilder.cardFor(entities, states, areas, "nope", Locale.US))
+        assertNull(HomeUiBuilder.cardFor(entities, states, areas, "speed", Locale.US))
+    }
 }

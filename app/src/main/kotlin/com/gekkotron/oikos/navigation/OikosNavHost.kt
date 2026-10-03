@@ -26,6 +26,7 @@ import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.feature.energy.ui.EnergyRoute
 import com.gekkotron.oikos.feature.security.ui.SecurityRoute
 import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
+import com.gekkotron.oikos.feature.home.ui.CustomizeEntitySheet
 import com.gekkotron.oikos.feature.home.ui.HomeRoute
 import com.gekkotron.oikos.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.oikos.feature.settings.licences.LicencesRoute
@@ -141,7 +142,12 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<EnergyKey> {
                     EnergyRoute(onOpenHome = { selectTab(backStack, HomeKey) }, windowInsets = tabInsets)
                 }
-                entry<SecurityKey> { SecurityRoute(windowInsets = tabInsets) }
+                entry<SecurityKey> {
+                    SecurityRoute(
+                        windowInsets = tabInsets,
+                        customizeSheet = { id, onDismiss, onSaveFailed -> CustomizeEntitySheet(id, onDismiss, onSaveFailed) },
+                    )
+                }
             },
         )
     }

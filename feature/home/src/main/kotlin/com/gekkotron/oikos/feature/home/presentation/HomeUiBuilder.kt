@@ -38,10 +38,8 @@ object HomeUiBuilder {
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
         val areaNames = areas.associate { it.id to it.name }
         val standalone = entities.values.filter { it.partOf == null }
-        val children = entities.values.filter { it.partOf != null && it.kind in COMPANION_KINDS }.groupBy { it.partOf!! }
-        fun companionsOf(e: Entity): List<CardUi> = if (e.kind != Kind.LIGHT) emptyList() else children[e.uniqueId].orEmpty()
-            .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList()) }
-            .sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id }))
+        val children = childrenByParent(entities)
+        fun companionsOf(e: Entity): List<CardUi> = companions(e, children, states, areaNames, locale, labels)
         // What Energy or Security already shows stays off Home unless pinned; search still finds it.
         val visible = standalone.filter { Placement.onHome(it.kind, it.deviceClass, it.ui) }
         val hidden = standalone.filter { it.ui.hidden }
@@ -87,6 +85,34 @@ object HomeUiBuilder {
             query = query,
         )
     }
+
+    /** One card for [id] wherever it lives (Home, Energy or Security), so another tab can customise it; null if unknown or attached to another card. */
+    fun cardFor(
+        entities: Map<String, Entity>,
+        states: Map<String, EntityState>,
+        areas: List<Area>,
+        id: String,
+        locale: Locale,
+        labels: LabelText = LabelText { null },
+    ): CardUi? {
+        val e = entities[id]?.takeIf { it.partOf == null } ?: return null
+        val areaNames = areas.associate { it.id to it.name }
+        return card(e, displayName(e, labels), states[id], areaNames, locale, companions(e, childrenByParent(entities), states, areaNames, locale, labels))
+    }
+
+    private fun childrenByParent(entities: Map<String, Entity>): Map<String, List<Entity>> =
+        entities.values.filter { it.partOf != null && it.kind in COMPANION_KINDS }.groupBy { it.partOf!! }
+
+    private fun companions(
+        e: Entity,
+        children: Map<String, List<Entity>>,
+        states: Map<String, EntityState>,
+        areaNames: Map<String, String>,
+        locale: Locale,
+        labels: LabelText,
+    ): List<CardUi> = if (e.kind != Kind.LIGHT) emptyList() else children[e.uniqueId].orEmpty()
+        .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList()) }
+        .sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id }))
 
     private fun matches(entity: Entity, filter: RoomFilter) = when (filter) {
         RoomFilter.All -> true
