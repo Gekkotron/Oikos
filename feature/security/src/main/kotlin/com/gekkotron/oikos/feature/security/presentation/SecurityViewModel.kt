@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
+import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -49,19 +50,25 @@ class SecurityViewModel internal constructor(
 
     fun send(id: String, command: Command) {
         viewModelScope.launch {
-            // A cached panel has no live link yet: sending would be dropped, so say so (like Home).
-            if (state.value.panel(id)?.stale == true) return@launch _events.send(SecurityEvent.WaitingForConnection)
+            // A cached panel or action has no live link yet: sending would be dropped, so say so (like Home).
+            val ui = state.value
+            if (ui.panel(id)?.stale == true || ui.action(id)?.stale == true) return@launch _events.send(SecurityEvent.WaitingForConnection)
             sentHere += id
             val result = source.send(id, command)
             if (result is CommandResult.Rejected) _events.send(SecurityEvent.Rejected(result.reason))
         }
     }
 
-    fun setSecurityHidden(id: String, hidden: Boolean) {
+    fun setSecurityHidden(id: String, hidden: Boolean) = save(id) { it.copy(securityHidden = hidden) }
+
+    /** Security actions spec §3.4. */
+    fun setAction(id: String, show: Boolean, ask: Boolean) = save(id) { it.copy(securityAction = show, securityAsk = ask) }
+
+    private fun save(id: String, change: (UiOverride) -> UiOverride) {
         val entity = source.entities.value[id] ?: return
         viewModelScope.launch {
             try {
-                source.setOverride(id, entity.ui.copy(securityHidden = hidden))
+                source.setOverride(id, change(entity.ui))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

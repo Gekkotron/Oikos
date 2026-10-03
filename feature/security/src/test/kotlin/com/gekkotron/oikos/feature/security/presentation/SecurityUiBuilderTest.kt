@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.security.presentation
 
+import com.gekkotron.oikos.feature.security.action
 import com.gekkotron.oikos.feature.security.alarm
 import com.gekkotron.oikos.feature.security.on
 import com.gekkotron.oikos.feature.security.panel
@@ -134,5 +135,33 @@ class SecurityUiBuilderTest {
         // Within a section the tab order holds: the active CO alarm comes before the calm smoke one.
         assertEquals(listOf("co", "smoke"), ui.sections.first { it.section == SensorSection.FIRE }.rows.map { it.id })
         assertEquals(ui.sensors.toSet(), ui.sections.flatMap { it.rows }.toSet())
+    }
+
+    @Test
+    fun `opted-in switches and buttons are actions, sorted by area then name`() {
+        val ui = build(
+            listOf(
+                action("siren", name = "Siren", area = "living"),
+                action("flood", name = "Floodlight", area = "garage"),
+                action("panic", Kind.BUTTON, name = "Panic"),
+                action("coffee", name = "Coffee", ui = UiOverride()),
+                action("hidden_sw", name = "Hidden", ui = UiOverride(securityAction = true, hidden = true)),
+            ),
+            listOf(on("siren", true), on("flood", false, available = false)),
+        )
+        assertEquals(listOf("flood", "siren", "hidden_sw", "panic"), ui.actions.map { it.id })
+        val siren = ui.action("siren")!!
+        assertEquals(ActionRow("siren", "Siren", "Living room", Kind.SWITCH, on = true, available = true, stale = false, ask = true), siren)
+        assertNull(ui.action("panic")!!.on)
+        assertFalse(ui.action("flood")!!.available)
+        assertTrue(ui.sensors.isEmpty())
+    }
+
+    @Test
+    fun `ask follows the override and an action alone is not empty`() {
+        val ui = build(listOf(action("panic", Kind.BUTTON, ui = UiOverride(securityAction = true, securityAsk = false))))
+        assertFalse(ui.action("panic")!!.ask)
+        assertFalse(ui.isEmpty)
+        assertTrue(build(emptyList()).isEmpty)
     }
 }

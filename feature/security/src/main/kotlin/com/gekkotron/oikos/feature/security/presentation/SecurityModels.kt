@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.security.presentation
 import com.gekkotron.oikos.model.AlarmState
 import com.gekkotron.oikos.model.Capabilities
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.transport.LinkState
 
@@ -50,6 +51,27 @@ enum class SensorSection {
 /** [rows] keep the tab order (active first); a section is never empty. */
 data class SectionUi(val section: SensorSection, val rows: List<SensorRow>)
 
+/** A switch or button opted onto Security (security actions spec §3.1). [on] null: a button, or no state yet. [areaName] null: Unassigned. */
+data class ActionRow(
+    val id: String,
+    val name: String,
+    val areaName: String?,
+    val kind: Kind,
+    val on: Boolean?,
+    val available: Boolean,
+    val stale: Boolean,
+    val ask: Boolean,
+)
+
+/** What a tap on an action does, and whether it asks first (security actions spec §3.3). */
+data class ActionTap(val command: Command, val confirm: Boolean)
+
+fun ActionRow.tap(): ActionTap = when {
+    kind == Kind.SWITCH && on == true -> ActionTap(Command.TurnOff, confirm = false)
+    kind == Kind.SWITCH -> ActionTap(Command.TurnOn(), confirm = ask)
+    else -> ActionTap(Command.Press, confirm = ask)
+}
+
 /** [loading] is true only before the first build, so the empty state never flashes. */
 data class SecurityUi(
     val link: LinkState = LinkState.Connecting,
@@ -57,9 +79,15 @@ data class SecurityUi(
     val summary: List<GroupCount> = emptyList(),
     val sensors: List<SensorRow> = emptyList(),
     val sections: List<SectionUi> = emptyList(),
+    val actions: List<ActionRow> = emptyList(),
     val loading: Boolean = true,
 ) {
+    /** Nothing at all to show: one empty state instead of the sections. */
+    val isEmpty: Boolean get() = panels.isEmpty() && sensors.isEmpty() && actions.isEmpty()
+
     fun panel(id: String): PanelUi? = panels.firstOrNull { it.id == id }
+
+    fun action(id: String): ActionRow? = actions.firstOrNull { it.id == id }
 }
 
 sealed interface SecurityEvent {
