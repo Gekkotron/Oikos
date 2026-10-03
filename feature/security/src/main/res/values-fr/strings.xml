@@ -44,4 +44,14 @@
     <string name="security_section_openings">Ouvertures</string>
     <string name="security_section_motion">Mouvement</string>
     <string name="security_section_other">Autres</string>
+    <string name="security_section_actions">Actions</string>
+    <string name="security_action_on">Allumé</string>
+    <string name="security_action_off">Éteint</string>
+    <string name="security_action_confirm_on">Allumer %1$s ?</string>
+    <string name="security_action_confirm_press">Déclencher %1$s ?</string>
+    <string name="security_action_turn_on">Allumer</string>
+    <string name="security_action_press">Déclencher</string>
+    <string name="security_action_ask">Demander avant d\'allumer</string>
+    <string name="security_action_settings">Réglages</string>
+    <string name="security_cancel">Annuler</string>
 </resources>
