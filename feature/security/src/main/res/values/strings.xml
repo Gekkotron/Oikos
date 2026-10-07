@@ -5,8 +5,6 @@
     <string name="security_no_panel">No alarm panel. Publish an MQTT alarm_control_panel to see it here.</string>
     <string name="security_no_sensors">No security sensors.</string>
     <string name="security_empty">No alarm panel or security sensor yet. Publish an MQTT alarm_control_panel, or pair door, motion, smoke or leak sensors.</string>
-    <string name="security_alerts">Recent alerts</string>
-    <string name="security_alerts_empty">Alerts will appear here once push notifications are set up.</string>
     <string name="security_show">Show on Security</string>
     <string name="security_hide_hint">To bring it back later, use Customize on Home.</string>
     <string name="security_unassigned">Unassigned</string>

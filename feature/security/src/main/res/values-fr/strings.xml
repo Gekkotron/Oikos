@@ -5,8 +5,6 @@
     <string name="security_no_panel">Aucune centrale d\'alarme. Publiez un alarm_control_panel MQTT pour la voir ici.</string>
     <string name="security_no_sensors">Aucun capteur de sécurité.</string>
     <string name="security_empty">Ni centrale d\'alarme ni capteur de sécurité pour l\'instant. Publiez un alarm_control_panel MQTT, ou appairez des capteurs de porte, de mouvement, de fumée ou de fuite.</string>
-    <string name="security_alerts">Alertes récentes</string>
-    <string name="security_alerts_empty">Les alertes apparaîtront ici une fois les notifications push configurées.</string>
     <string name="security_show">Afficher dans Sécurité</string>
     <string name="security_hide_hint">Pour le réafficher, passez par Personnaliser sur l\'Accueil.</string>
     <string name="security_unassigned">Sans pièce</string>

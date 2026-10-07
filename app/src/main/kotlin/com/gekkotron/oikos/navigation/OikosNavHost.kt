@@ -26,6 +26,7 @@ import com.gekkotron.oikos.R
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.feature.alerts.ui.AlertDetailRoute
 import com.gekkotron.oikos.feature.alerts.ui.AlertsRoute
+import com.gekkotron.oikos.feature.alerts.ui.RecentAlertsRoute
 import com.gekkotron.oikos.feature.energy.ui.EnergyRoute
 import com.gekkotron.oikos.feature.security.ui.SecurityRoute
 import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
@@ -193,6 +194,9 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                     SecurityRoute(
                         windowInsets = tabInsets,
                         customizeSheet = { id, onDismiss, onSaveFailed -> CustomizeEntitySheet(id, onDismiss, onSaveFailed) },
+                        alertsSection = { snackbar ->
+                            RecentAlertsRoute(snackbar, onOpenAll = { push(backStack, AlertsKey) }, deviceSheet = deviceSheet)
+                        },
                     )
                 }
             },

@@ -68,6 +68,7 @@ import kotlinx.coroutines.launch
 fun SecurityRoute(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     customizeSheet: (@Composable (id: String, onDismiss: () -> Unit, onSaveFailed: () -> Unit) -> Unit)? = null,
+    alertsSection: (@Composable (snackbar: SnackbarHostState) -> Unit)? = null,
     viewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -97,6 +98,7 @@ fun SecurityRoute(
         onSetHidden = viewModel::setSecurityHidden,
         onSetAction = viewModel::setAction,
         customizeSheet = customizeSheet?.let { sheet -> { id, onDismiss -> sheet(id, onDismiss, saveFailed) } },
+        alertsSection = alertsSection?.let { section -> { section(snackbar) } },
         snackbarHostState = snackbar,
     )
 }
@@ -109,6 +111,7 @@ fun SecurityScreen(
     onSetHidden: (String, Boolean) -> Unit = { _, _ -> },
     onSetAction: (String, Boolean, Boolean) -> Unit = { _, _, _ -> },
     customizeSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
+    alertsSection: (@Composable () -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val layoutDirection = LocalLayoutDirection.current
@@ -210,14 +213,10 @@ fun SecurityScreen(
                             }
                         }
                     }
-                    item(key = "alerts") {
-                        Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(stringResource(R.string.security_alerts), style = OikosTheme.type.label)
-                            Text(stringResource(R.string.security_alerts_empty), style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
-                        }
-                    }
                 }
             }
+            // Even a house with no panel or sensor gets its alerts (a camera-only house, say).
+            if (!state.loading) alertsSection?.let { section -> item(key = "alerts") { section() } }
         }
     }
     // A sensor that left Security (hidden here or elsewhere) closes its sheet.
