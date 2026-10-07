@@ -1,5 +1,8 @@
 package com.gekkotron.oikos.alerts.media
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -20,11 +23,13 @@ class VideoCacheTest {
     private class FakeSource : MediaSource {
         var calls = 0
         var limit: Long? = null
+        var delayMs = 0L
         var answer: (String) -> Result<Media> = { Result.success(Media(ByteArray(4) { 7 }, "video/mp4")) }
         override suspend fun bytes(url: String, maxBytes: Long, onProgress: (Long, Long?) -> Unit): Result<Media> {
             calls++
             limit = maxBytes
             onProgress(2, 4)
+            if (delayMs > 0) delay(delayMs)
             return answer(url)
         }
     }
@@ -113,5 +118,28 @@ class VideoCacheTest {
         cache.ready("a", "http://h/a.mp4")
         cache.clear()
         assertEquals(0, dir.listFiles()!!.size)
+    }
+
+    @Test
+    fun `a store failure is reported as Failed and does not throw`(): Unit = runBlocking {
+        val dir = tmp.newFolder("video6")
+        dir.setWritable(false)
+        try {
+            val last = cache(dir = dir).file("a1", "http://h/c.mp4").toList().last()
+            assertIs<VideoState.Failed>(last)
+            assertIs<MediaFailure.Unavailable>(last.failure)
+        } finally {
+            dir.setWritable(true)
+        }
+    }
+
+    @Test
+    fun `two concurrent collectors of the same clip end with one complete file`(): Unit = runBlocking {
+        source.delayMs = 100
+        val cache = cache()
+        val files = (1..2).map { async { cache.ready("a1", "http://h/c.mp4") } }.awaitAll()
+        assertEquals(files[0], files[1])
+        assertEquals(listOf<Byte>(7, 7, 7, 7), files[0].readBytes().toList())
+        assertEquals(1, source.calls)
     }
 }

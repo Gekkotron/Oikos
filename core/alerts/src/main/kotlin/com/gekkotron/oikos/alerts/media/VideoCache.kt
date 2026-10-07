@@ -1,13 +1,17 @@
 package com.gekkotron.oikos.alerts.media
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 sealed interface VideoState {
     data class Downloading(val read: Long, val total: Long?) : VideoState {
@@ -28,6 +32,8 @@ class VideoCache(
     private val clipLimit: Long = 25L * 1024 * 1024,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
+    private val locks = ConcurrentHashMap<String, Mutex>()
+
     /** Emits `Downloading` updates, then `Ready` (also at once on a hit) or `Failed`. */
     fun file(alertId: String, url: String): Flow<VideoState> = channelFlow {
         val target = withContext(io) { fileFor(alertId, url) }
@@ -35,15 +41,26 @@ class VideoCache(
             send(VideoState.Ready(target))
             return@channelFlow
         }
-        send(VideoState.Downloading(0, null))
-        val result = source.bytes(url, clipLimit) { read, total -> trySend(VideoState.Downloading(read, total)) }
-        result.fold(
-            onSuccess = { media ->
-                withContext(io) { store(target, media.bytes) }
+        // One download per clip: a second collector waits, then finds the finished file.
+        locks.getOrPut(target.name) { Mutex() }.withLock {
+            if (withContext(io) { touch(target) }) {
                 send(VideoState.Ready(target))
-            },
-            onFailure = { send(VideoState.Failed((it as? MediaException)?.failure ?: MediaFailure.Unavailable(it.message ?: "error"))) },
-        )
+                return@channelFlow
+            }
+            send(VideoState.Downloading(0, null))
+            val result = source.bytes(url, clipLimit) { read, total -> trySend(VideoState.Downloading(read, total)) }
+            result.fold(
+                onSuccess = { media ->
+                    val stored = runCatching { withContext(io) { store(target, media.bytes) } }
+                    stored.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+                    send(
+                        if (stored.isSuccess) VideoState.Ready(target)
+                        else VideoState.Failed(MediaFailure.Unavailable(stored.exceptionOrNull()?.message ?: "could not store the clip")),
+                    )
+                },
+                onFailure = { send(VideoState.Failed((it as? MediaException)?.failure ?: MediaFailure.Unavailable(it.message ?: "error"))) },
+            )
+        }
     }
 
     /** Deletes every clip ("Set up again"). */
