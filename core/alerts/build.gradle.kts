@@ -1,6 +1,7 @@
 plugins {
     id("oikos.android.library")
     id("oikos.serialization")
+    id("oikos.room")
 }
 
 android {
