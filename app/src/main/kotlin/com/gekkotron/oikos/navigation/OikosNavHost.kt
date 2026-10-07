@@ -82,6 +82,10 @@ internal fun alertLinkAction(root: NavKey, pending: String?): AlertLinkAction = 
     else -> AlertLinkAction.WAIT
 }
 
+/** The main tabs share the bar's bottom inset; every other screen has no bar, so it keeps the full insets. */
+internal fun screenInsets(top: NavKey?, tabInsets: WindowInsets, full: WindowInsets): WindowInsets =
+    if (showsTabBar(top)) tabInsets else full
+
 /** Pushes [key] unless it is already on top (a double tap on the gear opens Settings once). */
 internal fun push(stack: MutableList<NavKey>, key: NavKey) {
     if (stack.lastOrNull() != key) stack.add(key)
@@ -183,7 +187,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<EnergyKey> {
                     EnergyRoute(onOpenHome = { selectTab(backStack, HomeKey) }, windowInsets = tabInsets)
                 }
-                entry<AlertsKey> { AlertsRoute(onBack = { pop(backStack, AlertsKey) }, windowInsets = tabInsets, deviceSheet = deviceSheet) }
+                entry<AlertsKey> { AlertsRoute(onBack = { pop(backStack, AlertsKey) }, windowInsets = screenInsets(AlertsKey, tabInsets, ScaffoldDefaults.contentWindowInsets), deviceSheet = deviceSheet) }
                 entry<AlertDetailKey> { key -> AlertDetailRoute(key.id, onDismiss = { pop(backStack, key) }, deviceSheet = deviceSheet) }
                 entry<SecurityKey> {
                     SecurityRoute(

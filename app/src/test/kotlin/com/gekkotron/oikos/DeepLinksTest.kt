@@ -1,5 +1,6 @@
 package com.gekkotron.oikos
 
+import android.content.Intent
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Test
@@ -27,5 +28,18 @@ class DeepLinksTest {
         assertNull(DeepLinks.alertId(Uri.parse("oikos://alert")))
         assertNull(DeepLinks.alertId(Uri.parse("oikos://alert/")))
         assertNull(DeepLinks.alertId(null))
+    }
+
+    private fun view(flags: Int = 0) = Intent(Intent.ACTION_VIEW, Uri.parse("oikos://alert/a1")).addFlags(flags)
+
+    @Test
+    fun `a tap on a notification opens its alert`() {
+        assertEquals("a1", DeepLinks.alertToOpen(view()))
+    }
+
+    @Test
+    fun `a relaunch from Recents does not replay the old notification link`() {
+        assertNull(DeepLinks.alertToOpen(view(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
+        assertNull(DeepLinks.alertToOpen(null))
     }
 }
