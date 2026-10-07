@@ -40,4 +40,19 @@ class DayGroupsTest {
     fun `no alerts, no sections`() {
         assertEquals(emptyList(), groupByDay(emptyList(), ZoneOffset.UTC, today))
     }
+
+    @Test
+    fun `days stay correct across a DST change in a non UTC zone`() {
+        val paris = java.time.ZoneId.of("Europe/Paris")
+        // Paris leaves DST on 2026-10-25 (25 hour day); 23:30 local on the 24th is still "yesterday".
+        val dayToday = LocalDate.of(2026, 10, 25)
+        val a = DemoAlerts.all(now)
+        val justAfterMidnight = a[0].copy(id = "x", sentAt = Instant.parse("2026-10-24T22:00:00Z")) // 00:00 on the 25th (CEST)
+        val beforeMidnight = a[1].copy(id = "y", sentAt = Instant.parse("2026-10-24T21:59:00Z")) // 23:59 on the 24th
+        val lateOnThe25th = a[2].copy(id = "z", sentAt = Instant.parse("2026-10-25T22:30:00Z")) // 23:30 on the 25th (CET)
+        val sections = groupByDay(listOf(lateOnThe25th, justAfterMidnight, beforeMidnight), paris, dayToday)
+        assertEquals(listOf(DayLabel.Today, DayLabel.Yesterday), sections.map { it.label })
+        assertEquals(listOf("z", "x"), sections[0].alerts.map { it.id })
+        assertEquals(listOf("y"), sections[1].alerts.map { it.id })
+    }
 }

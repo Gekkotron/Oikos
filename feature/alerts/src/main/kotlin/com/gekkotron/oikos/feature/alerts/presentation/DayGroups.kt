@@ -17,7 +17,7 @@ data class DaySection(val label: DayLabel, val alerts: List<Alert>)
 /** One section per local day of `sentAt`, in order of first appearance, so a newest-first list stays newest first. */
 fun groupByDay(alerts: List<Alert>, zone: ZoneId, today: LocalDate): List<DaySection> {
     val byDate = LinkedHashMap<LocalDate, MutableList<Alert>>()
-    alerts.forEach { byDate.getOrPut(LocalDate.ofInstant(it.sentAt, zone)) { mutableListOf() } += it }
+    alerts.forEach { byDate.getOrPut(it.sentAt.atZone(zone).toLocalDate()) { mutableListOf() } += it }
     return byDate.map { (date, list) ->
         val label = when (date) {
             today -> DayLabel.Today

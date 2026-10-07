@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -40,7 +39,7 @@ class AlertsViewModel internal constructor(
     val state: StateFlow<AlertsUi> = filter
         .flatMapLatest { channel ->
             repository.all(channel).map { alerts ->
-                AlertsUi(channel, groupByDay(alerts, zone, LocalDate.ofInstant(clock(), zone)), loading = false)
+                AlertsUi(channel, groupByDay(alerts, zone, clock().atZone(zone).toLocalDate()), loading = false)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AlertsUi())

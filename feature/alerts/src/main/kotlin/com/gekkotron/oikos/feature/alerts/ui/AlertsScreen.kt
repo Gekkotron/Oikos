@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -48,7 +49,6 @@ import com.gekkotron.oikos.push.AlertChannels
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Locale
 
 @Composable
 fun AlertsRoute(
@@ -169,7 +169,7 @@ private fun AlertsTopBar(onBack: () -> Unit, canClear: Boolean, onClearAll: () -
 private fun dayTitle(label: DayLabel): String = when (label) {
     DayLabel.Today -> stringResource(R.string.alerts_today)
     DayLabel.Yesterday -> stringResource(R.string.alerts_yesterday)
-    is DayLabel.On -> DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).format(label.date)
+    is DayLabel.On -> DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(LocalConfiguration.current.locales[0]).format(label.date)
 }
 
 private const val ALL_KEY = "all"

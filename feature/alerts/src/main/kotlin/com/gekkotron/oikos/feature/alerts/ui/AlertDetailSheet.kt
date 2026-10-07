@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -64,7 +65,6 @@ import java.io.File
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Locale
 
 @StringRes
 internal fun mediaErrorRes(failure: MediaFailure): Int = when (failure) {
@@ -180,7 +180,7 @@ private fun Found(
         if (alert.resolved) InfoChip(stringResource(R.string.alerts_resolved))
     }
     Text(
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(Locale.getDefault()).withZone(zone).format(alert.sentAt),
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(LocalConfiguration.current.locales[0]).withZone(zone).format(alert.sentAt),
         style = OikosTheme.type.label,
         color = OikosTheme.colors.contentMuted,
     )
