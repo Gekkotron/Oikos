@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.push
 
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -188,5 +189,18 @@ class PushRegistrarTest {
         assertTrue(publisher.sent.isEmpty())
         assertEquals(1, tokens.deleted)
         assertEquals(listOf("cancel"), events)
+    }
+
+    @Test
+    fun `unregister gives up on a token delete that never returns and still forgets the registration`(): Unit = runTest {
+        val store = newStore()
+        store.save("token-1", "oikos-push/tokens/install-1", now)
+        val stuck = object : FcmTokens {
+            override suspend fun token() = "token-1"
+            override suspend fun delete() = awaitCancellation()
+        }
+        PushRegistrar(targets, stuck, publisher, store, queue, { PushRegistrar.DeviceInfo("p", "en") }, { now }).unregister()
+        assertEquals(5_000, testScheduler.currentTime)
+        assertNull(store.last())
     }
 }

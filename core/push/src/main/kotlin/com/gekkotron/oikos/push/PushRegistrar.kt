@@ -118,7 +118,7 @@ class PushRegistrar(
 
     /**
      * "Set up again", before the profile is wiped. Order matters: pending registration work is cancelled first so
-     * it cannot publish the token again after the empty payload; the publish is best effort and capped.
+     * it cannot publish the token again after the empty payload; the publish and the token delete are best effort and each capped.
      */
     suspend fun unregister() {
         queue.cancel()
@@ -132,7 +132,7 @@ class PushRegistrar(
             }
         }
         try {
-            tokens.delete()
+            withTimeoutOrNull(unregisterBudget) { tokens.delete() } // offline, deleteToken can hang: never strand the caller
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
