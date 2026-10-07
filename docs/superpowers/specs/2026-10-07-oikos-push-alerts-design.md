@@ -122,8 +122,11 @@ FCM data values are strings: `v="1"`, `id`, `channel`, `severity`, `title`, `bod
    - Android priority is `high` when severity is `warning` or `critical`, or the channel is `alarm`, `security` or `camera`; `normal` otherwise.
    - TTL is `ttl` (default 43200 s). A cancel is sent with a TTL of 300 s.
 5. **Failures:**
-   - `UNREGISTERED` / `INVALID_ARGUMENT`: publish an empty retained payload to that install's token topic, which clears it on the broker and in the map.
+   - `UNREGISTERED`, and `INVALID_ARGUMENT` only when it concerns the registration token: publish an empty retained payload to that install's token topic, which clears it on the broker and in the map.
+   - `INVALID_ARGUMENT` about the message itself (too big, bad TTL): log it and drop the alert. No token is cleared and nothing is retried.
    - Any other failure: queue that message for those tokens; it is retried every `RETRY_INTERVAL`, up to `MAX_RETRIES` attempts or TTL expiry.
+
+Alerts that arrive before the token map is synced after a (re)connect (the `tokens/+` subscription acknowledged plus a short settle delay) are queued, with their recipients resolved at send time, and sent once synced. The retry worker does not touch the queue until then.
 
 ### 3.4 Replies
 
