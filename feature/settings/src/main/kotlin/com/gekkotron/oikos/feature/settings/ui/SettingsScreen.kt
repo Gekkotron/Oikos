@@ -39,12 +39,14 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.OikosRadioRow
 import com.gekkotron.oikos.designsystem.components.RoutePicker
+import com.gekkotron.oikos.designsystem.permissions.openNotificationSettings
 import com.gekkotron.oikos.feature.settings.R
 import com.gekkotron.oikos.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.oikos.feature.settings.presentation.SettingsUi
@@ -65,7 +67,15 @@ fun SettingsRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val version = remember { appVersion(context) }
-    SettingsScreen(state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack)
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshPush()
+        onPauseOrDispose {}
+    }
+    SettingsScreen(
+        state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack,
+        onRegisterAgain = viewModel::registerAgain,
+        onOpenChannels = { openNotificationSettings(context) },
+    )
 }
 
 @Composable
@@ -79,8 +89,11 @@ fun SettingsScreen(
     onOpenRooms: () -> Unit,
     onOpenLicences: () -> Unit,
     onBack: () -> Unit,
+    onRegisterAgain: () -> Unit = {},
+    onOpenChannels: () -> Unit = {},
 ) {
     var confirm by rememberSaveable { mutableStateOf(false) }
+    var pushSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -98,6 +111,7 @@ fun SettingsScreen(
                 }
             }
             NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)
+            NavRow(stringResource(R.string.settings_push), pushStatusText(state.push), onClick = { pushSheet = true })
             Section(stringResource(R.string.settings_connection)) {
                 ConnectionRows(state.connection)
                 if (route != null) RoutePicker(route, onRouteChange, Modifier.padding(top = 8.dp))
@@ -120,6 +134,9 @@ fun SettingsScreen(
             confirmButton = { TextButton(onClick = { confirm = false; onSetUpAgain() }) { Text(stringResource(R.string.settings_set_up_again_confirm)) } },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.settings_cancel)) } },
         )
+    }
+    if (pushSheet) {
+        PushSheet(state.push, onRegisterAgain, onOpenChannels, onDismiss = { pushSheet = false })
     }
 }
 

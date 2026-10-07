@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ThemePreference
+import com.gekkotron.oikos.push.PushStatus
+import com.gekkotron.oikos.push.PushStatusSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,23 +15,34 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class SettingsUi(val theme: ThemePreference = ThemePreference.SYSTEM, val connection: ConnectionSummary? = null)
+data class SettingsUi(
+    val theme: ThemePreference = ThemePreference.SYSTEM,
+    val connection: ConnectionSummary? = null,
+    val push: PushStatus = PushStatus.Waiting,
+)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     profiles: ProfileRepository,
     private val preferences: AppPreferences,
+    private val push: PushStatusSource,
 ) : ViewModel() {
-    val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state) { theme, profile ->
-        SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile))
+    val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state, push.status) { theme, profile, status ->
+        SettingsUi(theme ?: ThemePreference.SYSTEM, ConnectionSummary.from(profile), status)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         // Seeded from the live values so the radio does not show System for a frame.
-        SettingsUi(preferences.theme.value ?: ThemePreference.SYSTEM, ConnectionSummary.from(profiles.state.value)),
+        SettingsUi(preferences.theme.value ?: ThemePreference.SYSTEM, ConnectionSummary.from(profiles.state.value), push.status.value),
     )
 
     fun setTheme(theme: ThemePreference) {
         viewModelScope.launch { preferences.setTheme(theme) }
     }
+
+    /** "Register again" in the push sheet (push alerts spec §7.4). */
+    fun registerAgain() = push.registerAgain()
+
+    /** The notification permission may have changed while the app was away. */
+    fun refreshPush() = push.refresh()
 }
