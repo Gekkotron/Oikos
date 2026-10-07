@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -26,6 +27,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import com.gekkotron.oikos.push.RegistrationQueue
+import kotlin.test.assertEquals
 
 /** The real graph: ProfileRepository → ActiveTransport → DemoBroker → MqttDiscoverySource → Home. */
 @OptIn(ExperimentalTestApi::class)
@@ -40,6 +43,21 @@ class MainActivityTest {
     val compose = createAndroidComposeRule<MainActivity>()
 
     private val brokers = mutableListOf<EmbeddedBroker>()
+
+    @javax.inject.Inject
+    lateinit var registration: RegistrationQueue
+
+    @javax.inject.Inject
+    lateinit var transport: com.gekkotron.oikos.transport.ActiveTransport
+
+    /** HiltTestApplication skips OikosApplication's process-lifecycle observer, so ON_START is simulated here. */
+    @org.junit.Before
+    fun inject() {
+        hilt.inject()
+        transport.setForeground(true)
+    }
+
+    private val enqueued get() = (registration as TestWorkModule.RecordingRegistrationQueue).enqueued
 
     @After
     fun tearDown() = brokers.forEach { it.close() }
@@ -87,6 +105,20 @@ class MainActivityTest {
         compose.onNodeWithText("Demo").assertExists()
     }
 
+    @Test
+    fun `the demo shows its alerts on Security and Set up again forgets them`() {
+        openDemo()
+        compose.onNodeWithText("Security").performClick()
+        // Room delivers the seeded alerts in real time, after the tab is on screen.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            runCatching { compose.onNode(hasScrollAction()).performScrollToNode(hasText("Front door opened")) }.isSuccess
+        }
+        compose.onNodeWithText("Front door opened").assertExists()
+        compose.onNodeWithText("See all").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Person in the garden"), timeoutMillis = 10_000)
+        compose.onNodeWithContentDescription("Back").performClick()
+    }
+
     private val kettle = """{"name":"Kettle","unique_id":"kettle","command_topic":"k/set","state_topic":"k/state",
         "device":{"identifiers":["kettle"],"name":"Kitchen kettle"}}"""
 
@@ -106,10 +138,17 @@ class MainActivityTest {
     }
 
     /** The Rooms list is lazy: its last item may not be composed until the list scrolls to it. */
-    private fun finishRooms(label: String) {
+    private fun answerRooms(label: String) {
         compose.waitUntilAtLeastOneExists(hasText("Which room is each device in?"), timeoutMillis = 10_000)
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(label))
         compose.onNodeWithText(label).performClick()
+    }
+
+    /** First-run Rooms, which ends on the notification step. */
+    private fun finishRooms(label: String, answer: String = "Not now") {
+        answerRooms(label)
+        compose.waitUntilAtLeastOneExists(hasText("Stay informed"), timeoutMillis = 10_000)
+        compose.onNodeWithText(answer).performClick()
     }
 
     @Test
@@ -139,13 +178,34 @@ class MainActivityTest {
     }
 
     @Test
+    fun `after rooms the notification step is offered once and Not now reaches Home`() {
+        connectToBroker(kettle)
+        finishRooms("Skip") // waits for "Stay informed" and taps "Not now"
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
+        compose.onAllNodes(hasText("Stay informed")).assertCountEquals(0)
+        compose.waitUntil(10_000) { enqueued == 1 }
+        assertEquals(1, enqueued)
+    }
+
+    @Test
+    fun `the primary button of the notification step also reaches Home and registers once`() {
+        org.robolectric.Shadows.shadowOf(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>())
+            .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        connectToBroker(kettle)
+        finishRooms("Skip", answer = "Turn on notifications")
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
+        compose.waitUntil(10_000) { enqueued >= 1 }
+        assertEquals(1, enqueued)
+    }
+
+    @Test
     fun `the demo goes straight to Home, and Assign rooms opens the step and returns`() {
         openDemo()
         compose.onNodeWithText("Which room is each device in?").assertDoesNotExist()
         openSettings()
         compose.onNodeWithText("Rooms").performScrollTo().performClick()
         compose.onNodeWithText("Assign rooms").performClick()
-        finishRooms("Skip")
+        answerRooms("Skip") // from Settings: no notification step
         compose.waitUntilAtLeastOneExists(hasText("Assign rooms"), timeoutMillis = 10_000) // back on the Rooms screen
     }
 

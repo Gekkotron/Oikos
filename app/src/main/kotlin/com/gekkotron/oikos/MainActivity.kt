@@ -1,11 +1,13 @@
 package com.gekkotron.oikos
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -19,10 +21,17 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /** The same instance `hiltViewModel()` hands to the composition below: both use this activity's store. */
+    private val appViewModel: AppViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) TesterUpdates.check(this)
+        if (savedInstanceState == null) {
+            TesterUpdates.check(this)
+            // A rotation re-delivers the same intent: only a fresh launch is a tap on a notification.
+            handleIntent(intent)
+        }
         setContent {
             val app: AppViewModel = hiltViewModel()
             val theme by app.theme.collectAsStateWithLifecycle()
@@ -44,6 +53,17 @@ class MainActivity : ComponentActivity() {
                 OikosBackground { if (theme != null) OikosNavHost(app) }
             }
         }
+    }
+
+    /** `singleTop`: a tap on a notification while the app is open arrives here. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        DeepLinks.alertToOpen(intent)?.let(appViewModel::openAlert)
     }
 
     private companion object {

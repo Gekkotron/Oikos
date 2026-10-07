@@ -1,4 +1,7 @@
 [versions]
+androidxCore = "1.18.0"
+coil = "3.5.0"
+media3 = "1.11.1"
 kotlin = "2.4.20"
 coroutines = "1.11.0"
 serialization = "1.11.0"
@@ -6,6 +9,7 @@ kover = "0.9.9"
 junit = "6.1.3"
 agp = "9.4.1"
 ksp = "2.3.12"
+room = "2.8.5"
 hilt = "2.60.1"
 androidxHilt = "1.3.0"
 reorderable = "3.1.0"
@@ -24,15 +28,22 @@ camerax = "1.6.2"
 mlkitBarcode = "17.3.0"
 googleServices = "4.5.0"
 firebaseBom = "34.19.0"
+work = "2.12.0"
 firebaseCrashlyticsPlugin = "3.0.8"
 aboutlibraries = "15.2.0"
 # Not in the Firebase BoM.
 firebaseAppDistribution = "16.0.0-beta20"
-athenaGatewayClient = "v1.2"
+athenaGatewayClient = "v1.3"
 # Test-only; matches the OkHttp 4.12 that athena-gateway-client brings.
 okhttpMockwebserver = "4.12.0"
 
 [libraries]
+androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+coil-core = { module = "io.coil-kt.coil3:coil-core", version.ref = "coil" }
+coil = { module = "io.coil-kt.coil3:coil", version.ref = "coil" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-serialization-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 kover-gradle-plugin = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version.ref = "kover" }
@@ -50,6 +61,8 @@ google-services-gradle-plugin = { module = "com.google.gms:google-services", ver
 firebase-crashlytics-gradle-plugin = { module = "com.google.firebase:firebase-crashlytics-gradle", version.ref = "firebaseCrashlyticsPlugin" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 aboutlibraries-gradle-plugin = { module = "com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin", version.ref = "aboutlibraries" }
+# Resolved by the Firebase BoM.
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-appdistribution = { module = "com.google.firebase:firebase-appdistribution", version.ref = "firebaseAppDistribution" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -70,11 +83,17 @@ reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reo
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
 hivemq-mqtt-client = { module = "com.hivemq:hivemq-mqtt-client", version.ref = "hivemq" }
 moquette-broker = { module = "io.moquette:moquette-broker", version.ref = "moquette" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }

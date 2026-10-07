@@ -25,8 +25,8 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * The one [MqttTransport] the rest of the app sees (spec §3.3). It runs the transport for the current
- * [TransportSpec], replays subscriptions onto each new one, and pauses [backgroundGrace] after the app
- * leaves the foreground. A spec change is break-before-make; moving between the routes of one profile is
+ * [TransportSpec], replays subscriptions onto each new one, and stays paused until the app is first foregrounded, then
+ * pauses [backgroundGrace] after it leaves the foreground. A spec change is break-before-make; moving between the routes of one profile is
  * [TransportSelector]'s job, make-before-break.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -40,7 +40,9 @@ class ActiveTransport(
     override val link: StateFlow<LinkState> = _link.asStateFlow()
 
     private val out = MutableSharedFlow<MqttMessage>(extraBufferCapacity = 4096)
-    private val foreground = MutableStateFlow(true)
+    // Starts paused: a process woken by FCM or WorkManager has no activity, so no ON_START ever arrives.
+    private val foreground = MutableStateFlow(false)
+    @Volatile private var wasForeground = false
     private val mutex = Mutex()
     private var subscriptions: Set<String> = emptySet()
     private var current: Running? = null
@@ -55,7 +57,7 @@ class ActiveTransport(
 
     init {
         val active = foreground.transformLatest { isForeground ->
-            if (!isForeground) delay(backgroundGrace)
+            if (!isForeground && wasForeground) delay(backgroundGrace)
             emit(isForeground)
         }
         scope.launch {
@@ -73,6 +75,7 @@ class ActiveTransport(
 
     /** Driven by the process lifecycle. Going to the background pauses after the grace period. */
     fun setForeground(value: Boolean) {
+        if (value) wasForeground = true
         foreground.value = value
     }
 

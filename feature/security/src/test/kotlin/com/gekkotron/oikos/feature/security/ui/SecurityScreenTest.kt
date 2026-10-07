@@ -92,7 +92,6 @@ class SecurityScreenTest {
         compose.onNodeWithText("1 open · 1 motion").assertExists()
         compose.onNodeWithText("Garage door").assertExists()
         compose.onNodeWithText("Closed").performScrollTo().assertExists()
-        compose.onNodeWithText("Recent alerts").performScrollTo().assertExists()
     }
 
     @Test
@@ -250,5 +249,29 @@ class SecurityScreenTest {
         show(ui(listOf(sensor("mailbox", "door", "Mailbox")), listOf(on("mailbox", false))))
         compose.onNodeWithText("Mailbox").performClick()
         compose.onNodeWithText("Customize…").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the alerts slot shows under the sensors`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                SecurityScreen(ui(listOf(sensor("door", "door", "Entrance")), listOf(on("door", false))), alertsSection = { Text("alerts slot") })
+            }
+        }
+        compose.onNodeWithText("alerts slot").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun `the alerts slot shows even when the house has no panel or sensor`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) { SecurityScreen(ui(emptyList()), alertsSection = { Text("alerts slot") }) }
+        }
+        compose.onNodeWithText("alerts slot").assertExists()
+    }
+
+    @Test
+    fun `without a slot there is no alerts section`() {
+        show(ui(listOf(sensor("door", "door", "Entrance")), listOf(on("door", false))))
+        compose.onNodeWithText("Recent alerts").assertDoesNotExist()
     }
 }

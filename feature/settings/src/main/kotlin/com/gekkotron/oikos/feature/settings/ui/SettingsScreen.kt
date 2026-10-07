@@ -22,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,18 +40,25 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.OikosRadioRow
 import com.gekkotron.oikos.designsystem.components.RoutePicker
+import com.gekkotron.oikos.designsystem.permissions.openNotificationSettings
 import com.gekkotron.oikos.feature.settings.R
 import com.gekkotron.oikos.feature.settings.presentation.ConnectionSummary
 import com.gekkotron.oikos.feature.settings.presentation.SettingsUi
 import com.gekkotron.oikos.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.oikos.feature.settings.presentation.appVersion
 import com.gekkotron.oikos.transport.Route
+import kotlinx.coroutines.delay
+import java.time.Instant
 
 @Composable
 fun SettingsRoute(
@@ -61,11 +69,32 @@ fun SettingsRoute(
     onOpenLicences: () -> Unit,
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
+    clock: () -> Instant = Instant::now,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val version = remember { appVersion(context) }
-    SettingsScreen(state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack)
+    // The "N min ago" text must move on without a new status emission, so the clock is state here.
+    var now by remember { mutableStateOf(clock()) }
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(owner) {
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(60_000)
+                now = clock()
+            }
+        }
+    }
+    LifecycleResumeEffect(viewModel) {
+        now = clock()
+        viewModel.refreshPush()
+        onPauseOrDispose {}
+    }
+    SettingsScreen(
+        state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack,
+        onRegisterAgain = viewModel::registerAgain, now = now,
+        onOpenChannels = { openNotificationSettings(context) },
+    )
 }
 
 @Composable
@@ -79,8 +108,12 @@ fun SettingsScreen(
     onOpenRooms: () -> Unit,
     onOpenLicences: () -> Unit,
     onBack: () -> Unit,
+    onRegisterAgain: () -> Unit = {},
+    onOpenChannels: () -> Unit = {},
+    now: Instant = Instant.now(),
 ) {
     var confirm by rememberSaveable { mutableStateOf(false) }
+    var pushSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -98,6 +131,7 @@ fun SettingsScreen(
                 }
             }
             NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)
+            NavRow(stringResource(R.string.settings_push), pushStatusText(state.push, now), onClick = { pushSheet = true })
             Section(stringResource(R.string.settings_connection)) {
                 ConnectionRows(state.connection)
                 if (route != null) RoutePicker(route, onRouteChange, Modifier.padding(top = 8.dp))
@@ -120,6 +154,9 @@ fun SettingsScreen(
             confirmButton = { TextButton(onClick = { confirm = false; onSetUpAgain() }) { Text(stringResource(R.string.settings_set_up_again_confirm)) } },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.settings_cancel)) } },
         )
+    }
+    if (pushSheet) {
+        PushSheet(state.push, now, onRegisterAgain, onOpenChannels, onDismiss = { pushSheet = false })
     }
 }
 

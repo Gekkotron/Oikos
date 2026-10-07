@@ -50,4 +50,9 @@
     </plurals>
     <string name="connect_continue">Continuer</string>
     <string name="save_failed">Impossible d\'enregistrer la connexion sur ce téléphone. Réessayez.</string>
+    <string name="notifications_title">Restez informé</string>
+    <string name="notifications_body">Oikos peut vous prévenir pour l\'alarme, les portes, les caméras, l\'énergie et plus, avec une image et des actions rapides comme Désarmer. Vous pouvez changer cela à tout moment dans les réglages.</string>
+    <string name="notifications_turn_on">Activer les notifications</string>
+    <string name="notifications_continue">Continuer</string>
+    <string name="notifications_not_now">Pas maintenant</string>
 </resources>

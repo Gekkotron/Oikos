@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alerts_title">Alerts</string>
+    <string name="alerts_back">Back</string>
+    <string name="alerts_recent">Recent alerts</string>
+    <string name="alerts_see_all">See all</string>
+    <string name="alerts_empty">No alerts yet</string>
+    <string name="alerts_empty_filter">No alerts in this category</string>
+    <string name="alerts_resolved">Resolved</string>
+    <string name="alerts_just_now">Just now</string>
+    <string name="alerts_today">Today</string>
+    <string name="alerts_yesterday">Yesterday</string>
+    <string name="alerts_filter_all">All</string>
+    <string name="alerts_more">More options</string>
+    <string name="alerts_clear_all">Clear all</string>
+    <string name="alerts_clear_title">Clear all alerts?</string>
+    <string name="alerts_clear_body">This only clears this phone.</string>
+    <string name="alerts_clear_confirm">Clear</string>
+    <string name="alerts_cancel">Cancel</string>
+    <string name="alerts_notifications_off">Notifications are off</string>
+    <string name="alerts_turn_on">Turn on</string>
+    <plurals name="alerts_catch_up">
+        <item quantity="one">%d alert arrived while you were offline</item>
+        <item quantity="other">%d alerts arrived while you were offline</item>
+    </plurals>
+    <string name="alert_gone">This alert is no longer available</string>
+    <string name="alert_media_gone">Media no longer available</string>
+    <string name="alert_media_failed">Couldn\'t load the media</string>
+    <string name="alert_picture">Picture: %1$s</string>
+    <string name="alert_play_video">Play video</string>
+    <string name="alert_downloading_video">Downloading the clip</string>
+    <string name="alert_open_device">Open device</string>
+    <string name="alert_sent">Sent</string>
+    <string name="alert_send_failed">Couldn\'t send %1$s</string>
+</resources>

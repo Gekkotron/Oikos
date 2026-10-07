@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
@@ -23,11 +24,17 @@ import androidx.navigation3.ui.NavDisplay
 import com.gekkotron.oikos.AppViewModel
 import com.gekkotron.oikos.R
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.feature.alerts.ui.AlertDetailRoute
+import com.gekkotron.oikos.feature.alerts.ui.AlertsRoute
+import com.gekkotron.oikos.feature.alerts.ui.RecentAlertsEffects
+import com.gekkotron.oikos.feature.alerts.ui.RecentAlertsRoute
 import com.gekkotron.oikos.feature.energy.ui.EnergyRoute
 import com.gekkotron.oikos.feature.security.ui.SecurityRoute
 import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
 import com.gekkotron.oikos.feature.home.ui.CustomizeEntitySheet
+import com.gekkotron.oikos.feature.home.ui.EntityControlSheet
 import com.gekkotron.oikos.feature.home.ui.HomeRoute
+import com.gekkotron.oikos.feature.onboarding.ui.NotificationsRoute
 import com.gekkotron.oikos.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.oikos.feature.settings.licences.LicencesRoute
 import com.gekkotron.oikos.feature.settings.rooms.RoomOrderRoute
@@ -58,6 +65,30 @@ data object RoomOrderKey : NavKey
 @Serializable
 data object LicencesKey : NavKey
 
+@Serializable
+data object AlertsKey : NavKey
+
+/** Opened by the notification's `oikos://alert/<id>` link; only the sheet shows, over the app background. */
+@Serializable
+data class AlertDetailKey(val id: String) : NavKey
+
+@Serializable
+data object NotificationsKey : NavKey
+
+internal enum class AlertLinkAction { NONE, OPEN, DROP, WAIT }
+
+/** Where a tapped notification may land: only on Home (Rooms and the notification step come first; onboarding has no house). */
+internal fun alertLinkAction(root: NavKey, pending: String?): AlertLinkAction = when {
+    pending == null -> AlertLinkAction.NONE
+    root == HomeKey -> AlertLinkAction.OPEN
+    root == OnboardingKey -> AlertLinkAction.DROP
+    else -> AlertLinkAction.WAIT
+}
+
+/** The main tabs share the bar's bottom inset; every other screen has no bar, so it keeps the full insets. */
+internal fun screenInsets(top: NavKey?, tabInsets: WindowInsets, full: WindowInsets): WindowInsets =
+    if (showsTabBar(top)) tabInsets else full
+
 /** Pushes [key] unless it is already on top (a double tap on the gear opens Settings once). */
 internal fun push(stack: MutableList<NavKey>, key: NavKey) {
     if (stack.lastOrNull() != key) stack.add(key)
@@ -73,10 +104,16 @@ internal fun pop(stack: MutableList<NavKey>, key: NavKey) {
 fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val route by viewModel.route.collectAsStateWithLifecycle()
+    val pendingAlert by viewModel.pendingAlert.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val root: NavKey = when (val p = profile) {
         ProfileState.Loading -> return // a few milliseconds at launch; the background is already drawn
-        // A direct profile that was just set up first gets the Rooms step (spec §5.2 step 5), on the live source.
-        is ProfileState.Ready -> if (p.roomsPending) RoomsKey else HomeKey
+        // A direct profile that was just set up first gets the Rooms step (spec §5.2 step 5), on the live source, then the notification step.
+        is ProfileState.Ready -> when {
+            p.roomsPending -> RoomsKey
+            p.notificationsPending -> NotificationsKey
+            else -> HomeKey
+        }
         ProfileState.None, ProfileState.Locked -> OnboardingKey
     }
     // One back stack for the app's lifetime. A new root (onboarding finished, or "set up again")
@@ -85,6 +122,21 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     // ViewModels come back the next time the same root is shown.
     val backStack = rememberNavBackStack(root)
     LaunchedEffect(root) { resetToRoot(backStack, root) }
+    // Declared after resetToRoot's effect, so a cold start has its Home stack before the sheet is pushed on it.
+    LaunchedEffect(pendingAlert, root) {
+        val id = pendingAlert ?: return@LaunchedEffect
+        when (alertLinkAction(root, id)) {
+            AlertLinkAction.OPEN -> {
+                push(backStack, AlertDetailKey(id))
+                viewModel.alertOpened()
+            }
+            AlertLinkAction.DROP -> viewModel.alertOpened()
+            AlertLinkAction.WAIT, AlertLinkAction.NONE -> Unit
+        }
+    }
+    val deviceSheet: @Composable (String, () -> Unit) -> Unit = { id, dismiss ->
+        EntityControlSheet(id, dismiss, onSaveFailed = { Toast.makeText(context, R.string.device_save_failed, Toast.LENGTH_SHORT).show() })
+    }
     val top = backStack.lastOrNull()
     val tabs = showsTabBar(top)
     // The bar owns the bottom inset on the main tabs; their own Scaffolds then only pad top and sides.
@@ -111,6 +163,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         pop(backStack, RoomsKey)
                     })
                 }
+                entry<NotificationsKey> { NotificationsRoute(onDone = viewModel::finishNotifications) }
                 entry<HomeKey> {
                     HomeRoute(
                         onOpenSettings = { push(backStack, SettingsKey) },
@@ -142,10 +195,14 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 entry<EnergyKey> {
                     EnergyRoute(onOpenHome = { selectTab(backStack, HomeKey) }, windowInsets = tabInsets)
                 }
+                entry<AlertsKey> { AlertsRoute(onBack = { pop(backStack, AlertsKey) }, windowInsets = screenInsets(AlertsKey, tabInsets, ScaffoldDefaults.contentWindowInsets), deviceSheet = deviceSheet) }
+                entry<AlertDetailKey> { key -> AlertDetailRoute(key.id, onDismiss = { pop(backStack, key) }, deviceSheet = deviceSheet) }
                 entry<SecurityKey> {
                     SecurityRoute(
                         windowInsets = tabInsets,
                         customizeSheet = { id, onDismiss, onSaveFailed -> CustomizeEntitySheet(id, onDismiss, onSaveFailed) },
+                        alertsSection = { RecentAlertsRoute(onOpenAll = { push(backStack, AlertsKey) }, deviceSheet = deviceSheet) },
+                        alertsEffects = { snackbar -> RecentAlertsEffects(snackbar) },
                     )
                 }
             },

@@ -34,4 +34,13 @@
     <string name="rooms_assign">Assign rooms</string>
     <string name="licences_title">Open-source licences</string>
     <string name="licences_close">Close</string>
+    <string name="settings_push">Push alerts</string>
+    <string name="settings_push_registered">Registered · %1$s</string>
+    <string name="settings_push_just_now">just now</string>
+    <string name="settings_push_waiting">Waiting for connection</string>
+    <string name="settings_push_failed">Failed: %1$s</string>
+    <string name="settings_push_off">Notifications off</string>
+    <string name="settings_push_demo">Not available in demo</string>
+    <string name="settings_push_register_again">Register again</string>
+    <string name="settings_push_channels">Notification channels</string>
 </resources>

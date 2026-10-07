@@ -34,4 +34,13 @@
     <string name="rooms_assign">Attribuer les pièces</string>
     <string name="licences_title">Licences open source</string>
     <string name="licences_close">Fermer</string>
+    <string name="settings_push">Alertes push</string>
+    <string name="settings_push_registered">Enregistré · %1$s</string>
+    <string name="settings_push_just_now">à l\'instant</string>
+    <string name="settings_push_waiting">En attente de connexion</string>
+    <string name="settings_push_failed">Échec : %1$s</string>
+    <string name="settings_push_off">Notifications désactivées</string>
+    <string name="settings_push_demo">Indisponible dans la démo</string>
+    <string name="settings_push_register_again">Enregistrer à nouveau</string>
+    <string name="settings_push_channels">Canaux de notification</string>
 </resources>

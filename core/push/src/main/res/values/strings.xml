@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="push_channel_alarm">Alarm</string>
+    <string name="push_channel_alarm_desc">The alarm system: armed, disarmed, triggered, siren</string>
+    <string name="push_channel_security">Security</string>
+    <string name="push_channel_security_desc">Doors, windows, motion, leaks and smoke</string>
+    <string name="push_channel_camera">Cameras</string>
+    <string name="push_channel_camera_desc">Camera detections and snapshots</string>
+    <string name="push_channel_energy">Energy</string>
+    <string name="push_channel_energy_desc">Solar, grid and consumption</string>
+    <string name="push_channel_climate">Climate</string>
+    <string name="push_channel_climate_desc">Heating, cooling and temperature</string>
+    <string name="push_channel_system">System</string>
+    <string name="push_channel_system_desc">Service status and messages from Oikos</string>
+    <string name="push_channel_misc">Other</string>
+    <string name="push_channel_misc_desc">Everything else</string>
+    <string name="push_reply_failed">Couldn\'t send %1$s</string>
+    <string name="push_sending">Sending %1$s…</string>
+</resources>

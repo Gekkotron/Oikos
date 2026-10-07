@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alerts_title">Alertes</string>
+    <string name="alerts_back">Retour</string>
+    <string name="alerts_recent">Alertes récentes</string>
+    <string name="alerts_see_all">Tout voir</string>
+    <string name="alerts_empty">Aucune alerte pour l\'instant</string>
+    <string name="alerts_empty_filter">Aucune alerte dans cette catégorie</string>
+    <string name="alerts_resolved">Résolue</string>
+    <string name="alerts_just_now">À l\'instant</string>
+    <string name="alerts_today">Aujourd\'hui</string>
+    <string name="alerts_yesterday">Hier</string>
+    <string name="alerts_filter_all">Toutes</string>
+    <string name="alerts_more">Plus d\'options</string>
+    <string name="alerts_clear_all">Tout effacer</string>
+    <string name="alerts_clear_title">Effacer toutes les alertes ?</string>
+    <string name="alerts_clear_body">Cela n\'efface que ce téléphone.</string>
+    <string name="alerts_clear_confirm">Effacer</string>
+    <string name="alerts_cancel">Annuler</string>
+    <string name="alerts_notifications_off">Les notifications sont désactivées</string>
+    <string name="alerts_turn_on">Activer</string>
+    <plurals name="alerts_catch_up">
+        <item quantity="one">%d alerte reçue pendant que vous étiez hors ligne</item>
+        <item quantity="other">%d alertes reçues pendant que vous étiez hors ligne</item>
+    </plurals>
+    <string name="alert_gone">Cette alerte n\'est plus disponible</string>
+    <string name="alert_media_gone">Média plus disponible</string>
+    <string name="alert_media_failed">Impossible de charger le média</string>
+    <string name="alert_picture">Image : %1$s</string>
+    <string name="alert_play_video">Lire la vidéo</string>
+    <string name="alert_downloading_video">Téléchargement de la vidéo</string>
+    <string name="alert_open_device">Ouvrir l\'appareil</string>
+    <string name="alert_sent">Envoyé</string>
+    <string name="alert_send_failed">Impossible d\'envoyer %1$s</string>
+</resources>
