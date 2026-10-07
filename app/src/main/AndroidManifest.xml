@@ -5,9 +5,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Default-network changes for the route selector; no SSID, so no location permission. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Expedited reply work runs as a foreground service on Android 9 to 11 (push alerts spec §5.5). -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".OikosApplication"
@@ -35,12 +32,6 @@
                 <data android:scheme="oikos" android:host="alert" />
             </intent-filter>
         </activity>
-
-        <!-- ReplyWorker.getForegroundInfo() declares dataSync: the library's service must carry the same type. -->
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            tools:node="merge" />
 
         <!-- WorkManager starts on demand with PushWorkerFactory (OikosApplication.workManagerConfiguration). -->
         <provider
