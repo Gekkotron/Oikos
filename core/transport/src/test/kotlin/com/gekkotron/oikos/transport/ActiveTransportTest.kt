@@ -29,6 +29,20 @@ class ActiveTransportTest {
         specs: Flow<TransportSpec?>,
         seed: FakeManagedTransport.() -> Unit = {},
     ) = ActiveTransport(specs, { FakeManagedTransport(it).apply(seed).also(created::add) }, backgroundScope)
+        .also { it.setForeground(true) }
+
+    @Test
+    fun `a fresh transport stays paused until the app is foregrounded`() = runTest {
+        val t = ActiveTransport(flowOf(TransportSpec.Demo), { FakeManagedTransport(it).also(created::add) }, backgroundScope)
+        runCurrent()
+        advanceTimeBy(60.seconds)
+        runCurrent()
+        assertTrue(created.isEmpty())
+        assertEquals(LinkState.Offline(LinkState.Offline.PAUSED), t.link.value)
+        t.setForeground(true)
+        runCurrent()
+        assertTrue(created.single().started)
+    }
 
     @Test
     fun `no spec is offline and not configured`() = runTest {
@@ -155,7 +169,7 @@ class ActiveTransportTest {
             specs,
             { spec -> FakeManagedTransport(spec, failClose = created.isEmpty()).also(created::add) },
             backgroundScope,
-        )
+        ).also { it.setForeground(true) }
         runCurrent()
         specs.value = direct
         runCurrent()
@@ -172,7 +186,7 @@ class ActiveTransportTest {
             specs,
             { spec -> FakeManagedTransport(spec, failStart = created.isEmpty()).also(created::add) },
             backgroundScope,
-        )
+        ).also { it.setForeground(true) }
         runCurrent()
         assertTrue(created[0].started)
         assertEquals(LinkState.Offline(LinkState.Offline.FAILED), t.link.value)
@@ -205,7 +219,7 @@ class ActiveTransportTest {
     fun `the old transport's collectors have finished before it is closed`() = runTest {
         val specs = MutableStateFlow<TransportSpec?>(TransportSpec.Demo)
         val probes = mutableListOf<ProbeTransport>()
-        ActiveTransport(specs, { ProbeTransport().also(probes::add) }, backgroundScope)
+        ActiveTransport(specs, { ProbeTransport().also(probes::add) }, backgroundScope).setForeground(true)
         runCurrent()
         specs.value = direct
         runCurrent()

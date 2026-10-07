@@ -47,8 +47,15 @@ class MainActivityTest {
     @javax.inject.Inject
     lateinit var registration: RegistrationQueue
 
+    @javax.inject.Inject
+    lateinit var transport: com.gekkotron.oikos.transport.ActiveTransport
+
+    /** HiltTestApplication skips OikosApplication's process-lifecycle observer, so ON_START is simulated here. */
     @org.junit.Before
-    fun inject() = hilt.inject()
+    fun inject() {
+        hilt.inject()
+        transport.setForeground(true)
+    }
 
     private val enqueued get() = (registration as TestWorkModule.RecordingRegistrationQueue).enqueued
 
