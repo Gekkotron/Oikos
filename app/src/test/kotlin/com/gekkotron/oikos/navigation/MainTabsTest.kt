@@ -114,4 +114,10 @@ class MainTabsTest {
         compose.onNodeWithText("Security").performClick()
         assertEquals(listOf<NavKey>(SecurityKey), picked)
     }
+
+    @Test
+    fun `the Alerts screen and the alert sheet have no tab bar`() {
+        assertEquals(false, showsTabBar(AlertsKey))
+        assertEquals(false, showsTabBar(AlertDetailKey("a1")))
+    }
 }

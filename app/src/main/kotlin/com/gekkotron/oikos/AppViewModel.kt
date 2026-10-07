@@ -12,6 +12,7 @@ import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.ThemeChoice
 import com.gekkotron.oikos.transport.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -43,6 +44,19 @@ class AppViewModel @Inject constructor(
     /** The link sheet's route row; null hides it (no gateway in the profile). */
     val route: StateFlow<Route?> =
         combine(profiles.state, profiles.route, ::routeChoice).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val _pendingAlert = MutableStateFlow<String?>(null)
+
+    /** An `oikos://alert/<id>` tap waiting for the navigation host to show it (push alerts spec §7.3). */
+    val pendingAlert: StateFlow<String?> = _pendingAlert
+
+    fun openAlert(id: String) {
+        _pendingAlert.value = id
+    }
+
+    fun alertOpened() {
+        _pendingAlert.value = null
+    }
 
     /** The Rooms step was finished or skipped (a no-op when it was opened from Home). */
     fun finishRooms() {
