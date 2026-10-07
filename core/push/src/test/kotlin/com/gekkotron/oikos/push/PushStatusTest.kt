@@ -1,8 +1,9 @@
 package com.gekkotron.oikos.push
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -10,6 +11,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.IOException
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.time.Duration.Companion.seconds
 
 class PushStatusTest {
     @get:Rule
@@ -64,7 +66,10 @@ class PushStatusTest {
         assertEquals(PushStatus.Waiting, status(target = PushTarget.None, last = null))
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    /** The DataStore commits on Dispatchers.IO in real time, so the wait must leave the test dispatcher and use real time. */
+    private suspend fun awaitStatus(source: PushStatusSource, accept: (PushStatus) -> Boolean): PushStatus =
+        withContext(Dispatchers.Default) { withTimeout(5.seconds) { source.status.first(accept) } }
+
     @Test
     fun `the source follows the registration, the queue, the error and a refreshed permission`(): Unit = runTest {
         val store = RegistrationStore.create(tmp.newFile().also { it.delete() }, backgroundScope)
@@ -74,19 +79,16 @@ class PushStatusTest {
         var enabled = true
         val source = DefaultPushStatusSource(FakeTargets(), store, queue, registrar, { enabled }, backgroundScope)
 
-        // Let the eager collector subscribe to the DataStore before the first write, as it does at app start.
-        runCurrent()
-        assertEquals(PushStatus.Waiting, source.status.first { it == PushStatus.Waiting })
         registrar.register()
-        assertEquals(PushStatus.Registered(at), source.status.first { it is PushStatus.Registered })
+        assertEquals(PushStatus.Registered(at), awaitStatus(source) { it is PushStatus.Registered })
 
         publisher.result = Result.failure(IOException("offline"))
         registrar.register()
-        assertEquals(PushStatus.Failed("offline"), source.status.first { it is PushStatus.Failed })
+        assertEquals(PushStatus.Failed("offline"), awaitStatus(source) { it is PushStatus.Failed })
 
         enabled = false
         source.refresh()
-        assertEquals(PushStatus.NotificationsOff, source.status.first { it == PushStatus.NotificationsOff })
+        assertEquals(PushStatus.NotificationsOff, awaitStatus(source) { it == PushStatus.NotificationsOff })
     }
 
     @Test
