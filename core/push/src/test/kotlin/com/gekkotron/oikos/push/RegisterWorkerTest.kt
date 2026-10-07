@@ -28,7 +28,7 @@ class RegisterWorkerTest {
         val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined)
         val store = RegistrationStore.create(tmp.newFile().also { it.delete() }, scope)
         val registrar = PushRegistrar(targets, tokens, pub, store, FakeQueue(), { PushRegistrar.DeviceInfo("Pixel", "en") }, { Instant.EPOCH })
-        TestListenableWorkerBuilder<RegisterWorker>(context).setWorkerFactory(PushWorkerFactory(registrar)).build().doWork()
+        TestListenableWorkerBuilder<RegisterWorker>(context).setWorkerFactory(PushWorkerFactory(registrar, pub, targets, ReplyFailureNotifier(context))).build().doWork()
     }
 
     @Test
