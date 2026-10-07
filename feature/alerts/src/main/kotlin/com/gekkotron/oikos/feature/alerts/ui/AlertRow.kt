@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.alerts.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +35,7 @@ fun AlertRow(alert: Alert, now: Instant, onClick: () -> Unit, modifier: Modifier
     OikosCard(modifier.fillMaxWidth().testTag("alert-${alert.id}"), onClick = onClick, minHeight = 0.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
-                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(c.chip),
+                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(c.card).border(1.dp, c.cardBorder, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 val image = alert.imageUrl

@@ -57,7 +57,7 @@ fun AlertImage(
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = ContentScale.Crop,
-        loading = { Box(Modifier.fillMaxSize().background(OikosTheme.colors.chip)) },
+        loading = { Box(Modifier.fillMaxSize().background(OikosTheme.colors.card)) },
         error = { state -> error(state.result.throwable) },
     )
 }

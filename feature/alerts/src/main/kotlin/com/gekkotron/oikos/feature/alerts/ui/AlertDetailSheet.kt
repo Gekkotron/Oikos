@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.alerts.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -196,7 +197,8 @@ private fun Found(
 @Composable
 private fun MediaBlock(alert: Alert, video: VideoState?, onPlay: () -> Unit, playerContent: @Composable (File) -> Unit) {
     Box(
-        Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)).background(OikosTheme.colors.chip),
+        Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)).background(OikosTheme.colors.card)
+            .border(1.dp, OikosTheme.colors.cardBorder, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center,
     ) {
         if (video is VideoState.Ready) {
@@ -238,7 +240,7 @@ private fun MediaMessage(text: String) {
         text,
         style = OikosTheme.type.label,
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxSize().background(OikosTheme.colors.chip).padding(16.dp),
+        modifier = Modifier.fillMaxSize().background(OikosTheme.colors.card).padding(16.dp),
     )
 }
 
@@ -249,6 +251,6 @@ private fun InfoChip(text: String) {
         text,
         style = OikosTheme.type.label,
         color = c.content,
-        modifier = Modifier.clip(CircleShape).background(c.chip).padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.clip(CircleShape).background(c.chip).border(1.dp, c.chipBorder, CircleShape).padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }

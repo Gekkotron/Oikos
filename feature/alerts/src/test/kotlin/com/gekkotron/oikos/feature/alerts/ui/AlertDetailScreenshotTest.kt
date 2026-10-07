@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.alerts.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.alerts.demo.DemoAlerts
 import com.gekkotron.oikos.alerts.media.VideoState
@@ -61,5 +62,21 @@ class AlertDetailScreenshotTest {
         val alert = DemoAlerts.all(now)[1].copy(videoUrl = "http://192.168.1.20:5000/clip.mp4")
         val bitmap = render(ThemeChoice.NIGHT_GLASS, "alert-detail-gone", DetailState.Found(alert, null), VideoState.Failed(com.gekkotron.oikos.alerts.media.MediaFailure.Gone))
         assertTrue(bitmap.distinctColors() > 8)
+    }
+
+    @Test
+    fun `chips and the media surface have a visible edge in Warm Minimal`() {
+        val alert = DemoAlerts.all(now)[2].copy(videoUrl = "http://192.168.1.20:5000/clip.mp4")
+        val bitmap = render(ThemeChoice.WARM_MINIMAL, "alert-detail-warm-chips", DetailState.Found(alert, null), VideoState.Failed(com.gekkotron.oikos.alerts.media.MediaFailure.Gone))
+        val page = bitmap.getPixel(4, 600)
+        // The text node sits inside the chip's padding, so scan the pixels above it (to 10 dp): any non-page colour is the chip's edge or fill.
+        fun hasEdge(text: String): Boolean {
+            val r = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+            val x = r.center.x.toInt()
+            return (r.top.toInt() - 30..r.top.toInt()).any { bitmap.getPixel(x, it.coerceAtLeast(0)) != page }
+        }
+        assertTrue(hasEdge("Alarm"), "channel chip has no border or background")
+        assertTrue(hasEdge("Resolved"), "resolved chip has no border or background")
+        assertTrue(hasEdge("Media no longer available"), "media surface is invisible")
     }
 }
