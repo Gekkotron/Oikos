@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -133,6 +134,13 @@ class AlertDetailSheetTest {
     fun `a clip that is gone or refused says the media is no longer available`() {
         show(withClip(), VideoState.Failed(MediaFailure.Gone))
         compose.onNodeWithText("Media no longer available").assertExists()
+    }
+
+    @Test
+    fun `gone media shows only the message, no picture underneath`() {
+        show(withClip(), VideoState.Failed(MediaFailure.Gone))
+        compose.onNodeWithText("Media no longer available").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Picture: Person in the garden").assertDoesNotExist()
     }
 
     @Test

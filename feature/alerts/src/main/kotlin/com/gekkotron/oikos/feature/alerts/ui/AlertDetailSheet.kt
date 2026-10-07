@@ -205,6 +205,11 @@ private fun MediaBlock(alert: Alert, video: VideoState?, onPlay: () -> Unit, pla
             playerContent(video.file)
             return@Box
         }
+        // A clip that is gone or refused leaves only the message, on its own surface: no picture underneath.
+        if (video is VideoState.Failed) {
+            MediaMessage(stringResource(mediaErrorRes(video.failure)))
+            return@Box
+        }
         val image = alert.imageUrl
         if (image != null) {
             AlertImage(
@@ -216,7 +221,6 @@ private fun MediaBlock(alert: Alert, video: VideoState?, onPlay: () -> Unit, pla
         }
         when {
             video is VideoState.Downloading -> ProgressRing(video.fraction)
-            video is VideoState.Failed -> MediaMessage(stringResource(mediaErrorRes(video.failure)))
             alert.videoUrl != null -> {
                 val label = stringResource(R.string.alert_play_video)
                 FilledTonalIconButton(onClick = onPlay, modifier = Modifier.semantics { contentDescription = label }) {
@@ -236,12 +240,15 @@ private fun ProgressRing(fraction: Float?) {
 
 @Composable
 private fun MediaMessage(text: String) {
-    Text(
-        text,
-        style = OikosTheme.type.label,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxSize().background(OikosTheme.colors.card).padding(16.dp),
-    )
+    Box(Modifier.fillMaxSize().background(OikosTheme.colors.card), contentAlignment = Alignment.Center) {
+        Text(
+            text,
+            style = OikosTheme.type.label,
+            color = OikosTheme.colors.content,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
 }
 
 @Composable

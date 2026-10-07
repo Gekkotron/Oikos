@@ -69,14 +69,23 @@ class AlertDetailScreenshotTest {
         val alert = DemoAlerts.all(now)[2].copy(videoUrl = "http://192.168.1.20:5000/clip.mp4")
         val bitmap = render(ThemeChoice.WARM_MINIMAL, "alert-detail-warm-chips", DetailState.Found(alert, null), VideoState.Failed(com.gekkotron.oikos.alerts.media.MediaFailure.Gone))
         val page = bitmap.getPixel(4, 600)
-        // The text node sits inside the chip's padding, so scan the pixels above it (to 10 dp): any non-page colour is the chip's edge or fill.
-        fun hasEdge(text: String): Boolean {
+        // The text node sits inside the chip's 12 dp side padding, so the chip's left edge is ~36 px left of the text at xxhdpi.
+        // The 1 dp border band must be the chipBorder colour (#D9D0C2), not the page colour or text anti-aliasing.
+        fun borderLeftOf(text: String): Boolean {
             val r = compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot
-            val x = r.center.x.toInt()
-            return (r.top.toInt() - 30..r.top.toInt()).any { bitmap.getPixel(x, it.coerceAtLeast(0)) != page }
+            val y = r.center.y.toInt()
+            return (r.left.toInt() - 40..r.left.toInt() - 28).any { isChipBorder(bitmap.getPixel(it, y)) }
         }
-        assertTrue(hasEdge("Alarm"), "channel chip has no border or background")
-        assertTrue(hasEdge("Resolved"), "resolved chip has no border or background")
-        assertTrue(hasEdge("Media no longer available"), "media surface is invisible")
+        assertTrue(borderLeftOf("Alarm"), "channel chip border is not drawn")
+        assertTrue(borderLeftOf("Resolved"), "resolved chip border is not drawn")
+        // The failed-media message sits on the card surface (#FFFDF9) with the card border, not on the page colour.
+        val m = compose.onNodeWithText("Media no longer available").fetchSemanticsNode().boundsInRoot
+        val card = bitmap.getPixel(m.center.x.toInt(), m.top.toInt() - 12)
+        assertTrue(close(card, 0xFF, 0xFD, 0xF9), "media message is not on the card surface")
     }
+
+    private fun close(pixel: Int, r: Int, g: Int, b: Int, tol: Int = 6) =
+        kotlin.math.abs(((pixel shr 16) and 0xFF) - r) <= tol && kotlin.math.abs(((pixel shr 8) and 0xFF) - g) <= tol && kotlin.math.abs((pixel and 0xFF) - b) <= tol
+
+    private fun isChipBorder(pixel: Int) = close(pixel, 217, 208, 194, tol = 12)
 }
