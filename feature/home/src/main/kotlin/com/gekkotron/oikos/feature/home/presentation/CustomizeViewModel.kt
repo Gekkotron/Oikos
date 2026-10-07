@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.home.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.model.Area
+import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
@@ -44,5 +45,10 @@ class CustomizeViewModel @Inject constructor(
     /** [onFailed] runs if the write fails; the sheet is already closed by then, so the caller's screen reports it. */
     fun save(id: String, newRooms: List<Area>, override: UiOverride, onFailed: () -> Unit) {
         viewModelScope.launch { if (!editor.customize(id, newRooms, override)) onFailed() }
+    }
+
+    /** The control sheet opened from another screen sends through the same source as Home. */
+    fun send(id: String, command: Command) {
+        viewModelScope.launch { source.send(id, command) }
     }
 }

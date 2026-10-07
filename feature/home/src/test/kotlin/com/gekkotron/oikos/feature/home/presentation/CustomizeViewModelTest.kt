@@ -57,4 +57,11 @@ class CustomizeViewModelTest {
         vm.save("door", emptyList(), UiOverride(name = "Hall")) { failures++ }
         assertEquals(1, failures)
     }
+
+    @Test
+    fun `send forwards the command to the source`(): Unit = runTest(dispatcher) {
+        val vm = CustomizeViewModel(source, LabelText { null })
+        vm.send("door", com.gekkotron.oikos.model.Command.Press)
+        assertEquals(listOf<Pair<String, com.gekkotron.oikos.model.Command>>("door" to com.gekkotron.oikos.model.Command.Press), source.sent)
+    }
 }
