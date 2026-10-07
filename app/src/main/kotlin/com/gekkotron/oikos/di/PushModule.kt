@@ -2,6 +2,7 @@ package com.gekkotron.oikos.di
 
 import android.content.Context
 import android.os.Build
+import androidx.core.app.NotificationManagerCompat
 import com.gekkotron.oikos.alerts.AlertRepository
 import com.gekkotron.oikos.alerts.media.AlertImageCache
 import com.gekkotron.oikos.alerts.media.MediaSource
@@ -12,12 +13,14 @@ import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.push.AlertChannels
 import com.gekkotron.oikos.push.AlertIngestor
 import com.gekkotron.oikos.push.AlertNotifier
+import com.gekkotron.oikos.push.DefaultPushStatusSource
 import com.gekkotron.oikos.push.FcmTokens
 import com.gekkotron.oikos.push.FetchedNotificationImages
 import com.gekkotron.oikos.push.FirebaseFcmTokens
 import com.gekkotron.oikos.push.OneShotPublisher
 import com.gekkotron.oikos.push.PushComponent
 import com.gekkotron.oikos.push.PushRegistrar
+import com.gekkotron.oikos.push.PushStatusSource
 import com.gekkotron.oikos.push.PushTargets
 import com.gekkotron.oikos.push.PushWorkerFactory
 import com.gekkotron.oikos.push.RegistrationQueue
@@ -108,4 +111,19 @@ object PushModule {
     @Singleton
     fun pushWiring(active: ActiveTransport, registrar: PushRegistrar, @ApplicationScope scope: CoroutineScope): PushWiring =
         PushWiring(active.link, { registrar.onLinkConnected() }, scope)
+
+    @Provides
+    @Singleton
+    fun pushStatusSource(
+        @ApplicationContext context: Context,
+        targets: PushTargets,
+        store: RegistrationStore,
+        queue: RegistrationQueue,
+        registrar: PushRegistrar,
+        @ApplicationScope scope: CoroutineScope,
+    ): PushStatusSource = DefaultPushStatusSource(
+        targets, store, queue, registrar,
+        notificationsEnabled = { NotificationManagerCompat.from(context).areNotificationsEnabled() },
+        scope = scope,
+    )
 }

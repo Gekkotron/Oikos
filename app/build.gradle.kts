@@ -75,6 +75,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:alerts"))
     implementation(project(":core:push"))
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     // coil3.SingletonImageLoader lives in the `coil` artifact, not in coil-core.
     implementation(libs.coil)
