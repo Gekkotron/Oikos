@@ -50,6 +50,11 @@ class ProfileRepository internal constructor(
         store.updateData { it.copy(roomsPending = false) }
     }
 
+    /** The notification step was finished or skipped; it is not shown again for this profile. */
+    suspend fun finishNotifications() {
+        store.updateData { it.copy(notificationsPending = false) }
+    }
+
     /** Changes only the route; the profile, and so [state], stay equal. */
     suspend fun setRoute(route: RoutePreference) {
         store.updateData { it.copy(route = route) }
@@ -62,7 +67,7 @@ class ProfileRepository internal constructor(
         null -> ProfileState.None
         StoredMode.DEMO -> ProfileState.Ready(ConnectionProfile.Demo)
         StoredMode.DIRECT -> try {
-            s.toDirect()?.let { ProfileState.Ready(it, s.roomsPending) } ?: ProfileState.None
+            s.toDirect()?.let { ProfileState.Ready(it, s.roomsPending, s.notificationsPending) } ?: ProfileState.None
         } catch (e: SecretUnavailable) {
             ProfileState.Locked
         }
@@ -88,6 +93,7 @@ class ProfileRepository internal constructor(
             prefix = p.prefix,
             pushTokenTopic = p.pushTokenTopic,
             roomsPending = true,
+            notificationsPending = true,
         )
     }
 

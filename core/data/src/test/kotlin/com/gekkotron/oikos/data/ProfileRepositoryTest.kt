@@ -39,7 +39,7 @@ class ProfileRepositoryTest {
     fun `direct profile round-trips`() = runTest {
         val r = repo()
         r.save(direct)
-        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(direct, roomsPending = true, notificationsPending = true), r.state.first { it is ProfileState.Ready })
     }
 
     @Test
@@ -54,7 +54,7 @@ class ProfileRepositoryTest {
         val r = repo()
         val profile = ConnectionProfile.Direct(LocalBroker("broker.local", username = "u", password = "p@ss wörd:1 🔑"))
         r.save(profile)
-        assertEquals(ProfileState.Ready(profile, roomsPending = true), r.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(profile, roomsPending = true, notificationsPending = true), r.state.first { it is ProfileState.Ready })
     }
 
     @Test
@@ -99,7 +99,7 @@ class ProfileRepositoryTest {
         repo(f).apply { save(plain); state.first { it is ProfileState.Ready } }
         val copy = file("copy.json").also { f.copyTo(it) }
         secrets.failDecrypt = true
-        assertEquals(ProfileState.Ready(plain, roomsPending = true), repo(copy).settled())
+        assertEquals(ProfileState.Ready(plain, roomsPending = true, notificationsPending = true), repo(copy).settled())
     }
 
     @Test
@@ -131,8 +131,9 @@ class ProfileRepositoryTest {
         val f = file()
         val r = repo(f)
         r.save(direct)
-        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(direct, roomsPending = true, notificationsPending = true), r.state.first { it is ProfileState.Ready })
         r.finishRooms()
+        r.finishNotifications()
         assertEquals(ProfileState.Ready(direct), r.state.first { it == ProfileState.Ready(direct) })
         val copy = tmp.root.resolve("copy.json")
         f.copyTo(copy)
@@ -144,10 +145,11 @@ class ProfileRepositoryTest {
         val r = repo()
         r.save(direct)
         r.finishRooms()
+        r.finishNotifications()
         r.state.first { it == ProfileState.Ready(direct) }
         r.clear()
         r.save(direct)
-        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.first { it is ProfileState.Ready })
+        assertEquals(ProfileState.Ready(direct, roomsPending = true, notificationsPending = true), r.state.first { it is ProfileState.Ready })
     }
 
     @Test
@@ -155,7 +157,7 @@ class ProfileRepositoryTest {
         val f = file()
         repo(f).apply { save(ConnectionProfile.Direct(LocalBroker("broker.local"))); state.first { it is ProfileState.Ready } }
         val old = tmp.root.resolve("old.json")
-        old.writeText(f.readText().replace(Regex(""",?"roomsPending":(true|false)"""), ""))
+        old.writeText(f.readText().replace(Regex(""",?"(roomsPending|notificationsPending)":(true|false)"""), ""))
         assertEquals(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("broker.local"))), repo(old).settled())
     }
 
@@ -187,6 +189,50 @@ class ProfileRepositoryTest {
         r.setRoute(RoutePreference.GATEWAY)
         r.route.first { it == RoutePreference.GATEWAY }
         assertEquals(before, r.state.value)
-        assertEquals(ProfileState.Ready(direct, roomsPending = true), r.state.value)
+        assertEquals(ProfileState.Ready(direct, roomsPending = true, notificationsPending = true), r.state.value)
+    }
+
+    @Test
+    fun `a saved direct profile asks for the notification step, the demo does not`() = runTest {
+        val r = repo()
+        r.save(direct)
+        assertEquals(true, (r.state.first { it is ProfileState.Ready } as ProfileState.Ready).notificationsPending)
+        r.save(ConnectionProfile.Demo)
+        assertEquals(false, (r.state.first { it is ProfileState.Ready && it.profile == ConnectionProfile.Demo } as ProfileState.Ready).notificationsPending)
+    }
+
+    @Test
+    fun `finishNotifications clears only its own flag`() = runTest {
+        val r = repo()
+        r.save(direct)
+        r.finishNotifications()
+        val ready = r.state.first { it is ProfileState.Ready && !it.notificationsPending } as ProfileState.Ready
+        assertEquals(true, ready.roomsPending)
+        r.finishRooms()
+        assertEquals(ProfileState.Ready(direct, roomsPending = false, notificationsPending = false), r.state.first { it is ProfileState.Ready && !it.roomsPending })
+    }
+
+    @Test
+    fun `a profile file from before this field reads as not pending`() = runTest {
+        val f = file()
+        repo(f).apply { save(direct); state.first { it is ProfileState.Ready } }
+        val old = tmp.root.resolve("old-notifications.json")
+        val text = f.readText()
+        assertTrue("\"notificationsPending\"" in text)
+        old.writeText(text.replace(Regex(""",?"notificationsPending":(true|false)"""), ""))
+        assertTrue("notificationsPending" !in old.readText())
+        val ready = repo(old).settled() as ProfileState.Ready
+        assertEquals(false, ready.notificationsPending)
+        assertEquals(true, ready.roomsPending)
+    }
+
+    @Test
+    fun `setting the route keeps the notification step pending`() = runTest {
+        val r = repo()
+        r.save(direct)
+        r.state.first { it is ProfileState.Ready }
+        r.setRoute(RoutePreference.GATEWAY)
+        r.route.first { it == RoutePreference.GATEWAY }
+        assertEquals(true, (r.state.value as ProfileState.Ready).notificationsPending)
     }
 }

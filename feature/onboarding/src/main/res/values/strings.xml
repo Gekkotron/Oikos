@@ -50,4 +50,9 @@
     </plurals>
     <string name="connect_continue">Continue</string>
     <string name="save_failed">Couldn\'t save the connection on this phone. Try again.</string>
+    <string name="notifications_title">Stay informed</string>
+    <string name="notifications_body">Oikos can alert you about the alarm, doors, cameras, energy and more, with a picture and quick actions such as Disarm. You can change this any time in Settings.</string>
+    <string name="notifications_turn_on">Turn on notifications</string>
+    <string name="notifications_continue">Continue</string>
+    <string name="notifications_not_now">Not now</string>
 </resources>

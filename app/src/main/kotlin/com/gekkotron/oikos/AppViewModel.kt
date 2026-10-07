@@ -10,6 +10,7 @@ import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.ProfileState
 import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.ThemeChoice
+import com.gekkotron.oikos.push.PushRegistrar
 import com.gekkotron.oikos.transport.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ class AppViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     private val sources: EntitySourceSession,
     private val preferences: AppPreferences,
+    private val registrar: PushRegistrar,
 ) : ViewModel() {
     val profile: StateFlow<ProfileState> = profiles.state
 
@@ -61,6 +63,14 @@ class AppViewModel @Inject constructor(
     /** The Rooms step was finished or skipped (a no-op when it was opened from Home). */
     fun finishRooms() {
         viewModelScope.launch { profiles.finishRooms() }
+    }
+
+    /** The notification step was answered or skipped: leave it, and register for push either way (push alerts spec §7.5). */
+    fun finishNotifications() {
+        viewModelScope.launch {
+            profiles.finishNotifications()
+            registrar.request()
+        }
     }
 
     /** Rebuilds the transport for the new route; the discovery source and the house on screen stay. */

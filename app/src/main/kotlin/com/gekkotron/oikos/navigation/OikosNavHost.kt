@@ -34,6 +34,7 @@ import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
 import com.gekkotron.oikos.feature.home.ui.CustomizeEntitySheet
 import com.gekkotron.oikos.feature.home.ui.EntityControlSheet
 import com.gekkotron.oikos.feature.home.ui.HomeRoute
+import com.gekkotron.oikos.feature.onboarding.ui.NotificationsRoute
 import com.gekkotron.oikos.feature.onboarding.ui.OnboardingRoute
 import com.gekkotron.oikos.feature.settings.licences.LicencesRoute
 import com.gekkotron.oikos.feature.settings.rooms.RoomOrderRoute
@@ -107,8 +108,12 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val root: NavKey = when (val p = profile) {
         ProfileState.Loading -> return // a few milliseconds at launch; the background is already drawn
-        // A direct profile that was just set up first gets the Rooms step (spec §5.2 step 5), on the live source.
-        is ProfileState.Ready -> if (p.roomsPending) RoomsKey else HomeKey
+        // A direct profile that was just set up first gets the Rooms step (spec §5.2 step 5), on the live source, then the notification step.
+        is ProfileState.Ready -> when {
+            p.roomsPending -> RoomsKey
+            p.notificationsPending -> NotificationsKey
+            else -> HomeKey
+        }
         ProfileState.None, ProfileState.Locked -> OnboardingKey
     }
     // One back stack for the app's lifetime. A new root (onboarding finished, or "set up again")
@@ -158,6 +163,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         pop(backStack, RoomsKey)
                     })
                 }
+                entry<NotificationsKey> { NotificationsRoute(onDone = viewModel::finishNotifications) }
                 entry<HomeKey> {
                     HomeRoute(
                         onOpenSettings = { push(backStack, SettingsKey) },

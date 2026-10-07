@@ -106,10 +106,17 @@ class MainActivityTest {
     }
 
     /** The Rooms list is lazy: its last item may not be composed until the list scrolls to it. */
-    private fun finishRooms(label: String) {
+    private fun answerRooms(label: String) {
         compose.waitUntilAtLeastOneExists(hasText("Which room is each device in?"), timeoutMillis = 10_000)
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(label))
         compose.onNodeWithText(label).performClick()
+    }
+
+    /** First-run Rooms, which ends on the notification step. */
+    private fun finishRooms(label: String) {
+        answerRooms(label)
+        compose.waitUntilAtLeastOneExists(hasText("Stay informed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Not now").performClick()
     }
 
     @Test
@@ -139,13 +146,21 @@ class MainActivityTest {
     }
 
     @Test
+    fun `after rooms the notification step is offered once and Not now reaches Home`() {
+        connectToBroker(kettle)
+        finishRooms("Skip") // waits for "Stay informed" and taps "Not now"
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
+        compose.onAllNodes(hasText("Stay informed")).assertCountEquals(0)
+    }
+
+    @Test
     fun `the demo goes straight to Home, and Assign rooms opens the step and returns`() {
         openDemo()
         compose.onNodeWithText("Which room is each device in?").assertDoesNotExist()
         openSettings()
         compose.onNodeWithText("Rooms").performScrollTo().performClick()
         compose.onNodeWithText("Assign rooms").performClick()
-        finishRooms("Skip")
+        answerRooms("Skip") // from Settings: no notification step
         compose.waitUntilAtLeastOneExists(hasText("Assign rooms"), timeoutMillis = 10_000) // back on the Rooms screen
     }
 
