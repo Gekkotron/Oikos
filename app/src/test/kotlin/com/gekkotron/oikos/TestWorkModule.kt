@@ -18,15 +18,22 @@ import javax.inject.Singleton
 @Module
 @TestInstallIn(components = [SingletonComponent::class], replaces = [WorkModule::class])
 object TestWorkModule {
-    @Provides
-    @Singleton
-    fun registrationQueue(): RegistrationQueue = object : RegistrationQueue {
+    /** Counts what the graph asked for. */
+    class RecordingRegistrationQueue : RegistrationQueue {
+        @Volatile
+        var enqueued = 0
         override val active = MutableStateFlow(false)
 
-        override fun enqueue() {}
+        override fun enqueue() {
+            enqueued++
+        }
 
         override fun cancel() {}
     }
+
+    @Provides
+    @Singleton
+    fun registrationQueue(): RegistrationQueue = RecordingRegistrationQueue()
 
     @Provides
     @Singleton

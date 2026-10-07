@@ -68,8 +68,11 @@ class AppViewModel @Inject constructor(
     /** The notification step was answered or skipped: leave it, and register for push either way (push alerts spec §7.5). */
     fun finishNotifications() {
         viewModelScope.launch {
-            profiles.finishNotifications()
-            registrar.request()
+            try {
+                profiles.finishNotifications()
+            } finally {
+                registrar.request() // a failed write must not skip the registration
+            }
         }
     }
 

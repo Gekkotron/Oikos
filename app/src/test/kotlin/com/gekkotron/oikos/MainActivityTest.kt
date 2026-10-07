@@ -26,6 +26,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import com.gekkotron.oikos.push.RegistrationQueue
+import kotlin.test.assertEquals
 
 /** The real graph: ProfileRepository → ActiveTransport → DemoBroker → MqttDiscoverySource → Home. */
 @OptIn(ExperimentalTestApi::class)
@@ -40,6 +42,14 @@ class MainActivityTest {
     val compose = createAndroidComposeRule<MainActivity>()
 
     private val brokers = mutableListOf<EmbeddedBroker>()
+
+    @javax.inject.Inject
+    lateinit var registration: RegistrationQueue
+
+    @org.junit.Before
+    fun inject() = hilt.inject()
+
+    private val enqueued get() = (registration as TestWorkModule.RecordingRegistrationQueue).enqueued
 
     @After
     fun tearDown() = brokers.forEach { it.close() }
@@ -113,10 +123,10 @@ class MainActivityTest {
     }
 
     /** First-run Rooms, which ends on the notification step. */
-    private fun finishRooms(label: String) {
+    private fun finishRooms(label: String, answer: String = "Not now") {
         answerRooms(label)
         compose.waitUntilAtLeastOneExists(hasText("Stay informed"), timeoutMillis = 10_000)
-        compose.onNodeWithText("Not now").performClick()
+        compose.onNodeWithText(answer).performClick()
     }
 
     @Test
@@ -151,6 +161,19 @@ class MainActivityTest {
         finishRooms("Skip") // waits for "Stay informed" and taps "Not now"
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
         compose.onAllNodes(hasText("Stay informed")).assertCountEquals(0)
+        compose.waitUntil(10_000) { enqueued == 1 }
+        assertEquals(1, enqueued)
+    }
+
+    @Test
+    fun `the primary button of the notification step also reaches Home and registers once`() {
+        org.robolectric.Shadows.shadowOf(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>())
+            .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        connectToBroker(kettle)
+        finishRooms("Skip", answer = "Turn on notifications")
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
+        compose.waitUntil(10_000) { enqueued >= 1 }
+        assertEquals(1, enqueued)
     }
 
     @Test

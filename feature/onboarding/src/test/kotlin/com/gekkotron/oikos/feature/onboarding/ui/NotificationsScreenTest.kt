@@ -3,6 +3,9 @@ package com.gekkotron.oikos.feature.onboarding.ui
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import android.Manifest
+import androidx.test.core.app.ApplicationProvider
+import org.robolectric.Shadows.shadowOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.ThemeChoice
@@ -53,5 +56,17 @@ class NotificationsScreenTest {
         compose.onNodeWithText("Not now").performClick()
         assertEquals(1, skipped)
         assertEquals(0, enabled)
+    }
+
+    @Test
+    @Config(sdk = [33], qualifiers = "w411dp-h914dp")
+    fun `with the permission already granted the primary button finishes and opens no settings`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        var done = 0
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { NotificationsRoute(onDone = { done++ }) } }
+        compose.onNodeWithText("Turn on notifications").performClick()
+        assertEquals(1, done)
+        assertEquals(null, shadowOf(app).nextStartedActivity)
     }
 }
