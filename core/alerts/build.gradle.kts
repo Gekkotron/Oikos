@@ -10,6 +10,7 @@ android {
 
 dependencies {
     api(libs.kotlinx.coroutines.core)
+    api(libs.coil.core)
     // LocalProbe, GatewayDownloader and (through the gateway SDK) OkHttp.
     api(project(":core:transport"))
     implementation(project(":core:data")) // isLikelyLocalHost
