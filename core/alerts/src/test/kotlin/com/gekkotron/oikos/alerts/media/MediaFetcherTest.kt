@@ -165,4 +165,13 @@ class MediaFetcherTest {
     fun `a url that is not http is Unavailable`(): Unit = runBlocking {
         assertNull(fetcher(true, FakeGateway()).bytes("not a url", 1_000).getOrNull())
     }
+
+    @Test
+    fun `a LAN redirect is not followed and does not fall back`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(302).setHeader("Location", "http://example.com/x.jpg"))
+        val gateway = FakeGateway()
+        assertEquals(MediaFailure.Unavailable("http 302"), failure(fetcher(true, gateway).bytes(url(), 1_000)))
+        assertEquals(1, server.requestCount)
+        assertTrue(gateway.urls.isEmpty())
+    }
 }

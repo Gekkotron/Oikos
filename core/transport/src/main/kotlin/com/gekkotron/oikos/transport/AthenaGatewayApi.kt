@@ -26,7 +26,7 @@ class AthenaGatewayApi internal constructor(
         AthenaGatewayClient(
             requireHttps(spec.url),
             spec.key.toHex(),
-            http.newBuilder().callTimeout(PUBLISH_TIMEOUT_SECONDS, TimeUnit.SECONDS).build(),
+            http.noDowngrade().newBuilder().callTimeout(PUBLISH_TIMEOUT_SECONDS, TimeUnit.SECONDS).build(),
         ),
         spec.broker(),
     )
@@ -89,3 +89,6 @@ internal fun TransportSpec.Gateway.broker(): Broker? =
 internal fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 
 private const val EXPIRED = "Request expired"
+
+/** Refuses https to http redirects: cleartext is allowed app-wide (push alerts spec §6.3), the gateway must stay on TLS. */
+internal fun OkHttpClient.noDowngrade(): OkHttpClient = newBuilder().followSslRedirects(false).build()

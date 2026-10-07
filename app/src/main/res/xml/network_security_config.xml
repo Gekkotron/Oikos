@@ -3,9 +3,10 @@
   Gateway spec §5 (amends parent spec §8): only system CAs are trusted, and the gateway is HTTPS only; that is
   enforced in code (`requireHttps` in AthenaGatewayApi and AthenaGatewayDownloader), not by this file.
   Push alerts spec §6.3: cleartext HTTP is permitted at the OS level because alert media (Frigate snapshots and
-  clips) lives on the LAN as plain http://192.168.x.x URLs. The only cleartext client is MediaFetcher's LAN branch,
-  which runs only for private-network hosts and only after the LAN broker answered a TCP probe; everything else
-  reaches the gateway over HTTPS. The MQTT TCP socket is not governed by this file.
+  clips) lives on the LAN as plain http://192.168.x.x URLs. Cleartext clients: MediaFetcher's LAN branch (private-
+  network hosts only, after the LAN broker answered a TCP probe, redirects not followed); the gateway clients
+  (AthenaGatewayApi, AthenaGatewayDownloader) stay on https via requireHttps and refuse https-to-http redirects.
+  The MQTT TCP socket is not governed by this file.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">

@@ -38,7 +38,7 @@ class AthenaGatewayDownloader internal constructor(
     private companion object {
         fun clientFor(spec: TransportSpec.Gateway, http: OkHttpClient): suspend (String, Int) -> GatewayDownload {
             require(spec.url.startsWith("https://")) { "the gateway URL must use https" }
-            val client = AthenaGatewayClient(spec.url, spec.key.toHex(), http)
+            val client = AthenaGatewayClient(spec.url, spec.key.toHex(), http.noDowngrade())
             return { url, timeout -> client.download(url, timeoutSeconds = timeout, throwOnUpstreamError = false) }
         }
     }

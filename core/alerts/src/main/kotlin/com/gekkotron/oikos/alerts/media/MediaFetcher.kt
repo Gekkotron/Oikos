@@ -61,6 +61,8 @@ class MediaFetcher(
     private val lan: OkHttpClient = http.newBuilder()
         .connectTimeout(LAN_CONNECT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(LAN_READ_SECONDS, TimeUnit.SECONDS)
+        .followRedirects(false) // a LAN host must not bounce the request to another (cleartext) host
+        .followSslRedirects(false)
         .build()
     private val warnedHosts = ConcurrentHashMap.newKeySet<String>()
 
