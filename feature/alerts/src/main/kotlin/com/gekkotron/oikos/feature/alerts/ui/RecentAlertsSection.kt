@@ -76,20 +76,12 @@ private fun NotificationsBanner(onTurnOn: () -> Unit) {
 }
 
 /**
- * Wires the section to Room and the push status. The catch-up message is shown on [snackbar] once per sync: it is
- * acknowledged first, so a second sync while the snackbar is up shows its own message after it.
+ * The Security tab's always-composed effects, kept out of the lazy list so they run while the section is below the
+ * fold: the permission is re-read on every resume, and the catch-up message is shown on [snackbar] once per sync
+ * (acknowledged first, so a second sync while the snackbar is up shows its own message after it).
  */
 @Composable
-fun RecentAlertsRoute(
-    snackbar: SnackbarHostState,
-    onOpenAll: () -> Unit,
-    deviceSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
-    viewModel: RecentAlertsViewModel = hiltViewModel(),
-) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val now by rememberNow()
-    var openId by rememberSaveable { mutableStateOf<String?>(null) }
-    val turnOn = rememberNotificationEnabler(onResult = viewModel::refreshPermission)
+fun RecentAlertsEffects(snackbar: SnackbarHostState, viewModel: RecentAlertsViewModel = hiltViewModel()) {
     LifecycleResumeEffect(viewModel) {
         viewModel.refreshPermission()
         onPauseOrDispose {}
@@ -101,6 +93,19 @@ fun RecentAlertsRoute(
             snackbar.showSnackbar(resources.getQuantityString(R.plurals.alerts_catch_up, count, count))
         }
     }
+}
+
+/** Wires the section to Room and the push status; the effects live in [RecentAlertsEffects]. */
+@Composable
+fun RecentAlertsRoute(
+    onOpenAll: () -> Unit,
+    deviceSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
+    viewModel: RecentAlertsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val now by rememberNow()
+    var openId by rememberSaveable { mutableStateOf<String?>(null) }
+    val turnOn = rememberNotificationEnabler(onResult = viewModel::refreshPermission)
     RecentAlertsSection(state.alerts, now, state.notificationsOff, onTurnOn = turnOn, onOpen = { openId = it }, onSeeAll = onOpenAll)
     openId?.let { id -> AlertDetailRoute(id, onDismiss = { openId = null }, deviceSheet = deviceSheet) }
 }

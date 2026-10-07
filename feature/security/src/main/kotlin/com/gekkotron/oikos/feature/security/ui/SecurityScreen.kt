@@ -68,7 +68,9 @@ import kotlinx.coroutines.launch
 fun SecurityRoute(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     customizeSheet: (@Composable (id: String, onDismiss: () -> Unit, onSaveFailed: () -> Unit) -> Unit)? = null,
-    alertsSection: (@Composable (snackbar: SnackbarHostState) -> Unit)? = null,
+    alertsSection: (@Composable () -> Unit)? = null,
+    /** Always composed, outside the lazy list, so effects of the alerts section run while it is scrolled out of view. */
+    alertsEffects: (@Composable (snackbar: SnackbarHostState) -> Unit)? = null,
     viewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -90,6 +92,7 @@ fun SecurityRoute(
             }
         }
     }
+    alertsEffects?.invoke(snackbar)
     val scope = rememberCoroutineScope()
     val saveFailed = { scope.launch { snackbar.showSnackbar(resources.getString(R.string.security_save_failed)) }; Unit }
     SecurityScreen(
@@ -98,7 +101,7 @@ fun SecurityRoute(
         onSetHidden = viewModel::setSecurityHidden,
         onSetAction = viewModel::setAction,
         customizeSheet = customizeSheet?.let { sheet -> { id, onDismiss -> sheet(id, onDismiss, saveFailed) } },
-        alertsSection = alertsSection?.let { section -> { section(snackbar) } },
+        alertsSection = alertsSection,
         snackbarHostState = snackbar,
     )
 }

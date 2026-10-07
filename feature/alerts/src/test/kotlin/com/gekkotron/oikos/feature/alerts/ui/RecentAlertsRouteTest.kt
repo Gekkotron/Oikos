@@ -1,7 +1,15 @@
 package com.gekkotron.oikos.feature.alerts.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.room.Room
@@ -45,13 +53,25 @@ class RecentAlertsRouteTest {
         history = HistorySync(MutableSharedFlow<MqttMessage>(), repo)
         viewModel = RecentAlertsViewModel(repo, status, history)
         compose.setContent {
-            OikosTheme(ThemeChoice.NIGHT_GLASS) { RecentAlertsRoute(snackbar, onOpenAll = {}, viewModel = viewModel) }
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                // The section is the last of 40 rows: far below the fold, so it is never composed; the effects still run.
+                RecentAlertsEffects(snackbar, viewModel)
+                LazyColumn(Modifier.fillMaxSize()) {
+                    items(40) { Text("row $it", Modifier.height(96.dp)) }
+                    item { RecentAlertsRoute(onOpenAll = {}, viewModel = viewModel) }
+                }
+            }
         }
     }
 
     @After
     fun tearDown() {
         db.close()
+    }
+
+    @Test
+    fun `the section itself is off screen in these tests`() {
+        compose.onNodeWithText("Recent alerts").assertDoesNotExist()
     }
 
     @Test
