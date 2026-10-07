@@ -5,6 +5,7 @@ package com.gekkotron.oikos.push
  * `OikosApplication` hands them out through [PushComponentProvider].
  */
 interface PushComponent {
+    val ingestor: AlertIngestor
     val registrar: PushRegistrar
     val replies: ReplyQueue
 }

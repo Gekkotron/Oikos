@@ -14,5 +14,7 @@ dependencies {
     // LocalProbe, GatewayDownloader and (through the gateway SDK) OkHttp.
     api(project(":core:transport"))
     implementation(project(":core:data")) // isLikelyLocalHost
+    // AlertDatabase extends RoomDatabase: every module that builds it must see the supertype.
+    api(libs.androidx.room.runtime)
     testImplementation(libs.mockwebserver)
 }

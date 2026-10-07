@@ -48,6 +48,7 @@ class ReplyReceiverTest {
             RegistrationStore.create(tmp.newFile().also { it.delete() }, CoroutineScope(Dispatchers.Unconfined)), FakeQueue(), { PushRegistrar.DeviceInfo("p", "en") },
         )
         override val replies: ReplyQueue = this@ReplyReceiverTest.replies
+        override val ingestor: AlertIngestor get() = error("not used")
     }
 
     @Test

@@ -4,6 +4,15 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application>
+        <!-- FCM data messages from OikosPush (push alerts spec §5.2). Only Google Play services binds to it. -->
+        <service
+            android:name="com.gekkotron.oikos.push.OikosMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- Notification action buttons (push alerts spec §5.2). Not exported: only our own PendingIntents reach it. -->
         <receiver
             android:name="com.gekkotron.oikos.push.ReplyReceiver"
