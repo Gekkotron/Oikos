@@ -1,6 +1,8 @@
 package com.gekkotron.oikos.push
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -62,9 +64,9 @@ class PushStatusTest {
         assertEquals(PushStatus.Waiting, status(target = PushTarget.None, last = null))
     }
 
-    // TODO: Fix this test - currently hangs in combine flow initialization
-    // @Test
-    fun _disabled_the_source_follows_the_registration_the_queue_the_error_and_a_refreshed_permission(): Unit = runTest {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `the source follows the registration, the queue, the error and a refreshed permission`(): Unit = runTest {
         val store = RegistrationStore.create(tmp.newFile().also { it.delete() }, backgroundScope)
         val queue = FakeQueue()
         val publisher = RecordingPublisher()
@@ -72,6 +74,8 @@ class PushStatusTest {
         var enabled = true
         val source = DefaultPushStatusSource(FakeTargets(), store, queue, registrar, { enabled }, backgroundScope)
 
+        // Let the eager collector subscribe to the DataStore before the first write, as it does at app start.
+        runCurrent()
         assertEquals(PushStatus.Waiting, source.status.first { it == PushStatus.Waiting })
         registrar.register()
         assertEquals(PushStatus.Registered(at), source.status.first { it is PushStatus.Registered })
@@ -85,9 +89,8 @@ class PushStatusTest {
         assertEquals(PushStatus.NotificationsOff, source.status.first { it == PushStatus.NotificationsOff })
     }
 
-    // TODO: Fix this test - currently hangs in combine flow initialization
-    // @Test
-    fun _disabled_register_again_asks_the_registrar_to_enqueue(): Unit = runTest {
+    @Test
+    fun `register again asks the registrar to enqueue`(): Unit = runTest {
         val store = RegistrationStore.create(tmp.newFile().also { it.delete() }, backgroundScope)
         val queue = FakeQueue()
         val registrar = PushRegistrar(FakeTargets(), FakeFcmTokens(), RecordingPublisher(), store, queue, { PushRegistrar.DeviceInfo("p", "en") })
