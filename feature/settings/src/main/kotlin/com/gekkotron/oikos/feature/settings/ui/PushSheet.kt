@@ -24,8 +24,8 @@ import java.time.Instant
 
 /** The push status in words (push alerts spec §7.4). */
 @Composable
-internal fun pushStatusText(status: PushStatus): String = when (status) {
-    is PushStatus.Registered -> stringResource(R.string.settings_push_registered, ageText(status.at))
+internal fun pushStatusText(status: PushStatus, now: Instant): String = when (status) {
+    is PushStatus.Registered -> stringResource(R.string.settings_push_registered, ageText(status.at, now))
     PushStatus.Waiting -> stringResource(R.string.settings_push_waiting)
     is PushStatus.Failed -> stringResource(R.string.settings_push_failed, status.reason)
     PushStatus.NotificationsOff -> stringResource(R.string.settings_push_off)
@@ -33,8 +33,7 @@ internal fun pushStatusText(status: PushStatus): String = when (status) {
 }
 
 @Composable
-private fun ageText(at: Instant): String {
-    val now = Instant.now()
+private fun ageText(at: Instant, now: Instant): String {
     if (Duration.between(at, now).seconds < 60) return stringResource(R.string.settings_push_just_now)
     return DateUtils.getRelativeTimeSpanString(
         at.toEpochMilli(), now.toEpochMilli(), DateUtils.MINUTE_IN_MILLIS, DateUtils.FORMAT_ABBREV_RELATIVE,
@@ -43,14 +42,14 @@ private fun ageText(at: Instant): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PushSheet(status: PushStatus, onRegisterAgain: () -> Unit, onOpenChannels: () -> Unit, onDismiss: () -> Unit) {
+internal fun PushSheet(status: PushStatus, now: Instant, onRegisterAgain: () -> Unit, onOpenChannels: () -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.settings_push), style = OikosTheme.type.display.copy(fontSize = 22.sp))
-            Text(pushStatusText(status), style = OikosTheme.type.body)
+            Text(pushStatusText(status, now), style = OikosTheme.type.body)
             FilledTonalButton(
                 onClick = { onRegisterAgain(); onDismiss() },
                 enabled = status != PushStatus.Demo,

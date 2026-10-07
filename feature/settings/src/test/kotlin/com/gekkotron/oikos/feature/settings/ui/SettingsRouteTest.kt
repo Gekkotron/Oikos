@@ -18,6 +18,9 @@ import com.gekkotron.oikos.transport.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import com.gekkotron.oikos.push.PushStatus
+import androidx.compose.ui.test.onNodeWithText
+import java.time.Instant
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -74,5 +77,35 @@ class SettingsRouteTest {
         compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
         compose.runOnIdle { assertEquals(2, push.refreshes) }
         assertTrue(push.refreshes >= 2)
+    }
+
+    @Test
+    fun `the registered age moves on at resume without a new status emission`() {
+        val at = Instant.parse("2026-10-07T10:00:00Z")
+        var clock = at.plusSeconds(120)
+        val push = FakePushStatusSource(PushStatus.Registered(at))
+        val vm = SettingsViewModel(
+            ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
+            AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
+            push,
+        )
+        lateinit var registry: LifecycleRegistry
+        val owner = object : LifecycleOwner {
+            override val lifecycle: Lifecycle get() = registry
+        }
+        registry = LifecycleRegistry.createUnsafe(owner)
+        registry.currentState = Lifecycle.State.RESUMED
+        compose.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm, clock = { clock })
+                }
+            }
+        }
+        compose.onNodeWithText("Registered · 2 min", substring = true).assertExists()
+        clock = at.plusSeconds(420)
+        compose.runOnIdle { registry.currentState = Lifecycle.State.STARTED }
+        compose.runOnIdle { registry.currentState = Lifecycle.State.RESUMED }
+        compose.onNodeWithText("Registered · 7 min", substring = true).assertExists()
     }
 }
