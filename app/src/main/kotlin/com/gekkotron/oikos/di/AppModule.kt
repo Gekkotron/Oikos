@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.gekkotron.oikos.connection.DirectConnectionTester
 import com.gekkotron.oikos.connection.EntitySourceSession
+import com.gekkotron.oikos.connection.SharedSubscriptions
 import com.gekkotron.oikos.connection.TransportFactory
 import com.gekkotron.oikos.connection.clientIdFor
 import com.gekkotron.oikos.connection.networkChanges
@@ -79,7 +80,11 @@ object AppModule {
     )
 
     @Provides
-    fun transport(active: ActiveTransport): MqttTransport = active
+    @Singleton
+    fun sharedSubscriptions(active: ActiveTransport): SharedSubscriptions = SharedSubscriptions(active)
+
+    @Provides
+    fun transport(shared: SharedSubscriptions): MqttTransport = shared
 
     @Provides
     @Singleton

@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.gekkotron.oikos.connection.HistoryWiring
 import com.gekkotron.oikos.connection.PushWiring
 import com.gekkotron.oikos.push.AlertChannels
 import com.gekkotron.oikos.push.PushComponent
@@ -38,6 +39,9 @@ class OikosApplication : Application(), PushComponentProvider, Configuration.Pro
     @Inject
     lateinit var pushWiring: PushWiring
 
+    @Inject
+    lateinit var historyWiring: HistoryWiring
+
     override fun pushComponent(): PushComponent = component
 
     /** On-demand WorkManager with our worker factory; the default initializer is removed from the manifest. */
@@ -50,6 +54,7 @@ class OikosApplication : Application(), PushComponentProvider, Configuration.Pro
         super.onCreate()
         channels.ensure()
         pushWiring.start()
+        historyWiring.start()
         // Connected only in the foreground; ActiveTransport closes 30 s after onStop (spec §3.3).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = transport.setForeground(true)

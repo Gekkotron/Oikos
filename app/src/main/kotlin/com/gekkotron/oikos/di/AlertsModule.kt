@@ -11,13 +11,18 @@ import com.gekkotron.oikos.alerts.media.MediaFetcher
 import com.gekkotron.oikos.alerts.media.MediaRoutes
 import com.gekkotron.oikos.alerts.media.MediaSource
 import com.gekkotron.oikos.alerts.media.VideoCache
+import com.gekkotron.oikos.alerts.sync.HistorySync
+import com.gekkotron.oikos.connection.HistoryWiring
 import com.gekkotron.oikos.connection.ProfileMediaRoutes
+import com.gekkotron.oikos.connection.SharedSubscriptions
 import com.gekkotron.oikos.data.ProfileRepository
+import com.gekkotron.oikos.transport.ActiveTransport
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
@@ -31,6 +36,19 @@ object AlertsModule {
     @Provides
     @Singleton
     fun repository(db: AlertDatabase): AlertRepository = AlertRepository(db.alerts())
+
+    @Provides
+    @Singleton
+    fun historySync(active: ActiveTransport, repository: AlertRepository): HistorySync = HistorySync(active.messages(), repository)
+
+    @Provides
+    @Singleton
+    fun historyWiring(
+        profiles: ProfileRepository,
+        shared: SharedSubscriptions,
+        sync: HistorySync,
+        @ApplicationScope scope: CoroutineScope,
+    ): HistoryWiring = HistoryWiring(profiles.state, shared, sync, scope)
 
     @Provides
     @Singleton
