@@ -29,7 +29,7 @@ firebaseCrashlyticsPlugin = "3.0.8"
 aboutlibraries = "15.2.0"
 # Not in the Firebase BoM.
 firebaseAppDistribution = "16.0.0-beta20"
-athenaGatewayClient = "v1.2"
+athenaGatewayClient = "v1.3"
 # Test-only; matches the OkHttp 4.12 that athena-gateway-client brings.
 okhttpMockwebserver = "4.12.0"
 
