@@ -2,6 +2,7 @@ package com.gekkotron.oikos.di
 
 import android.content.Context
 import coil3.ImageLoader
+import com.gekkotron.oikos.DemoAlertSeeder
 import com.gekkotron.oikos.alerts.AlertRepository
 import com.gekkotron.oikos.alerts.db.AlertDatabase
 import com.gekkotron.oikos.alerts.media.AlertImageCache
@@ -36,6 +37,11 @@ object AlertsModule {
     @Provides
     @Singleton
     fun repository(db: AlertDatabase): AlertRepository = AlertRepository(db.alerts())
+
+    @Provides
+    @Singleton
+    fun demoAlertSeeder(profiles: ProfileRepository, repository: AlertRepository, @ApplicationScope scope: CoroutineScope): DemoAlertSeeder =
+        DemoAlertSeeder(profiles.state, repository, scope = scope)
 
     @Provides
     @Singleton

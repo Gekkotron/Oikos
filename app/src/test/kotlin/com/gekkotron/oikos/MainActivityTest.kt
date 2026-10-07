@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -95,6 +96,20 @@ class MainActivityTest {
         compose.onNodeWithText("Enter manually").assertIsEnabled()
         openDemo()
         compose.onNodeWithText("Demo").assertExists()
+    }
+
+    @Test
+    fun `the demo shows its alerts on Security and Set up again forgets them`() {
+        openDemo()
+        compose.onNodeWithText("Security").performClick()
+        // Room delivers the seeded alerts in real time, after the tab is on screen.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            runCatching { compose.onNode(hasScrollAction()).performScrollToNode(hasText("Front door opened")) }.isSuccess
+        }
+        compose.onNodeWithText("Front door opened").assertExists()
+        compose.onNodeWithText("See all").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Person in the garden"), timeoutMillis = 10_000)
+        compose.onNodeWithContentDescription("Back").performClick()
     }
 
     private val kettle = """{"name":"Kettle","unique_id":"kettle","command_topic":"k/set","state_topic":"k/state",

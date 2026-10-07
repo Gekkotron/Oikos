@@ -35,7 +35,13 @@ class AppViewModel @Inject constructor(
     private val sources: EntitySourceSession,
     private val preferences: AppPreferences,
     private val registrar: PushRegistrar,
+    private val cleanup: SetUpAgainCleanup,
+    private val demoAlerts: DemoAlertSeeder,
 ) : ViewModel() {
+    init {
+        demoAlerts.start()
+    }
+
     val profile: StateFlow<ProfileState> = profiles.state
 
     /** The theme picked on this phone; null until the store has loaded (settings spec §3.2). */
@@ -88,6 +94,7 @@ class AppViewModel @Inject constructor(
      */
     fun setUpAgain() {
         viewModelScope.launch {
+            cleanup.run()
             profiles.clear()
             sources.reset()
         }

@@ -3,9 +3,11 @@ package com.gekkotron.oikos.di
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
+import com.gekkotron.oikos.SetUpAgainCleanup
 import com.gekkotron.oikos.alerts.AlertRepository
 import com.gekkotron.oikos.alerts.media.AlertImageCache
 import com.gekkotron.oikos.alerts.media.MediaSource
+import com.gekkotron.oikos.alerts.media.VideoCache
 import com.gekkotron.oikos.connection.PushWiring
 import com.gekkotron.oikos.connection.ProfilePushTargets
 import com.gekkotron.oikos.connection.oneShotSpec
@@ -75,6 +77,20 @@ object PushModule {
     ): PushRegistrar = PushRegistrar(
         targets, tokens, publisher, store, queue,
         device = { PushRegistrar.DeviceInfo(Build.MODEL, Locale.getDefault().toLanguageTag()) },
+    )
+
+    @Provides
+    @Singleton
+    fun setUpAgainCleanup(
+        @ApplicationContext context: Context,
+        registrar: PushRegistrar,
+        repository: AlertRepository,
+        replies: ReplyQueue,
+        images: AlertImageCache,
+        videos: VideoCache,
+    ): SetUpAgainCleanup = SetUpAgainCleanup(
+        registrar, repository, replies, images, videos,
+        dismissNotifications = { NotificationManagerCompat.from(context).cancelAll() },
     )
 
     @Provides
