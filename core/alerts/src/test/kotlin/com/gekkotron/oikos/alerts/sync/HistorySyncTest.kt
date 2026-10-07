@@ -149,4 +149,37 @@ class HistorySyncTest {
         assertNull(repo.byId("wrong").first())
         scope.cancel()
     }
+
+    @Test
+    fun `a live non retained history message inserts the alert but does not count it`(): Unit = runBlocking {
+        assertEquals(0, sync.handle(payload(entry("live")), retained = false))
+        assertNotNull(repo.byId("live").first())
+        assertEquals(0, sync.catchUp.value)
+    }
+
+    @Test
+    fun `a retained history message counts what it inserts`(): Unit = runBlocking {
+        assertEquals(1, sync.handle(payload(entry("old")), retained = true))
+        assertEquals(1, sync.catchUp.value)
+    }
+
+    @Test
+    fun `a message that makes the repository throw does not stop the next one`(): Unit = runBlocking {
+        var calls = 0
+        val flaky = object : AlertRepository(db.alerts()) {
+            override suspend fun insertIfMissing(alert: Alert): Boolean {
+                if (calls++ == 0) throw IllegalStateException("disk gone")
+                return super.insertIfMissing(alert)
+            }
+        }
+        val failing = HistorySync(messages, flaky) { logged += it }
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        failing.start(scope)
+        messages.emit(MqttMessage("oikos-push/history", payload(entry("boom")).encodeToByteArray(), retained = true))
+        messages.emit(MqttMessage("oikos-push/history", payload(entry("fine")).encodeToByteArray(), retained = true))
+        assertNotNull(withTimeout(5_000) { repo.byId("fine").first { it != null } })
+        assertTrue(logged.any { it.contains("IllegalStateException") })
+        assertTrue(logged.none { it.contains("disk") })
+        scope.cancel()
+    }
 }

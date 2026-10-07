@@ -9,12 +9,12 @@ import kotlinx.coroutines.flow.map
 import java.time.Instant
 
 /** The alert history (spec §6.1). Everything the UI and the push service need from Room, as [Alert]. */
-class AlertRepository(private val dao: AlertDao, private val clock: () -> Instant = Instant::now) {
+open class AlertRepository(private val dao: AlertDao, private val clock: () -> Instant = Instant::now) {
     /** Stores or replaces the alert with this id (keeping its first `receivedAt`) and trims to 200 rows. */
     suspend fun upsert(alert: Alert) = dao.upsert(alert.toEntity())
 
     /** Catch-up insert; true when the alert is new and still stored after trimming. */
-    suspend fun insertIfMissing(alert: Alert): Boolean = dao.insertIfMissing(alert.toEntity())
+    open suspend fun insertIfMissing(alert: Alert): Boolean = dao.insertIfMissing(alert.toEntity())
 
     suspend fun markResolved(id: String) = dao.markResolved(id)
 
