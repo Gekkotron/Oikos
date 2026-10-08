@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.action.Action
@@ -93,7 +94,7 @@ class OikosWidget : GlanceAppWidget() {
 
         override fun openSettings(): Action = actionStartActivity(view(AppLinks.SETTINGS))
 
-        private fun view(uri: String) = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        private fun view(uri: String) = Intent(Intent.ACTION_VIEW, uri.toUri()).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 }
 

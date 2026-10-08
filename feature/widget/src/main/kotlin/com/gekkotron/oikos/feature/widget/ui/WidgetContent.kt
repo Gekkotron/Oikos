@@ -41,7 +41,6 @@ import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.Kind
 import java.text.DateFormat
 import java.util.Date
-import java.util.Locale
 
 data class WidgetUiState(
     /** One entry per configured id, in order; null = never seen. */
@@ -123,7 +122,7 @@ private fun Tile(tile: TileSnapshot?, state: WidgetUiState, actions: WidgetActio
         tile == null -> "—"
         status == TileStatus.REMOVED -> context.getString(R.string.widget_removed)
         status == TileStatus.PENDING -> "…"
-        else -> TileText.of(context, tile.value, Locale.getDefault())
+        else -> TileText.of(context, tile.value, context.resources.configuration.locales[0])
     }
     val tap = tile?.let { actions.tap(TileActions.forTap(it, state.armMode)) } ?: actions.openApp()
     val color = if (dim) GlanceTheme.colors.onSurfaceVariant else GlanceTheme.colors.onSurface
