@@ -48,4 +48,5 @@
     <string name="settings_history_hint">http://192.168.1.91:8090</string>
     <string name="settings_history_error">Use http(s)://host[:port], nothing after it</string>
     <string name="settings_history_save">Save</string>
+    <string name="settings_history_edit">Edit</string>
 </resources>

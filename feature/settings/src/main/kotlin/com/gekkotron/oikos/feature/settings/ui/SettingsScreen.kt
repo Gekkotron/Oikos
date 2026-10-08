@@ -230,6 +230,7 @@ private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Uni
                 stringResource(R.string.settings_history),
                 summary.historyUrl ?: stringResource(R.string.settings_history_none),
                 onClick = onEditHistory,
+                onClickLabel = stringResource(R.string.settings_history_edit),
             )
         }
     }
@@ -277,13 +278,14 @@ internal fun HistoryUrlDialogContent(text: String, failed: Boolean, onTextChange
 }
 
 @Composable
-private fun InfoRow(label: String, value: String, extra: String? = null, onClick: (() -> Unit)? = null) {
-    val tap = if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier
+private fun InfoRow(label: String, value: String, extra: String? = null, onClick: (() -> Unit)? = null, onClickLabel: String? = null) {
+    val tap = if (onClick != null) Modifier.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick) else Modifier
     Row(Modifier.fillMaxWidth().then(tap).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted, modifier = Modifier.width(140.dp))
         Column(Modifier.weight(1f)) {
             Text(value, style = OikosTheme.type.body)
             if (extra != null) Text(extra, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
         }
+        if (onClick != null) Text("›", style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
     }
 }
