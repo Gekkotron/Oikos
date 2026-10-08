@@ -11,7 +11,7 @@ Status: approved design, 2026-10-08. Parent spec: `2026-09-24-oikos-design.md` ย
 **Out of scope**
 - Card sparklines and the event log (state-change timeline).
 - Recording more MQTT namespaces: that is a one-line Athena-Core config change, made when needed.
-- Offline history, free zoom/pan, comparing two devices, and calendar ranges other than "today" and per-day totals.
+- Offline history, comparing two devices, and calendar ranges other than "today" and per-day totals.
 
 **Decision: a LAN HTTP service, not a gateway endpoint.** The gateway stays a generic encryption gateway. History is a small read-only service on the LAN. At home the app calls it directly; away it uses the gateway's raw GET (gateway v1.3, `"raw": true`), exactly like push media. No gateway change is needed, only a host:port rule on the gateway key.
 
@@ -155,3 +155,7 @@ English and French.
 4. Regenerate the setup QR with `history.url`.
 
 The two plans are independent: the app is built and tested against `DemoHistoryClient` and a faked HTTP layer; the contract between them is ยง3.3.
+
+## Addendum (2026-10-08): zoom and pan
+
+Both history charts pinch-zoom and pan horizontally. They open on the whole range and cannot zoom out past it; zooming in stops at a tenth of the range or four samples, whichever is wider. A new range or mode starts again from the whole range.

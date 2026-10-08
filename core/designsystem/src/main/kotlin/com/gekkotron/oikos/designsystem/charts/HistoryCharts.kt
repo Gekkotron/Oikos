@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -123,13 +124,16 @@ fun HistoryLineChart(
         ),
         marker = marker,
     )
-    CartesianChartHost(
-        chart = chart,
-        modelProducer = producer,
-        modifier = frame,
-        scrollState = rememberVicoScrollState(scrollEnabled = false),
-        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-    )
+    // Keyed on the data: a new range or mode starts again from the whole span.
+    key(points) {
+        CartesianChartHost(
+            chart = chart,
+            modelProducer = producer,
+            modifier = frame,
+            scrollState = rememberVicoScrollState(scrollEnabled = true),
+            zoomState = rememberHistoryZoom(points.last().t - first, step),
+        )
+    }
 }
 
 @Composable
@@ -184,13 +188,15 @@ fun DailyBarsChart(
             itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = { spacing }),
         ),
     )
-    CartesianChartHost(
-        chart = chart,
-        modelProducer = producer,
-        modifier = frame,
-        scrollState = rememberVicoScrollState(scrollEnabled = false),
-        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-    )
+    key(bars) {
+        CartesianChartHost(
+            chart = chart,
+            modelProducer = producer,
+            modifier = frame,
+            scrollState = rememberVicoScrollState(scrollEnabled = true),
+            zoomState = rememberHistoryZoom(bars.last().t - first, step),
+        )
+    }
 }
 
 @Composable
@@ -200,6 +206,18 @@ fun ChartSkeleton(modifier: Modifier = Modifier) {
             .background(OikosTheme.colors.card, RoundedCornerShape(12.dp)),
     )
 }
+
+/** Pinch-zoom and pan: opens on the whole span, never zooms out past it, nor in past [maxZoomSpan]. */
+@Composable
+private fun rememberHistoryZoom(span: Long, step: Long) = rememberVicoZoomState(
+    zoomEnabled = true,
+    initialZoom = Zoom.Content,
+    minZoom = Zoom.Content,
+    maxZoom = Zoom.max(Zoom.x(maxZoomSpan(span, step)), Zoom.Content),
+)
+
+/** The narrowest x-span (seconds) zooming may show: a tenth of the data, but never fewer than four samples. */
+internal fun maxZoomSpan(span: Long, step: Long): Double = maxOf(span / 10.0, 4.0 * step)
 
 @Composable
 private fun LineCartesianLayer.Companion.rememberLineFor(color: Color, thicknessDp: Float) =

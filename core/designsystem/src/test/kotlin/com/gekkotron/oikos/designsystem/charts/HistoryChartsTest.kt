@@ -9,6 +9,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class HistoryChartsTest {
@@ -25,5 +26,12 @@ class HistoryChartsTest {
         }
         compose.onNodeWithContentDescription("line").assertExists()
         compose.onNodeWithContentDescription("bars").assertExists()
+    }
+
+    @Test
+    fun `zooming in stops at a tenth of the range or four samples, whichever is wider`() {
+        assertEquals(8_640.0, maxZoomSpan(span = 86_400, step = 300)) // 24 h of 5 min samples: 2.4 h on screen
+        assertEquals(4 * 86_400.0, maxZoomSpan(span = 29 * 86_400, step = 86_400)) // 30 daily bars: 4 days
+        assertEquals(4 * 86_400.0, maxZoomSpan(span = 6 * 86_400, step = 86_400)) // 7 daily bars: 4 days
     }
 }
