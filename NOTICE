@@ -5,3 +5,6 @@ This product includes software developed by Gekkotron.
 
 This product bundles the Inter and Fraunces typefaces, licensed under the SIL Open Font License 1.1
 (see core/designsystem/licenses/).
+
+The home-screen widget icons (feature/widget/src/main/res/drawable/ic_widget_*.xml) are Material Icons by Google,
+licensed under the Apache License 2.0.

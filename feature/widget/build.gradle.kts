@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.activity.compose)
     testImplementation(libs.androidx.glance.appwidget.testing)
     testImplementation(libs.androidx.work.testing)
 }

@@ -1,3 +1,37 @@
 <resources>
+    <string name="widget_name">Oikos devices</string>
+    <string name="widget_description">Your chosen devices at a glance, with one-tap control.</string>
     <string name="widget_sending">Sending…</string>
+    <string name="widget_updated">Updated %1$s</string>
+    <string name="widget_offline">Offline · %1$s</string>
+    <string name="widget_offline_never">Offline</string>
+    <string name="widget_sign_in_failed">Sign-in failed</string>
+    <string name="widget_set_up">Set up Oikos</string>
+    <string name="widget_refresh">Refresh</string>
+    <string name="widget_removed">Removed</string>
+    <string name="widget_on">On</string>
+    <string name="widget_off">Off</string>
+    <string name="widget_open">Open</string>
+    <string name="widget_closed">Closed</string>
+    <string name="widget_opening">Opening</string>
+    <string name="widget_closing">Closing</string>
+    <string name="widget_stopped">Stopped</string>
+    <string name="widget_open_percent">Open %1$d %%</string>
+    <string name="widget_detected">Detected</string>
+    <string name="widget_clear">Clear</string>
+    <string name="widget_cover_open">Open</string>
+    <string name="widget_cover_stop">Stop</string>
+    <string name="widget_cover_close">Close</string>
+    <string name="widget_failed">Not confirmed</string>
+    <string name="widget_empty">Long-press to choose devices</string>
+    <string name="widget_config_title">Choose devices</string>
+    <string name="widget_config_hint">Pick up to %1$d. %2$d fit at the current size.</string>
+    <string name="widget_config_save">Done</string>
+    <string name="widget_config_arm_mode">Arm mode for %1$s</string>
+    <string name="widget_config_offline">Can’t reach your home; showing the devices Oikos last saw.</string>
+    <string name="widget_config_search">Search</string>
+    <string name="widget_config_selected">On the widget</string>
+    <string name="widget_config_move_up">Move up</string>
+    <string name="widget_config_move_down">Move down</string>
+    <string name="widget_config_open_app">Open Oikos</string>
 </resources>
