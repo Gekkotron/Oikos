@@ -111,8 +111,8 @@ class EntitySourceSession(
         profile = null
     }
 
-    /** The profile as the source sees it: the history URL has no bearing on discovery. */
-    private fun ConnectionProfile?.sourceKey() = (this as? ConnectionProfile.Direct)?.copy(historyUrl = null) ?: this
+    /** The profile as the source sees it: the history URL and Frigate settings have no bearing on discovery. */
+    private fun ConnectionProfile?.sourceKey() = (this as? ConnectionProfile.Direct)?.copy(historyUrl = null, frigate = null) ?: this
 
     companion object {
         val SAVE_INTERVAL: Duration = 10.seconds

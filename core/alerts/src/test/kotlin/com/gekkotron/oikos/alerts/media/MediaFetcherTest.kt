@@ -5,6 +5,7 @@ import com.gekkotron.oikos.transport.DownloadNotAllowed
 import com.gekkotron.oikos.transport.GatewayDownloader
 import com.gekkotron.oikos.transport.LocalProbe
 import com.gekkotron.oikos.transport.RawDownload
+import com.gekkotron.oikos.transport.RawPost
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -25,11 +26,13 @@ class MediaFetcherTest {
 
     private class FakeGateway(var answer: () -> RawDownload = { RawDownload(200, byteArrayOf(9, 9), "image/png") }) : GatewayDownloader {
         val urls = mutableListOf<String>()
-        override suspend fun download(url: String, timeoutSeconds: Int): RawDownload {
+        override suspend fun download(url: String, timeoutSeconds: Int, headers: Map<String, String>): RawDownload {
             urls += url
             check(timeoutSeconds == 30) { "gateway timeout must be 30 s" }
             return answer()
         }
+
+        override suspend fun post(url: String, json: String, timeoutSeconds: Int): RawPost = error("unused")
     }
 
     @Before
@@ -173,5 +176,59 @@ class MediaFetcherTest {
         assertEquals(MediaFailure.Unavailable("http 302"), failure(fetcher(true, gateway).bytes(url(), 1_000)))
         assertEquals(1, server.requestCount)
         assertTrue(gateway.urls.isEmpty())
+    }
+
+    private class FakeAuth(
+        var first: AuthHeaders = AuthHeaders.Ready(mapOf("Cookie" to "frigate_token=old")),
+        var renewed: AuthHeaders = AuthHeaders.Ready(mapOf("Cookie" to "frigate_token=new")),
+    ) : MediaAuth {
+        var renews = 0
+        override suspend fun headersFor(url: String) = first
+        override suspend fun renew(url: String, rejected: Map<String, String>): AuthHeaders { renews++; return renewed }
+    }
+
+    private fun authed(auth: MediaAuth) = MediaFetcher(
+        routes = { MediaRoute(LocalProbe { true }, null) },
+        http = OkHttpClient(),
+        isLanHost = { true },
+        log = { logged += it },
+        auth = auth,
+    )
+
+    @Test
+    fun `the cookie is sent and a 401 is retried once with a renewed token`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setBody("jpeg"))
+        val auth = FakeAuth()
+        val media = authed(auth).bytes(url(), 1_000).getOrThrow()
+        assertContentEquals("jpeg".encodeToByteArray(), media.bytes)
+        assertEquals("frigate_token=old", server.takeRequest().getHeader("Cookie"))
+        assertEquals("frigate_token=new", server.takeRequest().getHeader("Cookie"))
+        assertEquals(1, auth.renews)
+    }
+
+    @Test
+    fun `a second 401 is AuthFailed and there is no loop`(): Unit = runBlocking {
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(401)) }
+        val auth = FakeAuth()
+        assertEquals(MediaFailure.AuthFailed, failure(authed(auth).bytes(url(), 1_000)))
+        assertEquals(2, server.requestCount)
+        assertEquals(1, auth.renews)
+    }
+
+    @Test
+    fun `a failed login stops before any media request`(): Unit = runBlocking {
+        val auth = FakeAuth(first = AuthHeaders.Failed(MediaFailure.AuthFailed))
+        assertEquals(MediaFailure.AuthFailed, failure(authed(auth).bytes(url(), 1_000)))
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `without auth headers a 401 stays Unavailable and nothing is renewed`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(401))
+        val auth = FakeAuth(first = AuthHeaders.None)
+        assertEquals(MediaFailure.Unavailable("http 401"), failure(authed(auth).bytes(url(), 1_000)))
+        assertEquals(0, auth.renews)
+        assertNull(server.takeRequest().getHeader("Cookie"))
     }
 }

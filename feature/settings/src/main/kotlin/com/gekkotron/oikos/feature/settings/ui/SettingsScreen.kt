@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,6 +54,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gekkotron.oikos.data.DEFAULT_FRIGATE_URL
 import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
@@ -100,7 +102,7 @@ fun SettingsRoute(
     }
     SettingsScreen(
         state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack,
-        onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl,
+        onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
         onOpenChannels = { openNotificationSettings(context) },
     )
 }
@@ -120,10 +122,12 @@ fun SettingsScreen(
     onOpenChannels: () -> Unit = {},
     now: Instant = Instant.now(),
     onSaveHistoryUrl: (String) -> Boolean = { true },
+    onSaveFrigate: (url: String, user: String, password: String) -> Boolean = { _, _, _ -> true },
 ) {
     var confirm by rememberSaveable { mutableStateOf(false) }
     var pushSheet by rememberSaveable { mutableStateOf(false) }
     var historyDialog by rememberSaveable { mutableStateOf(false) }
+    var frigateDialog by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -143,7 +147,7 @@ fun SettingsScreen(
             NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)
             NavRow(stringResource(R.string.settings_push), pushStatusText(state.push, now), onClick = { pushSheet = true })
             Section(stringResource(R.string.settings_connection)) {
-                ConnectionRows(state.connection, onEditHistory = { historyDialog = true })
+                ConnectionRows(state.connection, onEditHistory = { historyDialog = true }, onEditFrigate = { frigateDialog = true })
                 if (route != null) RoutePicker(route, onRouteChange, Modifier.padding(top = 8.dp))
                 OutlinedButton(onClick = { confirm = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Text(stringResource(R.string.settings_set_up_again))
@@ -168,6 +172,16 @@ fun SettingsScreen(
     if (historyDialog) {
         val direct = state.connection as? ConnectionSummary.Direct
         HistoryUrlDialog(direct?.historyUrl.orEmpty(), direct?.historyDefault.orEmpty(), onSave = onSaveHistoryUrl, onDismiss = { historyDialog = false })
+    }
+    if (frigateDialog) {
+        val direct = state.connection as? ConnectionSummary.Direct
+        FrigateDialog(
+            initialUrl = direct?.frigateUrl ?: DEFAULT_FRIGATE_URL,
+            initialUser = direct?.frigateUser.orEmpty(),
+            hasPassword = direct?.frigateHasPassword == true,
+            onSave = onSaveFrigate,
+            onDismiss = { frigateDialog = false },
+        )
     }
     if (pushSheet) {
         PushSheet(state.push, now, onRegisterAgain, onOpenChannels, onDismiss = { pushSheet = false })
@@ -213,7 +227,7 @@ private fun NavRow(title: String, summary: String?, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Unit) {
+private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Unit, onEditFrigate: () -> Unit) {
     when (summary) {
         null -> Unit
         ConnectionSummary.Demo -> Text(stringResource(R.string.settings_demo), style = OikosTheme.type.body)
@@ -230,6 +244,13 @@ private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Uni
                 stringResource(R.string.settings_history),
                 summary.historyUrl ?: stringResource(R.string.settings_history_auto, summary.historyDefault),
                 onClick = onEditHistory,
+                onClickLabel = stringResource(R.string.settings_history_edit),
+            )
+            InfoRow(
+                stringResource(R.string.settings_frigate),
+                summary.frigateUrl ?: stringResource(R.string.settings_frigate_none),
+                summary.frigateUser?.takeIf { summary.frigateHasPassword }?.let { stringResource(R.string.settings_frigate_login, it) },
+                onClick = onEditFrigate,
                 onClickLabel = stringResource(R.string.settings_history_edit),
             )
         }
@@ -270,6 +291,82 @@ internal fun HistoryUrlDialogContent(text: String, failed: Boolean, hint: String
         )
         // Always laid out (blank until a refusal) so the dialog does not resize when the error appears.
         Text(if (failed) error else "", style = OikosTheme.type.label, color = MaterialTheme.colorScheme.error, minLines = 1, modifier = Modifier.padding(top = 4.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
+            TextButton(onClick = onSave) { Text(stringResource(R.string.settings_history_save)) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FrigateDialog(initialUrl: String, initialUser: String, hasPassword: Boolean, onSave: (String, String, String) -> Boolean, onDismiss: () -> Unit) {
+    var url by rememberSaveable { mutableStateOf(initialUrl) }
+    var user by rememberSaveable { mutableStateOf(initialUser) }
+    // Not saveable: a password must not land in the saved instance state.
+    var password by remember { mutableStateOf("") }
+    var failed by rememberSaveable { mutableStateOf(false) }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = AlertDialogDefaults.shape, color = AlertDialogDefaults.containerColor, tonalElevation = AlertDialogDefaults.TonalElevation) {
+            FrigateDialogContent(
+                url, user, initialUser, password, hasPassword, failed,
+                onUrl = { url = it; failed = false },
+                onUser = { user = it },
+                onPassword = { password = it },
+                onSave = { if (onSave(url, user, password)) onDismiss() else failed = true },
+                onCancel = onDismiss,
+            )
+        }
+    }
+}
+
+/** Stateless body of the Frigate dialog, so it can be tested without a dialog window. */
+@Composable
+internal fun FrigateDialogContent(
+    url: String,
+    user: String,
+    initialUser: String,
+    password: String,
+    hasPassword: Boolean,
+    failed: Boolean,
+    onUrl: (String) -> Unit,
+    onUser: (String) -> Unit,
+    onPassword: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val error = stringResource(R.string.settings_history_error)
+    Column(Modifier.padding(24.dp)) {
+        Text(stringResource(R.string.settings_frigate), style = OikosTheme.type.display)
+        OutlinedTextField(
+            value = url,
+            onValueChange = onUrl,
+            label = { Text(stringResource(R.string.settings_frigate_hint)) },
+            singleLine = true,
+            isError = failed,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp).semantics { if (failed) error(error) },
+        )
+        // Always laid out (blank until a refusal) so the dialog does not resize when the error appears.
+        Text(if (failed) error else "", style = OikosTheme.type.label, color = MaterialTheme.colorScheme.error, minLines = 1, modifier = Modifier.padding(top = 4.dp))
+        OutlinedTextField(
+            value = user,
+            onValueChange = onUser,
+            label = { Text(stringResource(R.string.settings_frigate_user)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = onPassword,
+            label = { Text(stringResource(R.string.settings_frigate_password)) },
+            // The stored password is kept only for the same user (see the ViewModel).
+            supportingText = if (hasPassword && user.trim() == initialUser.trim()) ({ Text(stringResource(R.string.settings_frigate_unchanged)) }) else null,
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
             TextButton(onClick = onSave) { Text(stringResource(R.string.settings_history_save)) }

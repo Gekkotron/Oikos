@@ -8,9 +8,13 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Headers
+import okhttp3.Headers.Companion.toHeaders
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -35,7 +39,14 @@ sealed interface HttpGetResult {
     data class Unavailable(val reason: String) : HttpGetResult
 }
 
-/** A GET of a LAN URL: direct when the LAN is reachable (5 s connect, 15 s read), the gateway's raw download otherwise (30 s). */
+sealed interface HttpPostResult {
+    /** Any HTTP answer, with its headers (lower-case names, repeated ones joined with `\n`). */
+    class Response(val status: Int, val headers: Map<String, String>) : HttpPostResult
+    data object NotAllowed : HttpPostResult
+    data class Unavailable(val reason: String) : HttpPostResult
+}
+
+/** A GET or JSON POST of a LAN URL: direct when the LAN is reachable (5 s connect, 15 s read), the gateway's raw download otherwise (30 s). */
 class LanOrGatewayGet(
     private val routes: HttpRoutes,
     http: OkHttpClient,
@@ -56,24 +67,59 @@ class LanOrGatewayGet(
         class Down(val reason: String) : Lan
     }
 
-    suspend fun get(url: String, maxBytes: Long, onProgress: (read: Long, total: Long?) -> Unit = { _, _ -> }): HttpGetResult {
+    suspend fun get(
+        url: String,
+        maxBytes: Long,
+        onProgress: (read: Long, total: Long?) -> Unit = { _, _ -> },
+        headers: Map<String, String> = emptyMap(),
+    ): HttpGetResult {
         val parsed = url.toHttpUrlOrNull() ?: return HttpGetResult.Unavailable("not an http url")
         val host = parsed.host
         val route = routes.current()
         var lanReason: String? = null
         val probe = route.local
         if (probe != null && isLanHost(host) && probe.reachable()) {
-            when (val result = fromLan(url, maxBytes, onProgress)) {
+            when (val result = fromLan(url, maxBytes, onProgress, headers)) {
                 is Lan.Done -> return result.result
                 is Lan.Down -> lanReason = result.reason
             }
         }
         val gateway = route.gateway ?: return HttpGetResult.Unavailable(lanReason ?: "no route")
-        return fromGateway(gateway, url, host, maxBytes)
+        return fromGateway(gateway, url, host, maxBytes, headers)
     }
 
-    private suspend fun fromGateway(gateway: GatewayDownloader, url: String, host: String, maxBytes: Long): HttpGetResult = try {
-        val download = gateway.download(url, GATEWAY_TIMEOUT_SECONDS)
+    /** A JSON POST, e.g. a login: direct when the LAN is reachable, the gateway's `http` call otherwise. */
+    suspend fun post(url: String, json: String): HttpPostResult {
+        val host = url.toHttpUrlOrNull()?.host ?: return HttpPostResult.Unavailable("not an http url")
+        val route = routes.current()
+        var lanReason: String? = null
+        val probe = route.local
+        if (probe != null && isLanHost(host) && probe.reachable()) {
+            try {
+                lan.newCall(Request.Builder().url(url).post(json.toRequestBody(JSON)).build()).await().use { response ->
+                    return HttpPostResult.Response(response.code, response.headers.lowerCaseMap())
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                lanReason = e.message ?: e.javaClass.simpleName
+            }
+        }
+        val gateway = route.gateway ?: return HttpPostResult.Unavailable(lanReason ?: "no route")
+        return try {
+            gateway.post(url, json, GATEWAY_TIMEOUT_SECONDS).let { HttpPostResult.Response(it.status, it.headers) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: DownloadNotAllowed) {
+            if (warnedHosts.add(host)) log("the gateway refused $host (${e.reason}); add the host to this key's rules")
+            HttpPostResult.NotAllowed
+        } catch (e: Exception) {
+            HttpPostResult.Unavailable(e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    private suspend fun fromGateway(gateway: GatewayDownloader, url: String, host: String, maxBytes: Long, headers: Map<String, String>): HttpGetResult = try {
+        val download = gateway.download(url, GATEWAY_TIMEOUT_SECONDS, headers)
         if (download.bytes.size > maxBytes) HttpGetResult.TooLarge else HttpGetResult.Response(download.status, download.bytes, download.contentType)
     } catch (e: CancellationException) {
         throw e
@@ -84,8 +130,8 @@ class LanOrGatewayGet(
         HttpGetResult.Unavailable(e.message ?: e.javaClass.simpleName)
     }
 
-    private suspend fun fromLan(url: String, maxBytes: Long, onProgress: (Long, Long?) -> Unit): Lan = try {
-        lan.newCall(Request.Builder().url(url).build()).await().use { response ->
+    private suspend fun fromLan(url: String, maxBytes: Long, onProgress: (Long, Long?) -> Unit, headers: Map<String, String>): Lan = try {
+        lan.newCall(Request.Builder().url(url).headers(headers.toHeaders()).build()).await().use { response ->
             if (!response.isSuccessful) Lan.Done(HttpGetResult.Response(response.code, ByteArray(0), null))
             else Lan.Done(readBody(response, maxBytes, onProgress))
         }
@@ -116,6 +162,7 @@ class LanOrGatewayGet(
     }
 
     private companion object {
+        val JSON = "application/json; charset=utf-8".toMediaType()
         const val LAN_CONNECT_SECONDS = 5L
         const val LAN_READ_SECONDS = 15L
         const val GATEWAY_TIMEOUT_SECONDS = 30
@@ -139,3 +186,6 @@ private suspend fun Call.await(): Response = suspendCancellableCoroutine { conti
         },
     )
 }
+
+/** Lower-case names; a repeated header (several Set-Cookie) keeps every value, joined with `\n`. */
+internal fun Headers.lowerCaseMap(): Map<String, String> = names().associate { it.lowercase() to values(it).joinToString("\n") }

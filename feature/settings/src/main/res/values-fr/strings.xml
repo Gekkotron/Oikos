@@ -48,4 +48,11 @@
     <string name="settings_history_error">Format http(s)://hôte[:port], rien après</string>
     <string name="settings_history_save">Enregistrer</string>
     <string name="settings_history_edit">Modifier</string>
+    <string name="settings_frigate">Frigate</string>
+    <string name="settings_frigate_none">Non configuré</string>
+    <string name="settings_frigate_login">Identifiant : %1$s</string>
+    <string name="settings_frigate_hint">ex. http://frigate:8971 (identifiant) ou http://frigate:5000 (sans)</string>
+    <string name="settings_frigate_user">Identifiant (facultatif)</string>
+    <string name="settings_frigate_password">Mot de passe</string>
+    <string name="settings_frigate_unchanged">Inchangé</string>
 </resources>

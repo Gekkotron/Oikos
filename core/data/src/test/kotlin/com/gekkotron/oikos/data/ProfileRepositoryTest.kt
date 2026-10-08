@@ -259,4 +259,27 @@ class ProfileRepositoryTest {
         f.writeText("""{"installId":"x","mode":"DIRECT","local":{"host":"h","port":1883,"tls":false,"ws":false},"prefix":"homeassistant"}""")
         assertNull(((repo(f).settled() as ProfileState.Ready).profile as ConnectionProfile.Direct).historyUrl)
     }
+
+    @Test
+    fun `frigate round-trips with a sealed password and can be edited and cleared in place`() = runTest {
+        val f = file()
+        val r = repo(f)
+        r.save(direct.copy(frigate = FrigateConfig("http://192.168.1.91:8971", "admin", "fr1gate-secret")))
+        val saved = ((r.state.first { it is ProfileState.Ready } as ProfileState.Ready).profile as ConnectionProfile.Direct).frigate
+        assertEquals(FrigateConfig("http://192.168.1.91:8971", "admin", "fr1gate-secret"), saved)
+        assertFalse("fr1gate-secret" in f.readText())
+        r.finishRooms()
+        r.setFrigate(FrigateConfig("http://frigate:5000"))
+        val ready = r.state.first { ((it as? ProfileState.Ready)?.profile as? ConnectionProfile.Direct)?.frigate == FrigateConfig("http://frigate:5000") } as ProfileState.Ready
+        assertFalse(ready.roomsPending) // an in-place edit, not a new pairing
+        r.setFrigate(null)
+        r.state.first { it is ProfileState.Ready && (it.profile as ConnectionProfile.Direct).frigate == null }
+    }
+
+    @Test
+    fun `a profile file from before frigate has none`() = runTest {
+        val f = file()
+        f.writeText("""{"installId":"x","mode":"DIRECT","local":{"host":"h","port":1883,"tls":false,"ws":false},"prefix":"homeassistant"}""")
+        assertNull(((repo(f).settled() as ProfileState.Ready).profile as ConnectionProfile.Direct).frigate)
+    }
 }

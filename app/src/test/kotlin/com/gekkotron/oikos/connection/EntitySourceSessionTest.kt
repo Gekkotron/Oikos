@@ -2,6 +2,7 @@ package com.gekkotron.oikos.connection
 
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.EntityCache
+import com.gekkotron.oikos.data.FrigateConfig
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.LinkState
@@ -52,6 +53,14 @@ class EntitySourceSessionTest {
         assertSame(first, second)
         assertEquals(1, scopes.size)
         assertTrue(scopes[0].isActive)
+    }
+
+    @Test
+    fun `a profile differing only by frigate keeps the source`() {
+        val first = session.current(direct)
+        val second = session.current(direct.copy(frigate = FrigateConfig("http://frigate:8971", "admin", "pw")))
+        assertSame(first, second)
+        assertEquals(1, scopes.size)
     }
 
     @Test

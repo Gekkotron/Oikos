@@ -65,6 +65,14 @@ class ProfileRepository internal constructor(
         store.updateData { it.copy(historyUrl = url) }
     }
 
+    /** Edits the Frigate settings in place: no new pairing, rooms and route are kept. Null removes them. */
+    suspend fun setFrigate(config: FrigateConfig?) {
+        val stored = config?.toStored()
+        store.updateData { it.copy(frigate = stored) }
+    }
+
+    private fun FrigateConfig.toStored() = StoredFrigate(url, username, password?.let { seal(it.encodeToByteArray()) })
+
     suspend fun installId(): String =
         store.updateData { if (it.installId.isEmpty()) it.copy(installId = newId()) else it }.installId
 
@@ -86,6 +94,7 @@ class ProfileRepository internal constructor(
             gateway = gateway?.let { GatewayConfig(it.url, open(it.keyCipher), it.brokerHost) },
             pushTokenTopic = pushTokenTopic,
             historyUrl = historyUrl,
+            frigate = frigate?.let { FrigateConfig(it.url, it.username, it.passCipher?.let { c -> open(c).decodeToString() }) },
         )
     }
 
@@ -99,6 +108,7 @@ class ProfileRepository internal constructor(
             prefix = p.prefix,
             pushTokenTopic = p.pushTokenTopic,
             historyUrl = p.historyUrl,
+            frigate = p.frigate?.toStored(),
             roomsPending = true,
             notificationsPending = true,
         )

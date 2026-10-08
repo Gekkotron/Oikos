@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.settings.presentation
 
 import com.gekkotron.oikos.data.ConnectionProfile
+import com.gekkotron.oikos.data.FrigateConfig
 import com.gekkotron.oikos.data.GatewayConfig
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.data.ProfileState
@@ -8,6 +9,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ConnectionSummaryTest {
     private val key = ByteArray(GatewayConfig.KEY_BYTES) { 0x5a }
@@ -62,5 +64,16 @@ class ConnectionSummaryTest {
         val other = ConnectionSummary.from(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("h"), historyUrl = "http://nas:9000"))) as ConnectionSummary.Direct
         assertEquals("http://nas:9000", other.historyUrl)
         assertEquals("http://h:8090", other.historyDefault)
+    }
+
+    @Test
+    fun `frigate shows url and user, and only whether a password exists`() {
+        val s = ConnectionSummary.from(
+            ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("h"), frigate = FrigateConfig("http://f:8971", "admin", "fr1gate-secret"))),
+        ) as ConnectionSummary.Direct
+        assertEquals("http://f:8971", s.frigateUrl)
+        assertEquals("admin", s.frigateUser)
+        assertTrue(s.frigateHasPassword)
+        assertFalse("fr1gate-secret" in s.toString())
     }
 }

@@ -19,6 +19,9 @@ sealed interface MediaFailure {
     /** The gateway key has no rule for this host (spec §10 step 2). */
     data object NotAllowed : MediaFailure
 
+    /** Frigate refused the configured login (Frigate auth spec §4). */
+    data object AuthFailed : MediaFailure
+
     data class Unavailable(val reason: String) : MediaFailure
 }
 
@@ -33,20 +36,41 @@ interface MediaSource {
     suspend fun bytes(url: String, maxBytes: Long, onProgress: (read: Long, total: Long?) -> Unit = { _, _ -> }): Result<Media>
 }
 
-/** LAN first (5 s connect, 15 s read), the gateway's raw download otherwise (30 s); spec §6.3. */
+/**
+ * LAN first (5 s connect, 15 s read), the gateway's raw download otherwise (30 s); spec §6.3. A Frigate URL gets its
+ * login cookie from [auth] (Frigate auth spec §4).
+ */
 class MediaFetcher(
     routes: MediaRoutes,
     http: OkHttpClient,
     io: CoroutineDispatcher = Dispatchers.IO,
     isLanHost: (String) -> Boolean = ::isLikelyLocalHost,
     log: (String) -> Unit = { Log.w(TAG, it) },
+    private val auth: MediaAuth? = null,
 ) : MediaSource {
     private val get = LanOrGatewayGet(routes, http, isLanHost, log, io)
 
-    override suspend fun bytes(url: String, maxBytes: Long, onProgress: (Long, Long?) -> Unit): Result<Media> =
-        when (val r = get.get(url, maxBytes, onProgress)) {
+    override suspend fun bytes(url: String, maxBytes: Long, onProgress: (Long, Long?) -> Unit): Result<Media> {
+        var headers = when (val a = auth?.headersFor(url) ?: AuthHeaders.None) {
+            AuthHeaders.None -> emptyMap()
+            is AuthHeaders.Ready -> a.headers
+            is AuthHeaders.Failed -> return fail(a.failure)
+        }
+        var r = get.get(url, maxBytes, onProgress, headers)
+        if (headers.isNotEmpty() && r is HttpGetResult.Response && r.status == 401) {
+            when (val again = auth!!.renew(url, headers)) {
+                AuthHeaders.None -> Unit
+                is AuthHeaders.Ready -> {
+                    headers = again.headers
+                    r = get.get(url, maxBytes, onProgress, headers)
+                }
+                is AuthHeaders.Failed -> return fail(again.failure)
+            }
+        }
+        return when (r) {
             is HttpGetResult.Response -> when {
                 r.status == 404 || r.status == 410 -> fail(MediaFailure.Gone)
+                r.status == 401 && headers.isNotEmpty() -> fail(MediaFailure.AuthFailed)
                 r.status !in 200..299 -> fail(MediaFailure.Unavailable("http ${r.status}"))
                 else -> Result.success(Media(r.bytes, r.contentType))
             }
@@ -54,6 +78,7 @@ class MediaFetcher(
             HttpGetResult.NotAllowed -> fail(MediaFailure.NotAllowed)
             is HttpGetResult.Unavailable -> fail(MediaFailure.Unavailable(if (r.reason == "no route") "no route to the media" else r.reason))
         }
+    }
 
     private fun fail(failure: MediaFailure): Result<Media> = Result.failure(MediaException(failure))
 

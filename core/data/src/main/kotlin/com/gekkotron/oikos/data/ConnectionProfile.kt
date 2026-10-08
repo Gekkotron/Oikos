@@ -52,6 +52,8 @@ sealed interface ConnectionProfile {
         val pushTokenTopic: String? = null,
         /** Override of the OikosHistory URL, e.g. `http://192.168.1.91:8090`; null = derived from the broker host (see [effectiveHistoryUrl]). */
         val historyUrl: String? = null,
+        /** Frigate's address and login for alert media (Frigate auth spec §3); null = none configured. */
+        val frigate: FrigateConfig? = null,
     ) : ConnectionProfile
 }
 

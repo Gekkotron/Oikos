@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.data.ThemePreference
@@ -54,6 +55,9 @@ class SettingsScreenTest {
     private val savedHistory = mutableListOf<String>()
     private var historyAccepts = false
     private fun saveHistory(text: String): Boolean { savedHistory += text; return historyAccepts }
+
+    private val savedFrigate = mutableListOf<Triple<String, String, String>>()
+    private var frigateAccepts = true
 
     @Test
     fun `theme rows show the choice and report a pick`() {
@@ -269,5 +273,86 @@ class SettingsScreenTest {
         showContent(accept = true) { dismissed++ }
         compose.onNodeWithText("Save").performClick()
         assertEquals(1, dismissed)
+    }
+
+    // Same hand-driven clock as showHistory: an open dialog never lets Robolectric report Compose idle.
+    private fun showFrigate(connection: ConnectionSummary.Direct) {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                SettingsScreen(
+                    SettingsUi(connection = connection), version = "0.12 · debug", route = null,
+                    onTheme = {}, onRouteChange = {}, onSetUpAgain = {}, onOpenRooms = {}, onOpenLicences = {}, onBack = {},
+                    onSaveFrigate = { u, n, p -> savedFrigate += Triple(u, n, p); frigateAccepts },
+                )
+            }
+        }
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithText("Frigate").performScrollTo()
+    }
+
+    @Test
+    fun `an unset frigate shows Not set and the dialog starts from the generic default`() {
+        showFrigate(direct)
+        compose.onNodeWithText("Not set").performClick()
+        settle()
+        compose.onNodeWithText("http://frigate:8971").assertExists()
+        compose.onNodeWithText("e.g. http://frigate:8971 (login) or http://frigate:5000 (no login)").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        settle()
+    }
+
+    @Test
+    fun `a configured frigate shows its url and user, and save reports the three fields`() {
+        showFrigate(direct.copy(frigateUrl = "http://192.168.1.91:8971", frigateUser = "admin", frigateHasPassword = true))
+        compose.onNodeWithText("http://192.168.1.91:8971").performClick()
+        settle()
+        compose.onNodeWithText("Unchanged").assertExists()
+        compose.onNodeWithText("Save").performClick()
+        settle()
+        assertEquals(listOf(Triple("http://192.168.1.91:8971", "admin", "")), savedFrigate)
+    }
+
+    // Stateless body, like the history one: an open dialog window never lets Robolectric go idle.
+    @Test
+    fun `a refused frigate save keeps the dialog open with the error`() {
+        var dismissed = 0
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                var failed by remember { mutableStateOf(false) }
+                FrigateDialogContent(
+                    "nope", "", initialUser = "", password = "", hasPassword = false, failed = failed,
+                    onUrl = {}, onUser = {}, onPassword = {},
+                    onSave = { if (frigateAccepts) dismissed++ else failed = true },
+                    onCancel = {},
+                )
+            }
+        }
+        frigateAccepts = false
+        compose.onNodeWithText("Use http(s)://host[:port], nothing after it").assertDoesNotExist()
+        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithText("Use http(s)://host[:port], nothing after it").assertExists()
+        assertEquals(0, dismissed)
+    }
+
+    @Test
+    fun `the Unchanged hint shows for the stored user only`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                var user by remember { mutableStateOf("admin") }
+                FrigateDialogContent(
+                    "http://frigate:8971", user, initialUser = "admin", password = "", hasPassword = true, failed = false,
+                    onUrl = {}, onUser = { user = it }, onPassword = {}, onSave = {}, onCancel = {},
+                )
+            }
+        }
+        compose.onNodeWithText("Unchanged").assertExists()
+        compose.onNodeWithText("admin").performTextInput("x")
+        compose.onNodeWithText("Unchanged").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a frigate user without a password shows no Login line`() {
+        showFrigate(direct.copy(frigateUrl = "http://192.168.1.91:8971", frigateUser = "admin", frigateHasPassword = false))
+        compose.onNodeWithText("Login: admin").assertDoesNotExist()
     }
 }

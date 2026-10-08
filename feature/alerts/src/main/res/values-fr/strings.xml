@@ -26,6 +26,7 @@
     <string name="alert_gone">Cette alerte n\'est plus disponible</string>
     <string name="alert_media_gone">Média plus disponible</string>
     <string name="alert_media_failed">Impossible de charger le média</string>
+    <string name="alert_media_login">Connexion à Frigate refusée — vérifiez les réglages</string>
     <string name="alert_picture">Image : %1$s</string>
     <string name="alert_play_video">Lire la vidéo</string>
     <string name="alert_downloading_video">Téléchargement de la vidéo</string>

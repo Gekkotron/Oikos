@@ -111,4 +111,29 @@ class OnboardingPayloadTest {
         assertFalse("s3cret" in p.toString())
         assertFalse(key in p.toString())
     }
+
+    @Test
+    fun `frigate section is read and normalised`() {
+        val p = ok("""{"v":1,"local":{"host":"h"},"frigate":{"url":"http://192.168.1.91:8971/","user":"admin","pass":"pw"}}""")
+        assertEquals(FrigateConfig("http://192.168.1.91:8971", "admin", "pw"), p.frigate)
+    }
+
+    @Test
+    fun `frigate without a login is fine, and absent means none`() {
+        assertEquals(FrigateConfig("http://frigate:5000"), ok("""{"v":1,"local":{"host":"h"},"frigate":{"url":"http://frigate:5000"}}""").frigate)
+        assertNull(ok("""{"v":1,"local":{"host":"h"}}""").frigate)
+    }
+
+    @Test
+    fun `invalid frigate fields are named`() {
+        assertEquals(PayloadError.InvalidField("frigate.url"), error("""{"v":1,"local":{"host":"h"},"frigate":{}}"""))
+        assertEquals(PayloadError.InvalidField("frigate.url"), error("""{"v":1,"local":{"host":"h"},"frigate":{"url":"frigate:8971"}}"""))
+        assertEquals(PayloadError.InvalidField("frigate.user"), error("""{"v":1,"local":{"host":"h"},"frigate":{"url":"http://f:8971","pass":"pw"}}"""))
+    }
+
+    @Test
+    fun `the frigate password never shows in toString`() {
+        val p = ok("""{"v":1,"local":{"host":"h"},"frigate":{"url":"http://f:8971","user":"admin","pass":"fr1gate-secret"}}""")
+        assertFalse("fr1gate-secret" in p.toString())
+    }
 }
