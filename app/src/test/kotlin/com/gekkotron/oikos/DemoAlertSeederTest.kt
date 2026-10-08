@@ -73,9 +73,14 @@ class DemoAlertSeederTest {
         // A bare timeout says nothing in CI's console: name the step and what Room held.
         if (done == null) {
             val errors = seederErrors.joinToString { it.stackTraceToString().lines().take(6).joinToString(" | ") }
-            throw AssertionError("$step: after 5 s Room held $seen, expected $expected; seeder errors: [$errors]")
+            throw AssertionError("$step: after 5 s Room held $seen, expected $expected; seeder errors: [$errors]; threads:\n${busyThreads()}")
         }
     }
+
+    /** Where the app's threads are parked: a seeder that neither writes nor throws is stuck somewhere in here. */
+    private fun busyThreads(): String = Thread.getAllStackTraces()
+        .filter { (t, frames) -> frames.any { f -> f.className.startsWith("androidx.room") || f.className.startsWith("com.gekkotron") } || t.name.contains("arch_disk_io") }
+        .entries.joinToString("\n") { (t, frames) -> "[${t.name} ${t.state}] " + frames.take(14).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" } }
 
     private suspend fun settle() = withContext(Dispatchers.Default) { delay(300) }
 
