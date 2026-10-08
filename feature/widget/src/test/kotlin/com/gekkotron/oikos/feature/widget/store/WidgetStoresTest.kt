@@ -71,4 +71,12 @@ class WidgetStoresTest {
         }
         assertFalse(Regex("\"code\"\\s*:").containsMatchIn(file.readText()))
     }
+
+    @Test
+    fun set_up_again_leaves_set_up_oikos_not_dashes() = runTest {
+        val store = FileWidgetSnapshotStore.create(fresh("s3.json"), backgroundScope)
+        store.update { it.copy(tiles = mapOf("a" to TileSnapshot("a", "A", Kind.SWITCH, TileIcon.SWITCH, TileValue.OnOff(true))), link = LinkStatus.FRESH) }
+        store.resetForSetUp()
+        assertEquals(WidgetSnapshot(link = LinkStatus.NOT_CONFIGURED), store.current())
+    }
 }

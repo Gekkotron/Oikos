@@ -115,4 +115,20 @@ class TileMapperTest {
         val tile = TileMapper.map(entity("t", Kind.SENSOR, unit = "°C"), EntityState("t", StateValue.Numeric(1.0), lastUpdate = t0), null, historyEnabled = true, complete = true)!!
         assertEquals(false, tile.historyAvailable)
     }
+
+    @Test
+    fun a_partial_discovery_never_drops_a_code_requirement() {
+        // The cached alarm config has its code redacted, so before the live config replays the entity says "no code".
+        val live = Capabilities(alarmModes = setOf(AlarmMode.AWAY), codeArmRequired = true, codeDisarmRequired = true, codeFormat = CodeFormat.TEXT)
+        val state = EntityState("a", StateValue.Alarm(AlarmState.ARMED_AWAY), lastUpdate = t0)
+        val prev = TileMapper.map(entity("a", Kind.ALARM_PANEL, caps = live), state, null, false, complete = true)
+        val cachedOnly = entity("a", Kind.ALARM_PANEL, caps = Capabilities(alarmModes = setOf(AlarmMode.AWAY)))
+        val partial = TileMapper.map(cachedOnly, state, prev, false, complete = false)!!
+        assertTrue(partial.codeArmRequired)
+        assertTrue(partial.codeDisarmRequired)
+        assertEquals(CodeFormat.TEXT, partial.codeFormat)
+        // Once discovery settled, the live config is the truth.
+        val settled = TileMapper.map(cachedOnly, state, prev, false, complete = true)!!
+        assertEquals(false, settled.codeDisarmRequired)
+    }
 }

@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.widget.store
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import com.gekkotron.oikos.feature.widget.model.LinkStatus
 import com.gekkotron.oikos.feature.widget.model.WidgetSnapshot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,9 @@ interface WidgetSnapshotStore {
 
     suspend fun clear()
 }
+
+/** "Set up again": no tiles, and the footer asks to set Oikos up (widgets spec §4). The config is kept. */
+suspend fun WidgetSnapshotStore.resetForSetUp() = update { WidgetSnapshot(link = LinkStatus.NOT_CONFIGURED) }
 
 class FileWidgetSnapshotStore private constructor(private val store: DataStore<WidgetSnapshot>) : WidgetSnapshotStore {
     override val snapshot: Flow<WidgetSnapshot> = store.data

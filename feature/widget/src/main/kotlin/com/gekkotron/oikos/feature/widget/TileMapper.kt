@@ -26,6 +26,13 @@ object TileMapper {
             }
         }
         val liveAt = state?.lastUpdate?.takeIf { !state.stale }
+        val caps = entity.capabilities
+        // Before discovery settles the config may come from the cache, where the alarm code is redacted (so "no code"):
+        // never drop a code requirement seen earlier until the live config has replayed.
+        val keep = if (complete) null else previous
+        val codeArm = caps.codeArmRequired || keep?.codeArmRequired == true
+        val codeDisarm = caps.codeDisarmRequired || keep?.codeDisarmRequired == true
+        val codeFormat = if (!caps.codeArmRequired && !caps.codeDisarmRequired && keep != null && (codeArm || codeDisarm)) keep.codeFormat else caps.codeFormat
         val climateMode = (state?.value as? StateValue.Climate)?.mode
         return TileSnapshot(
             uniqueId = entity.uniqueId,
@@ -36,9 +43,9 @@ object TileMapper {
             value = state?.value?.let { valueOf(entity, it) } ?: TileValue.None,
             available = state?.available ?: true,
             alarmModes = entity.capabilities.alarmModes,
-            codeArmRequired = entity.capabilities.codeArmRequired,
-            codeDisarmRequired = entity.capabilities.codeDisarmRequired,
-            codeFormat = entity.capabilities.codeFormat,
+            codeArmRequired = codeArm,
+            codeDisarmRequired = codeDisarm,
+            codeFormat = codeFormat,
             hvacModes = entity.capabilities.hvacModes,
             lastOnMode = climateMode?.takeIf { it != "off" } ?: previous?.lastOnMode,
             historyAvailable = historyEnabled && HistoryRefs.of(entity) != null,

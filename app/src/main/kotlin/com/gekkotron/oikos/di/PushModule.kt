@@ -14,6 +14,7 @@ import com.gekkotron.oikos.connection.oneShotSpec
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.feature.widget.WidgetUpdater
 import com.gekkotron.oikos.feature.widget.store.WidgetSnapshotStore
+import com.gekkotron.oikos.feature.widget.store.resetForSetUp
 import com.gekkotron.oikos.push.AlertChannels
 import com.gekkotron.oikos.push.AlertIngestor
 import com.gekkotron.oikos.push.AlertNotifier
@@ -95,7 +96,7 @@ object PushModule {
     ): SetUpAgainCleanup = SetUpAgainCleanup(
         registrar, repository, replies, images, videos,
         resetWidgets = {
-            widgetSnapshots.clear()
+            widgetSnapshots.resetForSetUp()
             widgetUpdater.updateAll()
         },
         dismissNotifications = { NotificationManagerCompat.from(context).cancelAll() },
