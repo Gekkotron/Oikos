@@ -23,7 +23,7 @@ internal object HistoryApi {
     private fun encode(v: String) = URLEncoder.encode(v, Charsets.UTF_8).replace("+", "%20")
 
     fun parseSeries(text: String): Series {
-        val o = Json.parseToJsonElement(text) as JsonObject
+        val o = (Json.parseToJsonElement(text) as? JsonObject ?: error("not an object"))
         val points = o.getValue("points").jsonArray.map { p ->
             val a = p.jsonArray
             HistoryPoint(a.long(0), a.double(1), a.double(2), a.double(3))
@@ -32,17 +32,17 @@ internal object HistoryApi {
     }
 
     fun parseDaily(text: String, factor: Double): DailyTotals {
-        val o = Json.parseToJsonElement(text) as JsonObject
+        val o = (Json.parseToJsonElement(text) as? JsonObject ?: error("not an object"))
         return DailyTotals(o.getValue("days").jsonArray.map { d -> d.jsonArray.let { DayTotal(it.long(0), kwh(it.double(1), factor)) } })
     }
 
     fun parseToday(text: String, factor: Double): Double? {
-        val kwh = (Json.parseToJsonElement(text) as JsonObject).getValue("kwh")
+        val kwh = ((Json.parseToJsonElement(text) as? JsonObject ?: error("not an object"))).getValue("kwh")
         return if (kwh is JsonNull) null else kwh.jsonPrimitive.doubleOrNull?.let { kwh(it, factor) }
     }
 
     private fun kwh(raw: Double, factor: Double) = Math.round(raw * factor * 1000) / 1000.0
 
-    private fun JsonArray.long(i: Int) = get(i).jsonPrimitive.longOrNull ?: error("bad timestamp")
-    private fun JsonArray.double(i: Int) = get(i).jsonPrimitive.doubleOrNull ?: error("bad value")
+    private fun JsonArray.long(i: Int) = (getOrNull(i) ?: error("short array")).jsonPrimitive.longOrNull ?: error("bad timestamp")
+    private fun JsonArray.double(i: Int) = (getOrNull(i) ?: error("short array")).jsonPrimitive.doubleOrNull ?: error("bad value")
 }

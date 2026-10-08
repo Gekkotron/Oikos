@@ -54,6 +54,10 @@ class HttpHistoryClientTest {
         assertIs<HistoryResult.Unavailable>(client().series(ref, HistoryRange.D30))
         answer = ok("not json")
         assertIs<HistoryResult.Unavailable>(client().today(ref, EnergyScale(EnergyKind.COUNTER, 1.0)))
+        answer = ok("[]")
+        assertIs<HistoryResult.Unavailable>(client().series(ref, HistoryRange.H24))
+        answer = ok("""{"points":[[1]],"window":60}""")
+        assertIs<HistoryResult.Unavailable>(client().series(ref, HistoryRange.D7))
     }
 
     @Test
