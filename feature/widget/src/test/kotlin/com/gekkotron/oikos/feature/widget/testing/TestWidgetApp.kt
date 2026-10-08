@@ -9,7 +9,7 @@ import com.gekkotron.oikos.feature.widget.WidgetRefresher
 class TestWidgetApp : Application(), WidgetComponentProvider {
     val scheduler = FakeScheduler()
     private val entities = FakeWidgetEntities()
-    private val configs = MemConfigs()
+    val configs = MemConfigs()
     private val snapshots = MemSnapshots()
     private val component = WidgetComponent(entities, configs, snapshots, scheduler, WidgetRefresher(entities, configs, snapshots, {}))
 

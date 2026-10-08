@@ -31,11 +31,7 @@ import com.gekkotron.oikos.feature.widget.config.WidgetConfigActivity
 import com.gekkotron.oikos.feature.widget.model.WidgetCommand
 import com.gekkotron.oikos.feature.widget.model.WidgetConfig
 import com.gekkotron.oikos.feature.widget.model.WidgetSnapshot
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
 
 /** The links the widget opens in the app; `:app` parses them (widgets spec §2.3). */
 object AppLinks {
@@ -61,6 +57,11 @@ class OikosWidget : GlanceAppWidget() {
                 WidgetContent(uiState(current.first, current.second, System.currentTimeMillis()), Actions(context, appWidgetId))
             }
         }
+    }
+
+    /** Runs inside Glance's own goAsync on removal; the receiver must not call goAsync() again (it would return null). */
+    override suspend fun onDelete(context: Context, glanceId: GlanceId) {
+        context.widgetComponent.configs.remove(intArrayOf(GlanceAppWidgetManager(context).getAppWidgetId(glanceId)))
     }
 
     private fun uiState(config: WidgetConfig?, snapshot: WidgetSnapshot, now: Long) = WidgetUiState(
@@ -120,19 +121,6 @@ class RefreshCallback : ActionCallback {
 
 class OikosWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = OikosWidget()
-
-    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
-        super.onDeleted(context, appWidgetIds)
-        val configs = context.widgetComponent.configs
-        val pending = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try {
-                configs.remove(appWidgetIds)
-            } finally {
-                pending.finish()
-            }
-        }
-    }
 
     /** The last widget is gone: stop the periodic refresh. */
     override fun onDisabled(context: Context) {
