@@ -484,4 +484,17 @@ class EnergyFlowBuilderTest {
         assertEquals(1.5, buildToday(mapOf("heater" to 1.5)).node("consumer:heater")!!.todayKwh)
         assertNull(buildToday(emptyMap()).node("consumer:heater")!!.todayKwh)
     }
+
+    @Test
+    fun `a signed node without a meter has no today`() {
+        val ui = EnergyFlowBuilder.build(
+            listOf(energyEntity("grid", EnergyRole.GRID), energyEntity("battery", EnergyRole.BATTERY), energyEntity("heater", EnergyRole.CONSUMER))
+                .associateBy { it.uniqueId },
+            listOf(numeric("grid", 100.0), numeric("battery", -500.0), numeric("heater", 600.0)).associateBy { it.uniqueId },
+            LinkState.Connecting, 0, today = mapOf("grid" to 0.1, "battery" to -1.2, "heater" to 2.0),
+        )
+        assertNull(ui.node("grid")!!.todayKwh)
+        assertNull(ui.node("battery")!!.todayKwh)
+        assertEquals(2.0, ui.node("consumer:heater")!!.todayKwh)
+    }
 }

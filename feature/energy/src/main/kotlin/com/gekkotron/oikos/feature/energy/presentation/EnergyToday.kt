@@ -11,7 +11,7 @@ import com.gekkotron.oikos.model.Entity
 object EnergyToday {
     /**
      * For every energy-role power entity: its meter's counter (when paired, recorded and in an energy unit), keyed by the
-     * meter's id, else its own power integral keyed by its id. A derived house's export and inverter-draw counters
+     * meter's id; without a meter, an unsigned role's own power integral keyed by its id. A derived house's export and inverter-draw counters
      * ([EnergyMeters.houseMeters]) are asked too, since its total subtracts them.
      */
     fun requests(entities: Map<String, Entity>): Map<String, Pair<HistoryRef, EnergyScale>> {
@@ -19,8 +19,12 @@ object EnergyToday {
         val out = linkedMapOf<String, Pair<HistoryRef, EnergyScale>>()
         val powers = all.filter { it.ui.energyRole?.power == true }
         powers.forEach { e ->
-            val meter = EnergyMeters.meterFor(e, all)?.let { m -> request(m, EnergyKind.COUNTER)?.let { m.uniqueId to it } }
-            (meter ?: request(e, EnergyKind.POWER)?.let { e.uniqueId to it })?.let { (id, r) -> out[id] = r }
+            val meter = EnergyMeters.meterFor(e, all)
+            when {
+                meter != null -> request(meter, EnergyKind.COUNTER)?.let { out[meter.uniqueId] = it }
+                // A signed role's integral nets import against export (charge against discharge): no fallback.
+                e.ui.energyRole?.signed == false -> request(e, EnergyKind.POWER)?.let { out[e.uniqueId] = it }
+            }
         }
         val byRole = powers.groupBy { it.ui.energyRole!! }
         if (byRole[EnergyRole.HOUSE] == null) {

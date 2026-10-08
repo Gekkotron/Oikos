@@ -47,4 +47,16 @@ class EnergyTodayTest {
         )
         assertEquals(setOf("grid_energy", "grid_energy_produced", "solar_energy"), r.keys)
     }
+
+    @Test
+    fun `a signed role without a meter asks nothing`() {
+        assertEquals(emptyMap(), requests(power("battery", EnergyRole.BATTERY, "b")))
+        assertEquals(emptyMap(), requests(power("grid", EnergyRole.GRID, "g")))
+    }
+
+    @Test
+    fun `a paired meter without a ref asks nothing, not the power integral`() {
+        val unrecorded = energyEntity("heater_energy", null, unit = "kWh").copy(deviceId = "d")
+        assertEquals(emptyMap(), requests(power("heater_power", EnergyRole.CONSUMER, "d"), unrecorded))
+    }
 }

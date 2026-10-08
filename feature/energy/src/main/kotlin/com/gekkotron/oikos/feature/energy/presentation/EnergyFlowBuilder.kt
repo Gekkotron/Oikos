@@ -158,14 +158,15 @@ object EnergyFlowBuilder {
     }
 
     /**
-     * A node's energy today: [total] over today's meter values, or, when its sensors have no meter, the sum of their
-     * own power integrals ([EnergyToday.requests]); null if any is missing.
+     * A node's energy today: [total] over today's meter values, or, when its sensors have no meter and none is signed
+     * (grid, battery), the sum of their own power integrals ([EnergyToday.requests]); null if any is missing.
      */
     private fun todayOf(sensors: List<Entity>, all: Collection<Entity>, today: Map<String, Double>, ofToday: (Entity) -> Reading): Double? {
         val t = total(sensors, all, ofToday)
         if (t.hasMeter) return t.kwh
         val powers = sensors.filter { it.ui.energyRole?.power == true }
-        if (powers.isEmpty()) return null
+        // A signed role's integral nets import against export (charge against discharge), so it has no "today".
+        if (powers.isEmpty() || powers.any { it.ui.energyRole!!.signed }) return null
         return powers.map { today[it.uniqueId] ?: return null }.sum()
     }
 
