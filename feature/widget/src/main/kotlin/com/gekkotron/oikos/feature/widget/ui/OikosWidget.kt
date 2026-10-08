@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.glance.GlanceId
-import androidx.glance.GlanceTheme
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -53,9 +52,7 @@ class OikosWidget : GlanceAppWidget() {
         val data = combine(component.configs.configs, component.snapshots.snapshot) { configs, snapshot -> configs[appWidgetId] to snapshot }
         provideContent {
             val current by data.collectAsState(initial = null to WidgetSnapshot())
-            GlanceTheme {
-                WidgetContent(uiState(current.first, current.second, System.currentTimeMillis()), Actions(context, appWidgetId))
-            }
+            WidgetContent(uiState(current.first, current.second, System.currentTimeMillis()), Actions(context, appWidgetId))
         }
     }
 

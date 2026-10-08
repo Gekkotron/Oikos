@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
+    debugImplementation(libs.androidx.glance.preview)
+    debugImplementation(libs.androidx.glance.appwidget.preview)
     testImplementation(libs.androidx.glance.appwidget.testing)
     testImplementation(libs.androidx.work.testing)
 }

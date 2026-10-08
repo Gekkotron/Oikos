@@ -1,0 +1,9 @@
+<resources>
+    <!-- Night Glass (the app's dark theme), flattened: widgets cannot blur or use translucent gradients -->
+    <color name="oikos_widget_bg">#10172E</color>
+    <color name="oikos_widget_tile">#1B2444</color>
+    <color name="oikos_widget_tile_on">#4A3D26</color>
+    <color name="oikos_widget_chip">#27315A</color>
+    <color name="oikos_widget_chip_on">#6A5428</color>
+    <color name="oikos_widget_error">#FF9AB2</color>
+</resources>

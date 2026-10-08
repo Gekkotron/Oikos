@@ -1,0 +1,9 @@
+<resources>
+    <!-- Warm Minimal (the app's light theme) -->
+    <color name="oikos_widget_bg">#F5F1EA</color>
+    <color name="oikos_widget_tile">#FFFDF9</color>
+    <color name="oikos_widget_tile_on">#1F1B16</color>
+    <color name="oikos_widget_chip">#F0EADF</color>
+    <color name="oikos_widget_chip_on">#3A332B</color>
+    <color name="oikos_widget_error">#A23B4F</color>
+</resources>
