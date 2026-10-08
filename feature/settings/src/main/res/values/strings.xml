@@ -48,4 +48,11 @@
     <string name="settings_history_error">Use http(s)://host[:port], nothing after it</string>
     <string name="settings_history_save">Save</string>
     <string name="settings_history_edit">Edit</string>
+    <string name="settings_frigate">Frigate</string>
+    <string name="settings_frigate_none">Not set</string>
+    <string name="settings_frigate_login">Login: %1$s</string>
+    <string name="settings_frigate_hint">e.g. http://frigate:8971 (login) or http://frigate:5000 (no login)</string>
+    <string name="settings_frigate_user">Username (optional)</string>
+    <string name="settings_frigate_password">Password</string>
+    <string name="settings_frigate_unchanged">Unchanged</string>
 </resources>

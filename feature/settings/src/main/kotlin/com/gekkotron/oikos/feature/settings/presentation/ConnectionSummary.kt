@@ -19,6 +19,10 @@ sealed interface ConnectionSummary {
         val historyUrl: String?,
         /** Where history is looked for without an override. */
         val historyDefault: String,
+        /** Frigate's address; null = not set. The password itself never reaches Settings, only [frigateHasPassword]. */
+        val frigateUrl: String? = null,
+        val frigateUser: String? = null,
+        val frigateHasPassword: Boolean = false,
     ) : ConnectionSummary
 
     companion object {
@@ -34,6 +38,9 @@ sealed interface ConnectionSummary {
                     gatewayUrl = p.gateway?.url,
                     historyUrl = p.historyUrl,
                     historyDefault = defaultHistoryUrl(p.local.host),
+                    frigateUrl = p.frigate?.url,
+                    frigateUser = p.frigate?.username,
+                    frigateHasPassword = !p.frigate?.password.isNullOrEmpty(),
                 )
             }
             ProfileState.Loading, ProfileState.None, ProfileState.Locked -> null

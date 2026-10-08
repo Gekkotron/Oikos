@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.settings.presentation
 
 import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.ConnectionProfile
+import com.gekkotron.oikos.data.FrigateConfig
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.SecretStore
 import com.gekkotron.oikos.data.ThemePreference
@@ -107,5 +108,33 @@ class SettingsViewModelTest {
         profiles.awaitHistoryUrl("http://192.168.1.91:8090")
         assertTrue(vm.setHistoryUrl("  "))
         profiles.awaitHistoryUrl(null)
+    }
+
+    private fun frigateOf(profiles: ProfileRepository) =
+        ((profiles.state.value as? ProfileState.Ready)?.profile as? ConnectionProfile.Direct)?.frigate
+
+    @Test
+    fun `setFrigate saves, keeps the password for the same user only, and a blank url clears`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs-f.json"), backgroundScope)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile-f.json"), PassThrough, backgroundScope)
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource())
+        profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
+        profiles.state.first { it is ProfileState.Ready }
+
+        assertFalse(vm.setFrigate("frigate:8971", "admin", "pw"))
+        assertTrue(vm.setFrigate(" http://192.168.1.91:8971/ ", " admin ", "pw"))
+        profiles.state.first { frigateOf(profiles) == FrigateConfig("http://192.168.1.91:8971", "admin", "pw") }
+
+        assertTrue(vm.setFrigate("http://192.168.1.91:8971", "admin", "")) // blank = unchanged
+        profiles.state.first { frigateOf(profiles)?.password == "pw" }
+
+        assertTrue(vm.setFrigate("http://192.168.1.91:8971", "other", "")) // new user: the old password is not reused
+        profiles.state.first { frigateOf(profiles) == FrigateConfig("http://192.168.1.91:8971", "other", null) }
+
+        assertTrue(vm.setFrigate("http://frigate:5000", "", "ignored")) // no user: no login
+        profiles.state.first { frigateOf(profiles) == FrigateConfig("http://frigate:5000") }
+
+        assertTrue(vm.setFrigate("  ", "", ""))
+        profiles.state.first { it is ProfileState.Ready && frigateOf(profiles) == null }
     }
 }
