@@ -21,6 +21,8 @@ object EnergyFlowBuilder {
     /** Consumer node ids never collide with the fixed role ids ("house", "solar"…), whatever the entity's unique id. */
     const val CONSUMER_PREFIX = "consumer:"
 
+    private val CUBIC_METERS = setOf("m³", "m3")
+
     /** One role's value in watts (null = unknown) and its worst status. */
     private data class Reading(val watts: Double?, val status: NodeStatus)
 
@@ -93,7 +95,7 @@ object EnergyFlowBuilder {
                 derivedTotal(byRole, all, states).let { t -> node.copy(totalKwh = t.kwh, totalStatus = t.status, hasMeter = t.hasMeter) }
             }
         }
-        val waterNode = byRole[EnergyRole.WATER]?.firstOrNull()?.let { e -> water(e, states[e.uniqueId]) }
+        val waterNode = byRole[EnergyRole.WATER]?.firstOrNull()?.let { e -> water(e, states, all) }
 
         val roles = listOfNotNull(solarNode, gridNode, batteryNode, houseNode)
         val s = solar?.watts
@@ -231,9 +233,25 @@ object EnergyFlowBuilder {
         )
     }
 
-    private fun water(e: Entity, state: EntityState?): EnergyNode {
+    private fun water(e: Entity, states: Map<String, EntityState>, all: Collection<Entity>): EnergyNode {
+        val state = states[e.uniqueId]
         val status = status(state)
         val value = (state?.value as? StateValue.Numeric)?.value.takeIf { status != NodeStatus.UNAVAILABLE }
-        return EnergyNode("water", NodeKind.WATER, value = value, unit = e.unit, status = status, sensorIds = listOf(e.uniqueId))
+        val node = EnergyNode("water", NodeKind.WATER, value = value, unit = e.unit, status = status, sensorIds = listOf(e.uniqueId))
+        // A daily-volume sensor's device usually also reports the meter index (Suez: "Water meter reading", m³).
+        val meter = waterMeter(e, all) ?: return node
+        val meterState = states[meter.uniqueId]
+        val total = (meterState?.value as? StateValue.Numeric)?.value.takeIf { status(meterState) != NodeStatus.UNAVAILABLE }
+        return node.copy(waterTotal = total, waterTotalUnit = meter.unit)
     }
+
+    /** Another m³ sensor on [water]'s device, unless [water] already is the meter. */
+    private fun waterMeter(water: Entity, all: Collection<Entity>): Entity? {
+        val device = water.deviceId ?: return null
+        if (cubicMeters(water.unit)) return null
+        return all.filter { it.deviceId == device && it.uniqueId != water.uniqueId && cubicMeters(it.unit) }
+            .minByOrNull { it.uniqueId }
+    }
+
+    private fun cubicMeters(unit: String?) = unit?.trim()?.lowercase() in CUBIC_METERS
 }

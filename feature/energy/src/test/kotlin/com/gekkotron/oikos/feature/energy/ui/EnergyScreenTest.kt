@@ -215,6 +215,19 @@ class EnergyScreenTest {
     }
 
     @Test
+    fun `the water card shows its meter reading`() {
+        val water = listOf(
+            energyEntity("grid", EnergyRole.GRID),
+            energyEntity("daily", EnergyRole.WATER, unit = "L").copy(deviceId = "suez"),
+            energyEntity("index", null, unit = "m³").copy(deviceId = "suez"),
+        )
+        show(state(water, listOf(numeric("grid", 100.0), numeric("daily", 172.0), numeric("index", 601.359))))
+        compose.onNodeWithTag("energy-card-water").performScrollTo()
+            .assertTextContains("172 L", substring = true)
+            .assertTextContains("Meter 601.359 m³", substring = true)
+    }
+
+    @Test
     fun `a card without a meter says so`() {
         show(state(metered, meteredStates))
         compose.onNodeWithTag("energy-card-grid").performScrollTo().assertTextContains("No energy meter", substring = true)

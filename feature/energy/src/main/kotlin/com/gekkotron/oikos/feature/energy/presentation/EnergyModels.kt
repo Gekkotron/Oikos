@@ -36,6 +36,9 @@ data class EnergyNode(
     val totalStatus: NodeStatus = NodeStatus.LIVE,
     /** At least one of the node's sensors has an energy meter. */
     val hasMeter: Boolean = false,
+    /** Water only: the cumulative meter index from a volume sensor on the same device, in [waterTotalUnit]; null without one. */
+    val waterTotal: Double? = null,
+    val waterTotalUnit: String? = null,
 )
 
 /** One tagged entity as the details sheet shows it: its own value and unit, not the node's watts. */

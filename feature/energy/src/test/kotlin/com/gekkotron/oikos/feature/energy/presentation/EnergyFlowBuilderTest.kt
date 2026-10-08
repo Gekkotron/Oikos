@@ -222,6 +222,25 @@ class EnergyFlowBuilderTest {
     }
 
     @Test
+    fun `a water card carries the m3 meter of its device`() {
+        val daily = onDevice(energyEntity("daily", EnergyRole.WATER, unit = "L"), "suez")
+        val index = counter("index", device = "suez", unit = "m³")
+        val s = build(listOf(daily, index), listOf(numeric("daily", 172.0), numeric("index", 601.359)))
+        assertEquals(172.0, s.node("water")!!.value)
+        assertEquals(601.359, s.node("water")!!.waterTotal)
+        assertEquals("m³", s.node("water")!!.waterTotalUnit)
+    }
+
+    @Test
+    fun `a water card tagged on the meter itself or without one shows no total`() {
+        val index = onDevice(energyEntity("index", EnergyRole.WATER, unit = "m³"), "suez")
+        val onMeter = build(listOf(index, counter("other", device = "suez", unit = "m3")), listOf(numeric("index", 601.0), numeric("other", 1.0)))
+        assertNull(onMeter.node("water")!!.waterTotal)
+        val alone = build(listOf(onDevice(energyEntity("daily", EnergyRole.WATER, unit = "L"), "suez")), listOf(numeric("daily", 172.0)))
+        assertNull(alone.node("water")!!.waterTotalUnit)
+    }
+
+    @Test
     fun `consumers alone still show a house node`() {
         val s = build(listOf(energyEntity("ac", EnergyRole.CONSUMER)), listOf(numeric("ac", 300.0)))
         assertNull(s.node("house")!!.value)

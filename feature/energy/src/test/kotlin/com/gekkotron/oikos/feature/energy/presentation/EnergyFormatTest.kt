@@ -27,6 +27,12 @@ class EnergyFormatTest {
     }
 
     @Test
+    fun `meter keeps three decimals`() {
+        assertEquals("601.359 m³", EnergyFormat.meter(601.359, "m³", Locale.US))
+        assertEquals("601,4 m³", EnergyFormat.meter(601.4, "m³", Locale.FRANCE))
+    }
+
+    @Test
     fun `energy shows kWh with at most one decimal`() {
         assertEquals("1,234.5 kWh", EnergyFormat.energy(1234.5, Locale.US))
         assertEquals("0 kWh", EnergyFormat.energy(0.0, Locale.US))

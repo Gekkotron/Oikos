@@ -177,6 +177,13 @@ private fun EnergyValueCard(node: EnergyNode, locale: Locale, onClick: () -> Uni
             if (!water && !node.hasMeter) {
                 Text(stringResource(R.string.energy_no_meter), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
             }
+            if (water && node.waterTotal != null) {
+                Text(
+                    stringResource(R.string.energy_water_meter, EnergyFormat.meter(node.waterTotal, node.waterTotalUnit, locale)),
+                    style = OikosTheme.type.label,
+                    color = OikosTheme.colors.contentMuted,
+                )
+            }
         }
     }
 }

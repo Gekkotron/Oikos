@@ -18,6 +18,10 @@ object EnergyFormat {
     fun amount(value: Double, unit: String?, locale: Locale): String =
         listOfNotNull(number(value, locale, 0, 1), unit?.takeIf { it.isNotBlank() }).joinToString(" ")
 
+    /** A meter index, to the litre when in m³: "601.359 m³". */
+    fun meter(value: Double, unit: String?, locale: Locale): String =
+        listOfNotNull(number(value, locale, 0, 3), unit?.takeIf { it.isNotBlank() }).joinToString(" ")
+
     private fun number(value: Double, locale: Locale, min: Int, max: Int): String =
         NumberFormat.getNumberInstance(locale).apply {
             minimumFractionDigits = min
