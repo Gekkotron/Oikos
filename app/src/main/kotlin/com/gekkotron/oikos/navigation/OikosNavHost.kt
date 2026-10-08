@@ -23,7 +23,9 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.gekkotron.oikos.AppViewModel
 import com.gekkotron.oikos.R
+import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.designsystem.permissions.AskForNotificationsOnLaunch
 import com.gekkotron.oikos.feature.alerts.ui.AlertDetailRoute
 import com.gekkotron.oikos.feature.alerts.ui.AlertsRoute
 import com.gekkotron.oikos.feature.alerts.ui.RecentAlertsEffects
@@ -122,6 +124,8 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     // ViewModels come back the next time the same root is shown.
     val backStack = rememberNavBackStack(root)
     LaunchedEffect(root) { resetToRoot(backStack, root) }
+    // Push alerts need the permission; the onboarding step only runs once, so a launch on Home still asks while it is missing.
+    if (root == HomeKey && (profile as? ProfileState.Ready)?.profile is ConnectionProfile.Direct) AskForNotificationsOnLaunch()
     // Declared after resetToRoot's effect, so a cold start has its Home stack before the sheet is pushed on it.
     LaunchedEffect(pendingAlert, root) {
         val id = pendingAlert ?: return@LaunchedEffect
