@@ -69,6 +69,7 @@ import java.time.format.FormatStyle
 @StringRes
 internal fun mediaErrorRes(failure: MediaFailure): Int = when (failure) {
     MediaFailure.Gone, MediaFailure.NotAllowed -> R.string.alert_media_gone
+    MediaFailure.AuthFailed -> R.string.alert_media_login
     is MediaFailure.Unavailable -> R.string.alert_media_failed
 }
 

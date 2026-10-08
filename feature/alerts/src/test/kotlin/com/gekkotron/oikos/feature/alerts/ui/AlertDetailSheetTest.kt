@@ -159,6 +159,7 @@ class AlertDetailSheetTest {
     fun `a picture error maps to its message`() {
         assertEquals(R.string.alert_media_gone, mediaErrorRes(MediaException(MediaFailure.Gone).mediaFailure()))
         assertEquals(R.string.alert_media_gone, mediaErrorRes(MediaException(MediaFailure.NotAllowed).mediaFailure()))
+        assertEquals(R.string.alert_media_login, mediaErrorRes(MediaException(MediaFailure.AuthFailed).mediaFailure()))
         assertEquals(R.string.alert_media_failed, mediaErrorRes(MediaException(MediaFailure.Unavailable("x")).mediaFailure()))
         assertEquals(R.string.alert_media_failed, mediaErrorRes(RuntimeException("decoder").mediaFailure()))
         assertEquals(R.string.alert_media_failed, mediaErrorRes(null.mediaFailure()))

@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.di
 
 import android.content.Context
+import android.util.Log
 import coil3.ImageLoader
 import com.gekkotron.oikos.DemoAlertSeeder
 import com.gekkotron.oikos.alerts.AlertRepository
@@ -8,6 +9,7 @@ import com.gekkotron.oikos.alerts.db.AlertDatabase
 import com.gekkotron.oikos.alerts.media.AlertImageCache
 import com.gekkotron.oikos.alerts.media.AlertMediaFetcher
 import com.gekkotron.oikos.alerts.media.AlertMediaKeyer
+import com.gekkotron.oikos.alerts.media.FrigateAuth
 import com.gekkotron.oikos.alerts.media.MediaFetcher
 import com.gekkotron.oikos.alerts.media.MediaRoutes
 import com.gekkotron.oikos.alerts.media.MediaSource
@@ -16,14 +18,19 @@ import com.gekkotron.oikos.alerts.sync.HistorySync
 import com.gekkotron.oikos.connection.HistoryWiring
 import com.gekkotron.oikos.connection.ProfileMediaRoutes
 import com.gekkotron.oikos.connection.SharedSubscriptions
+import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.ProfileRepository
+import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.data.isLikelyLocalHost
 import com.gekkotron.oikos.transport.ActiveTransport
+import com.gekkotron.oikos.transport.LanOrGatewayGet
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
@@ -62,7 +69,17 @@ object AlertsModule {
 
     @Provides
     @Singleton
-    fun mediaFetcher(routes: MediaRoutes, http: OkHttpClient): MediaFetcher = MediaFetcher(routes, http)
+    fun frigateAuth(profiles: ProfileRepository, routes: MediaRoutes, http: OkHttpClient): FrigateAuth {
+        val lan = LanOrGatewayGet(routes, http, ::isLikelyLocalHost, log = { Log.w("OikosFrigate", it) })
+        return FrigateAuth(
+            config = { ((profiles.state.first { it !is ProfileState.Loading } as? ProfileState.Ready)?.profile as? ConnectionProfile.Direct)?.frigate },
+            post = lan::post,
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun mediaFetcher(routes: MediaRoutes, http: OkHttpClient, auth: FrigateAuth): MediaFetcher = MediaFetcher(routes, http, auth = auth)
 
     @Provides
     @Singleton
