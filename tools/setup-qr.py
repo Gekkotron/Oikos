@@ -8,6 +8,11 @@ as it is, and --no-gateway removes it. The key is read from a file and never pri
 The optional `history` section ({"url"}, an override of http://<broker host>:8090) is set with --history-url http://192.168.1.91:8090 and
 removed with --no-history; without either it is left as it is.
 
+The optional `frigate` section ({"url", "user"?, "pass"?}) is set with --frigate-url http://192.168.1.91:8971,
+--frigate-user admin and --frigate-pass-file PATH (the password is read from a file and never printed), and removed
+with --no-frigate; without these flags it is left as it is. Use http://<host>:5000 and no user for a Frigate
+without login.
+
     tools/setup-qr.py --gateway-url https://house.example.ts.net \\
         --gateway-key-file ../HttpMqttEnd2EndEncryption/secret_key.txt --broker-host 192.168.1.91
 
@@ -54,6 +59,10 @@ def main():
     parser.add_argument("--no-gateway", action="store_true", help="remove the gateway section")
     parser.add_argument("--history-url", help="override the OikosHistory URL (default: http://<broker host>:8090), e.g. http://192.168.1.91:8090")
     parser.add_argument("--no-history", action="store_true", help="remove the history section")
+    parser.add_argument("--frigate-url", help="Frigate's address, e.g. http://192.168.1.91:8971 (login) or http://192.168.1.91:5000")
+    parser.add_argument("--frigate-user", help="Frigate username (optional)")
+    parser.add_argument("--frigate-pass-file", help="file holding the Frigate password (needs --frigate-user)")
+    parser.add_argument("--no-frigate", action="store_true", help="remove the frigate section")
     args = parser.parse_args()
 
     payload = json.loads(args.source.read_text())
@@ -79,11 +88,30 @@ def main():
             fail("--history-url must be http(s)://host[:port]")
         payload["history"] = {"url": args.history_url.rstrip("/")}
 
+    if args.no_frigate:
+        payload.pop("frigate", None)
+    elif args.frigate_url:
+        if not re.fullmatch(r"https?://[A-Za-z0-9._-]+(:\d{1,5})?/?", args.frigate_url):
+            fail("--frigate-url must be http(s)://host[:port]")
+        frigate = {"url": args.frigate_url.rstrip("/")}
+        if args.frigate_pass_file and not args.frigate_user:
+            fail("--frigate-pass-file needs --frigate-user")
+        if args.frigate_user:
+            frigate["user"] = args.frigate_user
+            if args.frigate_pass_file:
+                password = Path(args.frigate_pass_file).read_text().strip()
+                if not password:
+                    fail(f"{args.frigate_pass_file} is empty")
+                frigate["pass"] = password
+        payload["frigate"] = frigate
+    elif args.frigate_user or args.frigate_pass_file:
+        fail("--frigate-user and --frigate-pass-file need --frigate-url")
+
     text = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     json_path, png_path = args.out.with_suffix(".json"), args.out.with_suffix(".png")
     json_path.write_text(text + "\n")
     subprocess.run(["qrencode", "-l", "M", "-s", "8", "-o", str(png_path), text], check=True)
-    sections = ", ".join(k for k in ("local", "gateway", "push", "history") if k in payload)
+    sections = ", ".join(k for k in ("local", "gateway", "push", "history", "frigate") if k in payload)
     print(f"wrote {json_path.name} and {png_path.name} ({sections})")
 
 
