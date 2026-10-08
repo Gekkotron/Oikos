@@ -20,6 +20,7 @@ class FakeHistoryClient : HistoryClient {
     val calls = mutableListOf<String>()
     var series: (HistoryRef, HistoryRange) -> HistoryResult<Series> = { _, _ -> okSeries() }
     var daily: (HistoryRef, Int, EnergyScale) -> HistoryResult<DailyTotals> = { _, _, _ -> okDaily() }
+    var today: (HistoryRef, EnergyScale) -> HistoryResult<Double?> = { _, _ -> HistoryResult.Ok(null) }
 
     /** When set, a 24 h series() waits on it (to test late answers). */
     var gate: CompletableDeferred<Unit>? = null
@@ -35,5 +36,8 @@ class FakeHistoryClient : HistoryClient {
         return this.daily.invoke(ref, days, scale)
     }
 
-    override suspend fun today(ref: HistoryRef, scale: EnergyScale): HistoryResult<Double?> = HistoryResult.Ok(null)
+    override suspend fun today(ref: HistoryRef, scale: EnergyScale): HistoryResult<Double?> {
+        calls += "today ${ref.key} ${scale.kind}"
+        return this.today.invoke(ref, scale)
+    }
 }

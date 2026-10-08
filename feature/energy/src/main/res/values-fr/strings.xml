@@ -47,4 +47,6 @@
     <string name="energy_icon_dishwasher">Lave-vaisselle</string>
     <string name="energy_details_save">Enregistrer</string>
     <string name="energy_save_failed">Impossible d\'enregistrer vos modifications. Vérifiez la connexion et réessayez.</string>
+    <string name="energy_today">%1$s aujourd’hui</string>
+    <string name="energy_history">Historique</string>
 </resources>

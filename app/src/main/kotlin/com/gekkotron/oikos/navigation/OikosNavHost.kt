@@ -209,7 +209,11 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                     )
                 }
                 entry<EnergyKey> {
-                    EnergyRoute(onOpenHome = { selectTab(backStack, HomeKey) }, windowInsets = tabInsets)
+                    EnergyRoute(
+                        onOpenHome = { selectTab(backStack, HomeKey) },
+                        windowInsets = tabInsets,
+                        onOpenHistory = { id -> openHistory(id?.let(HistoryTarget::Entity) ?: HistoryTarget.House) },
+                    )
                 }
                 entry<AlertsKey> { AlertsRoute(onBack = { pop(backStack, AlertsKey) }, windowInsets = screenInsets(AlertsKey, tabInsets, ScaffoldDefaults.contentWindowInsets), deviceSheet = deviceSheet) }
                 entry<AlertDetailKey> { key -> AlertDetailRoute(key.id, onDismiss = { pop(backStack, key) }, deviceSheet = deviceSheet) }
