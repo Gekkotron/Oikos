@@ -1,5 +1,9 @@
 package com.gekkotron.oikos.feature.settings.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,6 +23,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
@@ -172,7 +178,7 @@ class SettingsScreenTest {
     /** Drives the paused clock and lets the dialog window attach. */
     private fun settle() {
         repeat(3) {
-            org.robolectric.shadows.ShadowLooper.idleMainLooper(100, java.util.concurrent.TimeUnit.MILLISECONDS)
+            ShadowLooper.idleMainLooper(100, TimeUnit.MILLISECONDS)
             compose.mainClock.advanceTimeBy(200)
         }
     }
@@ -220,5 +226,36 @@ class SettingsScreenTest {
         showHistory()
         compose.onNodeWithText("Save").performClick()
         assertEquals(listOf(""), savedHistory)
+    }
+
+    // The dialog body is stateless, mirrors HistoryUrlDialog's save rule, and needs no dialog window.
+    private fun showContent(accept: Boolean, onDismiss: () -> Unit) = compose.setContent {
+        OikosTheme(ThemeChoice.NIGHT_GLASS) {
+            var failed by remember { mutableStateOf(false) }
+            HistoryUrlDialogContent(
+                "nope", failed, onTextChange = {},
+                onSave = { if (accept) onDismiss() else failed = true },
+                onCancel = {},
+            )
+        }
+    }
+
+    @Test
+    fun `a refused save keeps the dialog open and shows the error`() {
+        var dismissed = 0
+        showContent(accept = false) { dismissed++ }
+        compose.onNodeWithText("Use http(s)://host[:port], nothing after it").assertDoesNotExist()
+        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithText("Use http(s)://host[:port], nothing after it").assertExists()
+        compose.onNodeWithText("Save").assertExists()
+        assertEquals(0, dismissed)
+    }
+
+    @Test
+    fun `an accepted save dismisses`() {
+        var dismissed = 0
+        showContent(accept = true) { dismissed++ }
+        compose.onNodeWithText("Save").performClick()
+        assertEquals(1, dismissed)
     }
 }

@@ -13,6 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.error
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -231,32 +235,45 @@ private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Uni
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HistoryUrlDialog(initial: String, onSave: (String) -> Boolean, onDismiss: () -> Unit) {
     var text by rememberSaveable { mutableStateOf(initial) }
     var failed by rememberSaveable { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_history)) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it; failed = false },
-                    label = { Text(stringResource(R.string.settings_history_hint)) },
-                    singleLine = true,
-                    isError = failed,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                )
-                // Always laid out (blank until a refusal) so the dialog does not resize when the error appears.
-                Text(if (failed) stringResource(R.string.settings_history_error) else "", style = OikosTheme.type.label, color = MaterialTheme.colorScheme.error, minLines = 1, modifier = Modifier.padding(top = 4.dp))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { if (onSave(text)) onDismiss() else failed = true }) { Text(stringResource(R.string.settings_history_save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
-    )
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = AlertDialogDefaults.shape, color = AlertDialogDefaults.containerColor, tonalElevation = AlertDialogDefaults.TonalElevation) {
+            HistoryUrlDialogContent(
+                text, failed,
+                onTextChange = { text = it; failed = false },
+                onSave = { if (onSave(text)) onDismiss() else failed = true },
+                onCancel = onDismiss,
+            )
+        }
+    }
+}
+
+/** Stateless body of the history URL dialog, so it can be tested without a dialog window. */
+@Composable
+internal fun HistoryUrlDialogContent(text: String, failed: Boolean, onTextChange: (String) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
+    val error = stringResource(R.string.settings_history_error)
+    Column(Modifier.padding(24.dp)) {
+        Text(stringResource(R.string.settings_history), style = OikosTheme.type.display)
+        OutlinedTextField(
+            value = text,
+            onValueChange = onTextChange,
+            label = { Text(stringResource(R.string.settings_history_hint)) },
+            singleLine = true,
+            isError = failed,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp).semantics { if (failed) error(error) },
+        )
+        // Always laid out (blank until a refusal) so the dialog does not resize when the error appears.
+        Text(if (failed) error else "", style = OikosTheme.type.label, color = MaterialTheme.colorScheme.error, minLines = 1, modifier = Modifier.padding(top = 4.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
+            TextButton(onClick = onSave) { Text(stringResource(R.string.settings_history_save)) }
+        }
+    }
 }
 
 @Composable
