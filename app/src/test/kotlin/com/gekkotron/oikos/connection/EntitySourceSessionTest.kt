@@ -46,6 +46,23 @@ class EntitySourceSessionTest {
     }
 
     @Test
+    fun `a profile differing only by historyUrl keeps the source`() {
+        val first = session.current(direct)
+        val second = session.current(direct.copy(historyUrl = "http://192.168.1.91:8090"))
+        assertSame(first, second)
+        assertEquals(1, scopes.size)
+        assertTrue(scopes[0].isActive)
+    }
+
+    @Test
+    fun `a different host still rebuilds the source`() {
+        val first = session.current(direct)
+        val second = session.current(ConnectionProfile.Direct(LocalBroker("10.0.0.2"), historyUrl = "http://x:8090"))
+        assertNotSame(first, second)
+        assertFalse(scopes[0].isActive)
+    }
+
+    @Test
     fun `a new prefix cancels the old source and builds a new one`() {
         val first = session.current(direct)
         val second = session.current(direct.copy(prefix = "ha"))
