@@ -8,14 +8,16 @@ import com.gekkotron.oikos.alerts.demo.DemoAlerts
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.data.ProfileState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -40,8 +42,17 @@ class DemoAlertSeederTest {
         repo = AlertRepository(db.alerts()) { now }
     }
 
+    /**
+     * The seeder runs where production runs it (the app scope: SupervisorJob + Dispatchers.Default), not on runTest's
+     * virtual-time scheduler: there its first Room access hung on CI until the poll gave up, with Room still empty.
+     */
+    private val seederScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        seederScope.cancel()
+        db.close()
+    }
 
     private suspend fun ids() = repo.all(null).first().map { it.id }.sorted()
 
@@ -64,27 +75,27 @@ class DemoAlertSeederTest {
     private suspend fun settle() = withContext(Dispatchers.Default) { delay(300) }
 
     @Test
-    fun `entering the demo seeds its six alerts`(): Unit = runTest(UnconfinedTestDispatcher()) {
+    fun `entering the demo seeds its six alerts`(): Unit = runTest {
         val states = MutableStateFlow<ProfileState>(ProfileState.None)
-        DemoAlertSeeder(states, repo, { now }, backgroundScope).start()
+        DemoAlertSeeder(states, repo, { now }, seederScope).start()
         assertTrue(ids().isEmpty())
         states.value = demo
         awaitIds(demoIds, "first seed")
     }
 
     @Test
-    fun `a real house never gets demo alerts`(): Unit = runTest(UnconfinedTestDispatcher()) {
+    fun `a real house never gets demo alerts`(): Unit = runTest {
         val states = MutableStateFlow<ProfileState>(direct)
-        DemoAlertSeeder(states, repo, { now }, backgroundScope).start()
+        DemoAlertSeeder(states, repo, { now }, seederScope).start()
         states.value = ProfileState.Locked
         settle()
         assertTrue(ids().isEmpty())
     }
 
     @Test
-    fun `starting twice seeds once and leftovers are replaced, not added to`(): Unit = runTest(UnconfinedTestDispatcher()) {
+    fun `starting twice seeds once and leftovers are replaced, not added to`(): Unit = runTest {
         val states = MutableStateFlow<ProfileState>(demo)
-        val seeder = DemoAlertSeeder(states, repo, { now }, backgroundScope)
+        val seeder = DemoAlertSeeder(states, repo, { now }, seederScope)
         seeder.start()
         seeder.start()
         awaitIds(demoIds, "seed after two starts")
