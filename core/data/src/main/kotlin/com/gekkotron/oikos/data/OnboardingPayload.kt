@@ -20,7 +20,7 @@ sealed interface ParseResult {
     data class Error(val error: PayloadError) : ParseResult
 }
 
-/** The setup QR code, format `v:1` (parent spec §5.2, this spec §4.4). */
+/** The setup QR code, format `v:1` (parent spec §5.2, this spec §4.4), with optional `gateway`, `push`, `history` and `frigate` sections. */
 object OnboardingPayload {
     fun parse(text: String): ParseResult {
         val root = try {
@@ -54,7 +54,14 @@ object OnboardingPayload {
         val history = (root["history"] as? JsonObject)?.let { h ->
             h.string("url")?.let(::normalizeHistoryUrl) ?: return invalid("history.url")
         }
-        return ParseResult.Ok(ConnectionProfile.Direct(broker, prefix, gateway, tokenTopic, history))
+        val frigate = (root["frigate"] as? JsonObject)?.let { f ->
+            val url = f.string("url")?.let(::normalizeFrigateUrl) ?: return invalid("frigate.url")
+            val user = f.string("user")?.takeIf { it.isNotEmpty() }
+            val pass = f.string("pass")?.takeIf { it.isNotEmpty() }
+            if (pass != null && user == null) return invalid("frigate.user")
+            FrigateConfig(url, user, pass)
+        }
+        return ParseResult.Ok(ConnectionProfile.Direct(broker, prefix, gateway, tokenTopic, history, frigate))
     }
 
     private fun error(e: PayloadError) = ParseResult.Error(e)

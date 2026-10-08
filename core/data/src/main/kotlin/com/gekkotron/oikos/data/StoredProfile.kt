@@ -23,6 +23,9 @@ internal data class StoredLocal(
 @Serializable
 internal data class StoredGateway(val url: String, val brokerHost: String? = null, val keyCipher: String)
 
+@Serializable
+internal data class StoredFrigate(val url: String, val username: String? = null, val passCipher: String? = null)
+
 /** `profile.json` (spec §4.1). Secret fields hold base64 [SecretStore] ciphertext. */
 @Serializable
 internal data class StoredProfile(
@@ -33,6 +36,7 @@ internal data class StoredProfile(
     val prefix: String = DEFAULT_PREFIX,
     val pushTokenTopic: String? = null,
     val historyUrl: String? = null,
+    val frigate: StoredFrigate? = null,
     /** A direct profile was just set up and the Rooms step has not been finished or skipped (spec §5.2 step 5). */
     val roomsPending: Boolean = false,
     /**
