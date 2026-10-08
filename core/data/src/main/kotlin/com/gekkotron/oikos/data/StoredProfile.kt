@@ -34,8 +34,11 @@ internal data class StoredProfile(
     val pushTokenTopic: String? = null,
     /** A direct profile was just set up and the Rooms step has not been finished or skipped (spec §5.2 step 5). */
     val roomsPending: Boolean = false,
-    /** A direct profile was just set up and the notification step has not been finished or skipped (push alerts spec §7.5). */
-    val notificationsPending: Boolean = false,
+    /**
+     * A direct profile was just set up and the notification step has not been finished or skipped (push alerts spec §7.5).
+     * True when absent: a profile paired before push alerts never saw the step, so it gets it once at the next launch.
+     */
+    val notificationsPending: Boolean = true,
     /** The link sheet's route choice; only used when [gateway] is set. `clear()` and a new `save()` reset it. */
     val route: RoutePreference = RoutePreference.AUTO,
 )

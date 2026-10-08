@@ -157,8 +157,8 @@ class ProfileRepositoryTest {
         val f = file()
         repo(f).apply { save(ConnectionProfile.Direct(LocalBroker("broker.local"))); state.first { it is ProfileState.Ready } }
         val old = tmp.root.resolve("old.json")
-        old.writeText(f.readText().replace(Regex(""",?"(roomsPending|notificationsPending)":(true|false)"""), ""))
-        assertEquals(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("broker.local"))), repo(old).settled())
+        old.writeText(f.readText().replace(Regex(""",?"roomsPending":(true|false)"""), ""))
+        assertEquals(false, (repo(old).settled() as ProfileState.Ready).roomsPending)
     }
 
     @Test
@@ -213,7 +213,7 @@ class ProfileRepositoryTest {
     }
 
     @Test
-    fun `a profile file from before this field reads as not pending`() = runTest {
+    fun `a profile file from before this field asks for the notification step once`() = runTest {
         val f = file()
         repo(f).apply { save(direct); state.first { it is ProfileState.Ready } }
         val old = tmp.root.resolve("old-notifications.json")
@@ -221,9 +221,12 @@ class ProfileRepositoryTest {
         assertTrue("\"notificationsPending\"" in text)
         old.writeText(text.replace(Regex(""",?"notificationsPending":(true|false)"""), ""))
         assertTrue("notificationsPending" !in old.readText())
-        val ready = repo(old).settled() as ProfileState.Ready
-        assertEquals(false, ready.notificationsPending)
-        assertEquals(true, ready.roomsPending)
+        val upgraded = repo(old)
+        assertEquals(true, (upgraded.settled() as ProfileState.Ready).notificationsPending)
+        assertEquals(true, (upgraded.state.value as ProfileState.Ready).roomsPending)
+        upgraded.finishNotifications()
+        assertEquals(true, (upgraded.state.first { it is ProfileState.Ready && !it.notificationsPending } as ProfileState.Ready).roomsPending)
+        assertTrue("\"notificationsPending\":false" in old.readText())
     }
 
     @Test
