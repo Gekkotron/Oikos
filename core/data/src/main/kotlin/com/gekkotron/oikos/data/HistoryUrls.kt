@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.data
 
-private val HISTORY_URL = Regex("""^https?://([A-Za-z0-9._-]+|\[[0-9A-Fa-f:]+])(?::(\d{1,5}))?/?$""")
+// The literal `]` is escaped: Android's ICU regex engine rejects it bare, unlike the JVM's.
+private val HISTORY_URL = Regex("""^https?://([A-Za-z0-9._-]+|\[[0-9A-Fa-f:]+\])(?::(\d{1,5}))?/?$""")
 
 /** `http(s)://host[:port]`, nothing after the host but an optional `/` (history spec §4.4). */
 fun isHistoryUrl(text: String): Boolean {

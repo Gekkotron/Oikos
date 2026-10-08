@@ -6,8 +6,9 @@ import com.gekkotron.oikos.state.mqtt.MqttBindings
 
 /** Where Athena-Core recorded an entity: its state topic and the JSON key its template reads (history spec §2, §4.1). */
 object HistoryRefs {
+    // Literal `]` and `}` are escaped: Android's ICU regex engine rejects them bare, unlike the JVM's.
     private val KEY = Regex(
-        """^\{\{\s*value_json(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[\s*(['"])(.+?)\2\s*])\s*(?:\|[^{}]*)?}}$""",
+        """^\{\{\s*value_json(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[\s*(['"])(.+?)\2\s*\])\s*(?:\|[^{}]*)?\}\}$""",
     )
 
     fun jsonKey(template: String?): String? {
