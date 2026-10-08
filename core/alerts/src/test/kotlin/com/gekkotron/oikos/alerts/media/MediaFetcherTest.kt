@@ -5,6 +5,7 @@ import com.gekkotron.oikos.transport.DownloadNotAllowed
 import com.gekkotron.oikos.transport.GatewayDownloader
 import com.gekkotron.oikos.transport.LocalProbe
 import com.gekkotron.oikos.transport.RawDownload
+import com.gekkotron.oikos.transport.RawPost
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -25,11 +26,13 @@ class MediaFetcherTest {
 
     private class FakeGateway(var answer: () -> RawDownload = { RawDownload(200, byteArrayOf(9, 9), "image/png") }) : GatewayDownloader {
         val urls = mutableListOf<String>()
-        override suspend fun download(url: String, timeoutSeconds: Int): RawDownload {
+        override suspend fun download(url: String, timeoutSeconds: Int, headers: Map<String, String>): RawDownload {
             urls += url
             check(timeoutSeconds == 30) { "gateway timeout must be 30 s" }
             return answer()
         }
+
+        override suspend fun post(url: String, json: String, timeoutSeconds: Int): RawPost = error("unused")
     }
 
     @Before

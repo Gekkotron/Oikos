@@ -20,12 +20,23 @@ class LanOrGatewayGetTest {
     @BeforeEach fun start() = server.start()
     @AfterEach fun stop() = server.shutdown()
 
-    private class FakeGateway(var answer: () -> RawDownload = { RawDownload(200, "gw".encodeToByteArray(), "application/json") }) : GatewayDownloader {
+    private class FakeGateway(
+        var answer: () -> RawDownload = { RawDownload(200, "gw".encodeToByteArray(), "application/json") },
+        var postAnswer: () -> RawPost = { RawPost(200, mapOf("set-cookie" to "frigate_token=gw")) },
+    ) : GatewayDownloader {
         val urls = mutableListOf<String>()
-        override suspend fun download(url: String, timeoutSeconds: Int): RawDownload {
+        val headers = mutableListOf<Map<String, String>>()
+        val posts = mutableListOf<Pair<String, String>>()
+        override suspend fun download(url: String, timeoutSeconds: Int, headers: Map<String, String>): RawDownload {
             check(timeoutSeconds == 30)
             urls += url
+            this.headers += headers
             return answer()
+        }
+        override suspend fun post(url: String, json: String, timeoutSeconds: Int): RawPost {
+            check(timeoutSeconds == 30)
+            posts += url to json
+            return postAnswer()
         }
     }
 
@@ -76,7 +87,7 @@ class LanOrGatewayGetTest {
 
     @Test
     fun `a refused destination is NotAllowed and logged once per host`(): Unit = runBlocking {
-        val gateway = FakeGateway { throw DownloadNotAllowed("destination not allowed for this secret") }
+        val gateway = FakeGateway(answer = { throw DownloadNotAllowed("destination not allowed for this secret") })
         val g = get(local = false, gateway = gateway)
         assertEquals(HttpGetResult.NotAllowed, g.get(url(), 1_000))
         assertEquals(HttpGetResult.NotAllowed, g.get(url("/v1/daily"), 1_000))
@@ -87,7 +98,7 @@ class LanOrGatewayGetTest {
     fun `bodies over maxBytes are TooLarge on both routes`(): Unit = runBlocking {
         server.enqueue(MockResponse().setBody("x".repeat(50)))
         assertEquals(HttpGetResult.TooLarge, get(local = true, gateway = null).get(url(), 10))
-        val gateway = FakeGateway { RawDownload(200, ByteArray(50), null) }
+        val gateway = FakeGateway(answer = { RawDownload(200, ByteArray(50), null) })
         assertEquals(HttpGetResult.TooLarge, get(local = false, gateway = gateway).get(url(), 10))
     }
 
@@ -99,5 +110,46 @@ class LanOrGatewayGetTest {
     @Test
     fun `a url that is not http is Unavailable`(): Unit = runBlocking {
         assertEquals(HttpGetResult.Unavailable("not an http url"), get(local = true, gateway = FakeGateway()).get("ftp://x/y", 1_000))
+    }
+
+    @Test
+    fun `headers go on the LAN request`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setBody("x"))
+        get(local = true, gateway = FakeGateway()).get(url(), 1_000, headers = mapOf("Cookie" to "frigate_token=t"))
+        assertEquals("frigate_token=t", server.takeRequest().getHeader("Cookie"))
+    }
+
+    @Test
+    fun `headers go on the gateway download`(): Unit = runBlocking {
+        val gateway = FakeGateway()
+        get(local = false, gateway = gateway).get(url(), 1_000, headers = mapOf("Cookie" to "frigate_token=t"))
+        assertEquals(listOf(mapOf("Cookie" to "frigate_token=t")), gateway.headers)
+    }
+
+    @Test
+    fun `a LAN post sends JSON and returns lower-case headers, every Set-Cookie kept`(): Unit = runBlocking {
+        server.enqueue(MockResponse().addHeader("Set-Cookie", "a=1").addHeader("Set-Cookie", "frigate_token=lan; HttpOnly").setBody("{}"))
+        val r = assertIs<HttpPostResult.Response>(get(local = true, gateway = FakeGateway()).post(url("/api/login"), """{"user":"u"}"""))
+        assertEquals(200, r.status)
+        assertEquals("a=1\nfrigate_token=lan; HttpOnly", r.headers["set-cookie"])
+        val sent = server.takeRequest()
+        assertEquals("POST", sent.method)
+        assertEquals("""{"user":"u"}""", sent.body.readUtf8())
+        assertTrue(sent.getHeader("Content-Type")!!.startsWith("application/json"))
+    }
+
+    @Test
+    fun `a post falls back to the gateway when the LAN is down`(): Unit = runBlocking {
+        val gateway = FakeGateway()
+        val r = assertIs<HttpPostResult.Response>(get(local = false, gateway = gateway).post(url("/api/login"), "{}"))
+        assertEquals("frigate_token=gw", r.headers["set-cookie"])
+        assertEquals(listOf(url("/api/login") to "{}"), gateway.posts)
+    }
+
+    @Test
+    fun `a refused post is NotAllowed and no route is Unavailable`(): Unit = runBlocking {
+        val refused = FakeGateway(postAnswer = { throw DownloadNotAllowed("destination not allowed for this secret") })
+        assertEquals(HttpPostResult.NotAllowed, get(local = false, gateway = refused).post(url(), "{}"))
+        assertIs<HttpPostResult.Unavailable>(get(local = false, gateway = null).post(url(), "{}"))
     }
 }
