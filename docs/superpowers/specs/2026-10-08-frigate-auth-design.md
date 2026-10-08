@@ -48,7 +48,8 @@ generic: an unauthenticated Frigate (port 5000) keeps working with no credential
   - URL — prefilled with the profile's value, else the generic default `http://frigate:8971`; hint
     "e.g. http://frigate:8971 (login) or http://frigate:5000 (no login)".
   - Username and password — optional; the password field is masked and shows "unchanged" when one is stored.
-  - Save validates the URL (same rule as §5) and stores it; "Clear" removes the Frigate config.
+  - Save validates the URL (same rule as §5) and stores it; a blank URL removes the Frigate config (as the history
+    dialog does). A blank password keeps the stored one only when the username is unchanged.
 - Nothing specific to one house is hard-coded.
 
 ## 4. Oikos: `FrigateAuth` (core/alerts)
