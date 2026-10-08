@@ -12,6 +12,12 @@ sealed interface WidgetCommand {
     @Serializable @SerialName("toggle")
     data object Toggle : WidgetCommand
 
+    @Serializable @SerialName("on")
+    data object TurnOn : WidgetCommand
+
+    @Serializable @SerialName("off")
+    data object TurnOff : WidgetCommand
+
     @Serializable @SerialName("open")
     data object Open : WidgetCommand
 
@@ -35,6 +41,8 @@ sealed interface WidgetCommand {
 
     fun toCommand(code: String? = null): Command = when (this) {
         Toggle -> Command.Toggle
+        TurnOn -> Command.TurnOn()
+        TurnOff -> Command.TurnOff
         Open -> Command.Open
         Close -> Command.Close
         Stop -> Command.Stop

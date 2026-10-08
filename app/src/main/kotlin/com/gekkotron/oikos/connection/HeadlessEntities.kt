@@ -79,9 +79,7 @@ class HeadlessEntities(
             return RefreshResult.Ok(source.entities.value, source.states().first(), complete, historyEnabled(readyProfile()))
         }
         val session = session(save = true) { source, history ->
-            withTimeoutOrNull(waitBudget) {
-                source.states().first { states -> ids.all { id -> states[id]?.let { !it.stale && it.lastUpdate != null } == true } }
-            }
+            awaitLiveOrSettled(source, ids)
             withTimeoutOrNull(settleBudget) { source.hasSettled.first { it } }
             RefreshResult.Ok(source.entities.value, source.states().first(), complete = source.hasSettled.value, historyEnabled = history)
         }
@@ -97,9 +95,7 @@ class HeadlessEntities(
             if (withTimeoutOrNull(waitBudget) { source.entities.first { id in it } } == null) return@session SendResult.NotConfirmed
             // Wait for the state topic's retained replay first: arriving after the send, it would "confirm" the old value.
             // A button has no state topic, so there is nothing to wait for.
-            if (source.entities.value[id]?.kind != Kind.BUTTON) {
-                withTimeoutOrNull(waitBudget) { source.states().first { it[id]?.let { s -> !s.stale && s.lastUpdate != null } == true } }
-            }
+            if (source.entities.value[id]?.kind != Kind.BUTTON) awaitLiveOrSettled(source, setOf(id))
             sendOn(source, id, command, history)
         }
         return when (session) {
@@ -118,6 +114,19 @@ class HeadlessEntities(
         return when (session) {
             is Session.Ok -> session.value
             is Session.Failed -> CatalogResult.Failed(session.reason)
+        }
+    }
+
+    /**
+     * Until every id has a live state or discovery settled, whichever comes first, within [waitBudget]. A settled source
+     * has seen the broker's retained replay end, so a state topic the broker does not retain (Zigbee2MQTT's default)
+     * costs about one quiet window instead of the whole budget, and no late replay can "confirm" a command.
+     */
+    private suspend fun awaitLiveOrSettled(source: MqttDiscoverySource, ids: Set<String>) {
+        withTimeoutOrNull(waitBudget) {
+            combine(source.states(), source.hasSettled) { states, settled ->
+                settled || ids.all { id -> states[id]?.let { !it.stale && it.lastUpdate != null } == true }
+            }.first { it }
         }
     }
 

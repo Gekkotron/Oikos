@@ -19,8 +19,15 @@ class TileActionsTest {
         f(TileSnapshot("x", "X", kind, TileIcon.SENSOR, value))
 
     @Test
-    fun switch_toggles() =
-        assertEquals(TileAction.Send("x", WidgetCommand.Toggle), TileActions.forTap(tile(Kind.SWITCH, TileValue.OnOff(true)), null))
+    fun a_tap_sends_the_opposite_of_what_the_tile_shows_never_a_blind_toggle() {
+        // The background session may only hold a stale cached state: a Toggle computed from it can go the wrong way.
+        assertEquals(TileAction.Send("x", WidgetCommand.TurnOff), TileActions.forTap(tile(Kind.SWITCH, TileValue.OnOff(true)), null))
+        assertEquals(TileAction.Send("x", WidgetCommand.TurnOn), TileActions.forTap(tile(Kind.SWITCH, TileValue.OnOff(false)), null))
+        assertEquals(TileAction.Send("x", WidgetCommand.TurnOn), TileActions.forTap(tile(Kind.LIGHT, TileValue.Light(false, null)), null))
+        assertEquals(TileAction.Send("x", WidgetCommand.TurnOff), TileActions.forTap(tile(Kind.LIGHT, TileValue.Light(true, 40)), null))
+        // Unknown state: turning on is the useful guess.
+        assertEquals(TileAction.Send("x", WidgetCommand.TurnOn), TileActions.forTap(tile(Kind.LIGHT, TileValue.None), null))
+    }
 
     @Test
     fun button_presses() =

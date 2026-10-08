@@ -26,7 +26,9 @@ object TileActions {
         notActionable(tile)?.let { return it }
         val id = tile.uniqueId
         return when (tile.kind) {
-            Kind.LIGHT, Kind.SWITCH -> TileAction.Send(id, WidgetCommand.Toggle)
+            // The opposite of what the tile shows, never a Toggle: the background session may only hold a stale
+            // cached state, and a Toggle computed from it can go the wrong way.
+            Kind.LIGHT, Kind.SWITCH -> TileAction.Send(id, if (shownOn(tile.value)) WidgetCommand.TurnOff else WidgetCommand.TurnOn)
             Kind.BUTTON -> TileAction.Send(id, WidgetCommand.Press)
             Kind.COVER -> {
                 val closed = (tile.value as? TileValue.Cover)?.state == CoverState.CLOSED
@@ -41,6 +43,12 @@ object TileActions {
 
     /** The Open / Stop / Close buttons of a wide cover tile. */
     fun coverButton(tile: TileSnapshot, command: WidgetCommand): TileAction = notActionable(tile) ?: TileAction.Send(tile.uniqueId, command)
+
+    private fun shownOn(value: TileValue): Boolean = when (value) {
+        is TileValue.OnOff -> value.on
+        is TileValue.Light -> value.on
+        else -> false
+    }
 
     /** Where a tap on a tile that cannot act goes, or null when it can act. */
     private fun notActionable(tile: TileSnapshot): TileAction? = when {

@@ -241,6 +241,39 @@ class HeadlessEntitiesTest {
         assertTrue(h.transports.isEmpty())
     }
 
+    /** Zigbee2MQTT does not retain device states by default: the broker replays the config, never the state. */
+    private fun TestScope.nonRetainedHarness(echo: Boolean) = harness(connect = { t ->
+        t.fake.retain(configTopic, config)
+        t.fake.setLink(LinkState.Connected(TransportMode.DIRECT))
+        if (echo) {
+            backgroundScope.launch {
+                var seen = 0
+                while (true) {
+                    val new = t.fake.published.drop(seen)
+                    seen += new.size
+                    new.filter { it.topic == "sw/1/set" }.forEach { t.fake.deliver("sw/1", it.payloadString()) }
+                    delay(50)
+                }
+            }
+        }
+    })
+
+    @Test
+    fun a_tap_on_a_non_retained_state_sends_once_discovery_settles_not_after_8_s() = runTest {
+        val h = nonRetainedHarness(echo = true)
+        val result = h.entities.send(switchId, Command.TurnOn())
+        assertTrue("$result", result is SendResult.Confirmed)
+        assertTrue("took ${testScheduler.currentTime} ms", testScheduler.currentTime < 5_000)
+    }
+
+    @Test
+    fun a_refresh_with_non_retained_states_returns_once_discovery_settles() = runTest {
+        val h = nonRetainedHarness(echo = false)
+        val result = h.entities.refresh(setOf(switchId)) as RefreshResult.Ok
+        assertTrue(result.complete)
+        assertTrue("took ${testScheduler.currentTime} ms", testScheduler.currentTime < 5_000)
+    }
+
     private object NoBindings : Bindings
 
     private fun entity(id: String) = Entity(id, null, "Kettle", Kind.SWITCH, null, null, null, Capabilities(), NoBindings)
