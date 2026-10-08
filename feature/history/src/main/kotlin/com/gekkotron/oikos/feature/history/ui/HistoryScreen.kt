@@ -109,7 +109,7 @@ fun HistoryScreen(
         ) {
             Header(state, locale)
             RangeChips(state.range, onRange)
-            if (state.energy && state.range != HistoryRange.H24) ModeToggle(state.mode, onMode)
+            if (state.toggle && state.range != HistoryRange.H24) ModeToggle(state.mode, onMode)
             Body(state, onRetry, zone, locale)
         }
     }

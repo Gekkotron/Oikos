@@ -65,7 +65,7 @@ class HistoryScreenshotTest {
 
     @Test
     fun `a line in Night Glass`() {
-        val state = HistoryUi(title = "Boiler", room = "Garage", live = 420.0, unit = "W", energy = true, content = line())
+        val state = HistoryUi(title = "Boiler", room = "Garage", live = 420.0, unit = "W", energy = true, toggle = true, content = line())
         val bitmap = render(ThemeChoice.NIGHT_GLASS, "history-line-night", state)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) < 0.35f)
@@ -81,7 +81,7 @@ class HistoryScreenshotTest {
 
     @Test
     fun `daily bars in Night Glass`() {
-        val state = HistoryUi(live = 1800.0, unit = "W", range = HistoryRange.D7, energy = true, mode = ChartMode.DAILY, content = bars())
+        val state = HistoryUi(live = 1800.0, unit = "W", range = HistoryRange.D7, energy = true, toggle = true, mode = ChartMode.DAILY, content = bars())
         val bitmap = render(ThemeChoice.NIGHT_GLASS, "history-bars-night", state)
         assertTrue(bitmap.distinctColors() > 8)
         assertTrue(bitmap.luminanceAt(4, 4) < 0.35f)

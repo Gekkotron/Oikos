@@ -57,24 +57,31 @@ class HistoryViewModel @Inject constructor(
     ) { s, entities, states, areas, chart ->
         val base = when (val target = s.target) {
             null -> HistoryUi()
-            HistoryTarget.House -> HistoryUi(unit = "W", energy = true)
+            HistoryTarget.House -> HistoryUi(unit = "W", energy = true, toggle = true)
             is HistoryTarget.Entity -> {
                 val entity = entities[target.id]
                 if (entity == null || HistoryRefs.of(entity) == null) {
                     HistoryUi(missing = true)
                 } else {
+                    val kind = EnergyScale.of(entity.unit)?.kind
                     HistoryUi(
                         title = entity.name,
                         room = entity.area.takeIf { it != UNASSIGNED_AREA }?.let { id -> areas.firstOrNull { it.id == id }?.name },
                         live = states[target.id]?.let(::numeric),
                         unit = entity.unit,
-                        energy = EnergyScale.of(entity.unit) != null,
+                        energy = kind != null,
+                        // A kWh meter has no power line to switch to: only its index (24 h) or its daily bars exist.
+                        toggle = kind == EnergyKind.POWER,
                     )
                 }
             }
         }
-        base.copy(range = s.range, mode = s.mode, content = if (base.missing || s.target == null) ChartContent.Loading else chart)
+        base.copy(range = s.range, mode = effectiveMode(s, base.energy && !base.toggle), content = if (base.missing || s.target == null) ChartContent.Loading else chart)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUi())
+
+    /** A kWh meter (no power line) shows its daily bars on 7 d / 30 d whatever was picked. */
+    private fun effectiveMode(s: Selection, counter: Boolean) =
+        if (counter && s.range != HistoryRange.H24) ChartMode.DAILY else s.mode
 
     fun bind(target: HistoryTarget) = selection.update { if (it.target == target) it else it.copy(target = target, attempt = it.attempt + 1) }
 
@@ -97,7 +104,8 @@ class HistoryViewModel @Inject constructor(
                 val entity = source.entities.first { target.id in it }.getValue(target.id)
                 val ref = HistoryRefs.of(entity) ?: return ChartContent.Loading
                 val scale = EnergyScale.of(entity.unit)
-                if (daily && scale != null) {
+                val counter = scale?.kind == EnergyKind.COUNTER
+                if ((daily || counter && s.range != HistoryRange.H24) && scale != null) {
                     val meter = if (scale.kind == EnergyKind.POWER) meterOf(target.id) else null
                     if (meter != null) bars(history.daily(meter.first, days, meter.second)) else bars(history.daily(ref, days, scale))
                 } else {

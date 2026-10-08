@@ -22,8 +22,10 @@ data class HistoryUi(
     val live: Double? = null,
     val unit: String? = null,
     val range: HistoryRange = HistoryRange.H24,
-    /** True when kWh-per-day bars exist for this target; the toggle shows on 7 d / 30 d. */
+    /** True when kWh-per-day bars exist for this target. */
     val energy: Boolean = false,
+    /** True when the Power / kWh-per-day toggle applies (power sensors and the house, not kWh meters); shown on 7 d / 30 d. */
+    val toggle: Boolean = false,
     val mode: ChartMode = ChartMode.POWER,
     val content: ChartContent = ChartContent.Loading,
     val missing: Boolean = false, // the entity is gone or has no history ref

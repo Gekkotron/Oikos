@@ -68,7 +68,7 @@ class HistoryScreenTest {
     @Test
     fun `the bars show their total`() {
         val days = DailyTotals(listOf(DayTotal(1_760_000_000L, 5.0), DayTotal(1_760_086_400L, 7.5)))
-        show(HistoryUi(range = HistoryRange.D7, energy = true, mode = ChartMode.DAILY, content = ChartContent.Bars(days, 12.5)))
+        show(HistoryUi(range = HistoryRange.D7, energy = true, toggle = true, mode = ChartMode.DAILY, content = ChartContent.Bars(days, 12.5)))
         compose.onNodeWithText("12.5 kWh over 2 days").assertExists()
     }
 
@@ -106,13 +106,13 @@ class HistoryScreenTest {
 
     @Test
     fun `the mode toggle is absent on 24 h and present on 7 d for energy`() {
-        show(HistoryUi(energy = true, range = HistoryRange.H24, content = ChartContent.NoData))
+        show(HistoryUi(energy = true, toggle = true, range = HistoryRange.H24, content = ChartContent.NoData))
         compose.onNodeWithText("kWh per day").assertDoesNotExist()
     }
 
     @Test
     fun `the mode toggle shows on 7 d and picks daily`() {
-        show(HistoryUi(energy = true, range = HistoryRange.D7, content = ChartContent.NoData))
+        show(HistoryUi(energy = true, toggle = true, range = HistoryRange.D7, content = ChartContent.NoData))
         compose.onNodeWithText("Power").assertExists()
         compose.onNodeWithText("kWh per day").performClick()
         assertEquals(listOf(ChartMode.DAILY), modes)

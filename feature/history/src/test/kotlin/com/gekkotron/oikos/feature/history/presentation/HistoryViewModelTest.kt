@@ -123,6 +123,38 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `a kWh meter goes straight to daily bars on 7 d and has no toggle`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("plug_energy"))
+        backgroundScope.launch { vm.state.collect {} }
+        vm.selectRange(HistoryRange.D7)
+        val ui = vm.state.first { it.content is ChartContent.Bars }
+        assertEquals(ChartMode.DAILY, ui.mode)
+        assertFalse(ui.toggle)
+        assertEquals("daily energy 7 COUNTER", history.calls.last())
+    }
+
+    @Test
+    fun `a kWh meter shows its index line on 24 h`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("plug_energy"))
+        backgroundScope.launch { vm.state.collect {} }
+        val ui = vm.state.first { it.content is ChartContent.Line }
+        assertEquals(ChartMode.POWER, ui.mode)
+        assertFalse(ui.toggle)
+    }
+
+    @Test
+    fun `power sensors and the house get the toggle`() = runTest(dispatcher) {
+        val vm = vm()
+        backgroundScope.launch { vm.state.collect {} }
+        vm.bind(HistoryTarget.Entity("plug_power"))
+        assertTrue(vm.state.first { it.energy }.toggle)
+        vm.bind(HistoryTarget.House)
+        assertTrue(vm.state.first { it.title == null && it.energy }.toggle)
+    }
+
+    @Test
     fun `24 h always shows power`() = runTest(dispatcher) {
         val vm = vm()
         vm.bind(HistoryTarget.Entity("plug_power"))
