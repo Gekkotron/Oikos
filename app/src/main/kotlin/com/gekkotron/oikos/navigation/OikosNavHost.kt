@@ -31,6 +31,8 @@ import com.gekkotron.oikos.feature.alerts.ui.AlertsRoute
 import com.gekkotron.oikos.feature.alerts.ui.RecentAlertsEffects
 import com.gekkotron.oikos.feature.alerts.ui.RecentAlertsRoute
 import com.gekkotron.oikos.feature.energy.ui.EnergyRoute
+import com.gekkotron.oikos.feature.history.HistoryTarget
+import com.gekkotron.oikos.feature.history.ui.HistoryRoute
 import com.gekkotron.oikos.feature.security.ui.SecurityRoute
 import com.gekkotron.oikos.feature.home.rooms.RoomsRoute
 import com.gekkotron.oikos.feature.home.ui.CustomizeEntitySheet
@@ -73,6 +75,10 @@ data object AlertsKey : NavKey
 /** Opened by the notification's `oikos://alert/<id>` link; only the sheet shows, over the app background. */
 @Serializable
 data class AlertDetailKey(val id: String) : NavKey
+
+/** A history chart; [target] is a `HistoryTarget.encode()` string. */
+@Serializable
+data class HistoryKey(val target: String) : NavKey
 
 @Serializable
 data object NotificationsKey : NavKey
@@ -141,6 +147,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val deviceSheet: @Composable (String, () -> Unit) -> Unit = { id, dismiss ->
         EntityControlSheet(id, dismiss, onSaveFailed = { Toast.makeText(context, R.string.device_save_failed, Toast.LENGTH_SHORT).show() })
     }
+    val openHistory: (HistoryTarget) -> Unit = { push(backStack, HistoryKey(it.encode())) }
     val top = backStack.lastOrNull()
     val tabs = showsTabBar(top)
     // The bar owns the bottom inset on the main tabs; their own Scaffolds then only pad top and sides.
@@ -201,6 +208,11 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                 }
                 entry<AlertsKey> { AlertsRoute(onBack = { pop(backStack, AlertsKey) }, windowInsets = screenInsets(AlertsKey, tabInsets, ScaffoldDefaults.contentWindowInsets), deviceSheet = deviceSheet) }
                 entry<AlertDetailKey> { key -> AlertDetailRoute(key.id, onDismiss = { pop(backStack, key) }, deviceSheet = deviceSheet) }
+                entry<HistoryKey> { key ->
+                    val target = HistoryTarget.decode(key.target)
+                    if (target == null) LaunchedEffect(key) { pop(backStack, key) }
+                    else HistoryRoute(target, onBack = { pop(backStack, key) }, windowInsets = screenInsets(key, tabInsets, ScaffoldDefaults.contentWindowInsets))
+                }
                 entry<SecurityKey> {
                     SecurityRoute(
                         windowInsets = tabInsets,

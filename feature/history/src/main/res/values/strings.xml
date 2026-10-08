@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_back">Back</string>
+    <string name="history_range_24h">24 h</string>
+    <string name="history_range_7d">7 d</string>
+    <string name="history_range_30d">30 d</string>
+    <string name="history_mode_power">Power</string>
+    <string name="history_mode_daily">kWh per day</string>
+    <string name="history_min">Min</string>
+    <string name="history_avg">Avg</string>
+    <string name="history_max">Max</string>
+    <string name="history_total">%1$s kWh over %2$d days</string>
+    <string name="history_no_data">No data in this period</string>
+    <string name="history_not_recorded">No history recorded for this device</string>
+    <string name="history_not_allowed">Add the history host to the gateway key</string>
+    <string name="history_unavailable">History unavailable</string>
+    <string name="history_retry">Retry</string>
+    <string name="history_cd_line">%1$s, %2$s, min %3$s, max %4$s</string>
+    <string name="history_cd_bars">%1$s, kWh per day, %2$s</string>
+    <string name="history_cd_range_24h">last 24 hours</string>
+    <string name="history_cd_range_7d">last 7 days</string>
+    <string name="history_cd_range_30d">last 30 days</string>
+</resources>
