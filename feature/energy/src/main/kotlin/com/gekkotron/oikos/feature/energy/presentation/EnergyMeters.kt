@@ -72,6 +72,32 @@ object EnergyMeters {
         }
     }
 
+    /** A node's lifetime meters: the paired counters of its power [sensors], each counted once. */
+    fun nodeMeters(sensors: List<Entity>, entities: Collection<Entity>): List<Entity> =
+        sensors.filter { it.ui.energyRole?.power == true }.mapNotNull { meterFor(it, entities) }.distinctBy { it.uniqueId }
+
+    /** What a derived house's total adds ([plus]) and subtracts ([minus]), each counted once. */
+    data class HouseMeters(val plus: List<Entity>, val minus: List<Entity>)
+
+    /**
+     * The meters of a house without its own sensor: solar and grid counters, minus grid export and inverter draw,
+     * like its live watts (energy spec §3). Every solar and grid sensor needs a counter, and solar needs an export
+     * counter too (else the export would count as consumption); a battery has no counter pairing yet. Null when the
+     * house has no total.
+     */
+    fun houseMeters(byRole: Map<EnergyRole, List<Entity>>, entities: Collection<Entity>): HouseMeters? {
+        if (byRole[EnergyRole.BATTERY] != null) return null
+        val solar = byRole[EnergyRole.SOLAR].orEmpty()
+        val grid = byRole[EnergyRole.GRID].orEmpty()
+        val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
+        if (solar.isEmpty() && grid.isEmpty()) return null
+        val added = (solar + grid).map { meterFor(it, entities) ?: return null }
+        val exports = grid.mapNotNull { reverseFor(it, entities) } + gridExport.map { meterFor(it, entities) ?: return null }
+        if (solar.isNotEmpty() && exports.isEmpty()) return null
+        val draws = solar.mapNotNull { reverseFor(it, entities) }
+        return HouseMeters(added.distinctBy { it.uniqueId }, (exports + draws).distinctBy { it.uniqueId })
+    }
+
     private fun twin(power: Entity, counters: List<Entity>, replacement: String): Entity? {
         val wanted = power.uniqueId.replace(POWER_TOKEN, replacement)
         return if (wanted == power.uniqueId) null else counters.firstOrNull { it.uniqueId.equals(wanted, ignoreCase = true) }

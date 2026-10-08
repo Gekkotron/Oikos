@@ -47,4 +47,6 @@
     <string name="energy_icon_dishwasher">Dishwasher</string>
     <string name="energy_details_save">Save</string>
     <string name="energy_save_failed">Couldn\'t save your changes. Check the connection and try again.</string>
+    <string name="energy_today">%1$s today</string>
+    <string name="energy_history">History</string>
 </resources>

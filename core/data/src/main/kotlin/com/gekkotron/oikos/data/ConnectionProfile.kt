@@ -50,6 +50,8 @@ sealed interface ConnectionProfile {
         override val prefix: String = DEFAULT_PREFIX,
         val gateway: GatewayConfig? = null,
         val pushTokenTopic: String? = null,
+        /** Override of the OikosHistory URL, e.g. `http://192.168.1.91:8090`; null = derived from the broker host (see [effectiveHistoryUrl]). */
+        val historyUrl: String? = null,
     ) : ConnectionProfile
 }
 

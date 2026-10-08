@@ -32,6 +32,8 @@ data class EnergyNode(
     val icon: ConsumerIcon? = null,
     /** Cards only: lifetime energy in kWh summed over the node's paired meters; null when unknown or [hasMeter] is false. */
     val totalKwh: Double? = null,
+    /** Cards only: today's energy in kWh, by [totalKwh]'s formulas over today's meter values; null when unknown. */
+    val todayKwh: Double? = null,
     /** Worst status of the paired meters. */
     val totalStatus: NodeStatus = NodeStatus.LIVE,
     /** At least one of the node's sensors has an energy meter. */
@@ -89,6 +91,8 @@ data class EnergyUiState(
     val meters: List<MeterOption> = emptyList(),
     /** Every water volume sensor, by name, for the water meter picker. */
     val waterMeters: List<MeterOption> = emptyList(),
+    /** The history service answers: the details sheet offers its History buttons. */
+    val historyAvailable: Boolean = false,
 ) {
     fun node(id: String): EnergyNode? = diagram.firstOrNull { it.id == id } ?: cards.firstOrNull { it.id == id }
 }

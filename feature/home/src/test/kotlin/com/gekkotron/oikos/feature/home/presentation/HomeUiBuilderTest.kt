@@ -11,6 +11,9 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.state.mqtt.MqttBindings
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.TransportMode
 import org.junit.Test
@@ -357,5 +360,35 @@ class HomeUiBuilderTest {
         assertEquals(StateValue.OnOff(true), card?.state)
         assertNull(HomeUiBuilder.cardFor(entities, states, areas, "nope", Locale.US))
         assertNull(HomeUiBuilder.cardFor(entities, states, areas, "speed", Locale.US))
+    }
+
+    private fun thermometer(template: String?) = Entity(
+        "thermo", null, "Thermometer", Kind.SENSOR, null, "°C", null, Capabilities(),
+        MqttBindings(
+            "sensor",
+            JsonObject(buildMap {
+                put("state_topic", JsonPrimitive("zigbee2mqtt/thermo"))
+                template?.let { put("value_template", JsonPrimitive(it)) }
+            }),
+        ),
+    )
+
+    @Test
+    fun `a recorded sensor opens its history only when history is on`() {
+        val entities = listOf(thermometer("{{ value_json.temperature }}")).associateBy { it.uniqueId }
+        val on = HomeUiBuilder.build(entities, emptyMap(), areas, RoomFilter.All, link, Locale.ROOT, historyEnabled = true).card("thermo")!!
+        assertEquals(TapAction.OPEN_HISTORY, on.tap)
+        assertTrue(on.hasHistory)
+        val off = HomeUiBuilder.build(entities, emptyMap(), areas, RoomFilter.All, link, Locale.ROOT).card("thermo")!!
+        assertEquals(TapAction.NONE, off.tap)
+        assertFalse(off.hasHistory)
+    }
+
+    @Test
+    fun `a sensor without a json key never opens history`() {
+        val entities = listOf(thermometer(null)).associateBy { it.uniqueId }
+        val card = HomeUiBuilder.build(entities, emptyMap(), areas, RoomFilter.All, link, Locale.ROOT, historyEnabled = true).card("thermo")!!
+        assertEquals(TapAction.NONE, card.tap)
+        assertFalse(card.hasHistory)
     }
 }

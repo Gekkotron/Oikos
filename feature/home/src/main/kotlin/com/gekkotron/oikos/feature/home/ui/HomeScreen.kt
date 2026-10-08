@@ -82,6 +82,7 @@ fun HomeRoute(
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    onOpenHistory: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -95,6 +96,7 @@ fun HomeRoute(
         onRouteChange = onRouteChange,
         windowInsets = windowInsets,
         onSearch = viewModel::search,
+        onOpenHistory = onOpenHistory,
     )
 }
 
@@ -112,6 +114,7 @@ fun HomeScreen(
     route: Route? = null,
     onRouteChange: (Route) -> Unit = {},
     onSearch: (String) -> Unit = {},
+    onOpenHistory: (String) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -160,7 +163,13 @@ fun HomeScreen(
                 items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
                     EntityCard(
                         card = card,
-                        onClick = { if (card.tap == TapAction.OPEN_SHEET) sheetId = card.id else onTap(card) },
+                        onClick = {
+                            when (card.tap) {
+                                TapAction.OPEN_SHEET -> sheetId = card.id
+                                TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
+                                else -> onTap(card)
+                            }
+                        },
                         onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id },
                     )
                 }
@@ -182,6 +191,7 @@ fun HomeScreen(
             onSend = onSend,
             onCustomize = { sheetId = null; customizeId = sheetCard.id },
             onDismiss = { sheetId = null },
+            onOpenHistory = { onOpenHistory(sheetCard.id) },
         )
     }
     val customizeCard = customizeId?.let(state::card)

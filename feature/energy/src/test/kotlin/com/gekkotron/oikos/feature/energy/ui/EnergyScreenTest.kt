@@ -259,4 +259,41 @@ class EnergyScreenTest {
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertEquals(listOf("daily" to SensorEdit("Daily water", EnergyRole.WATER, invert = false, meter = "total")), saves)
     }
+
+    @Test
+    fun `a card shows today's kWh`() {
+        val s = state(metered, meteredStates)
+        show(s.copy(cards = s.cards.map { if (it.id == "consumer:heater") it.copy(todayKwh = 3.4) else it }))
+        compose.onNodeWithTag("energy-card-consumer:heater").performScrollTo().assertTextContains("3.4 kWh today", substring = true)
+    }
+
+    private fun showHistory(state: EnergyUiState, opened: MutableList<String?>) = compose.setContent {
+        OikosTheme(ThemeChoice.NIGHT_GLASS) { EnergyScreen(state, onOpenHome = {}, locale = Locale.US, onOpenHistory = { opened += it }) }
+    }
+
+    @Test
+    fun `a sensor's history button opens its history`() {
+        val opened = mutableListOf<String?>()
+        val s = state(listOf(energyEntity("solar_power", EnergyRole.SOLAR, name = "Inverter")), listOf(numeric("solar_power", 1000.0)))
+        showHistory(s.copy(historyAvailable = true), opened)
+        compose.onNodeWithTag("energy-card-solar").performScrollTo().performClick()
+        compose.onNodeWithText("History").performScrollTo().performClick()
+        assertEquals(listOf<String?>("solar_power"), opened)
+    }
+
+    @Test
+    fun `the derived house's history button opens the house history`() {
+        val opened = mutableListOf<String?>()
+        showHistory(state(house, houseStates).copy(historyAvailable = true), opened)
+        compose.onNodeWithTag("energy-card-house").performScrollTo().performClick()
+        compose.onNodeWithText("History").performScrollTo().performClick()
+        assertEquals(listOf<String?>(null), opened)
+    }
+
+    @Test
+    fun `no history, no history button`() {
+        showHistory(state(house, houseStates), mutableListOf())
+        compose.onNodeWithTag("energy-card-solar").performScrollTo().performClick()
+        compose.onNodeWithText("History").assertDoesNotExist()
+    }
 }

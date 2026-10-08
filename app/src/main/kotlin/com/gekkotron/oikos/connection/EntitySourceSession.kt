@@ -42,7 +42,12 @@ class EntitySourceSession(
     /** The source for [profile]; `null` (no saved profile) gets a source for the default prefix. */
     @Synchronized
     fun current(profile: ConnectionProfile?): EntitySource {
-        source?.let { if (profile == this.profile) return it }
+        source?.let {
+            if (profile.sourceKey() == this.profile.sourceKey()) {
+                this.profile = profile // only the history URL may differ: it is not the source's business
+                return it
+            }
+        }
         drop()
         val child = CoroutineScope(parent.coroutineContext + SupervisorJob(parent.coroutineContext[Job]))
         val built = build(transport, child, profile?.prefix ?: DEFAULT_PREFIX, diagnostics)
@@ -105,6 +110,9 @@ class EntitySourceSession(
         source = null
         profile = null
     }
+
+    /** The profile as the source sees it: the history URL has no bearing on discovery. */
+    private fun ConnectionProfile?.sourceKey() = (this as? ConnectionProfile.Direct)?.copy(historyUrl = null) ?: this
 
     companion object {
         val SAVE_INTERVAL: Duration = 10.seconds

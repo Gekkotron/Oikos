@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.home.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.oikos.history.HistoryClient
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
@@ -35,6 +36,7 @@ class HomeViewModel @Inject constructor(
     private val savedState: SavedStateHandle,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val labels: LabelText = LabelText { null },
+    private val history: HistoryClient = HistoryClient.None,
 ) : ViewModel() {
     // conflate() collapses a burst of state messages to one rebuild per collection turn instead of one
     // per message, and flowOn moves the combine (and HomeUiBuilder.build) off Main; the final value is
@@ -44,9 +46,9 @@ class HomeViewModel @Inject constructor(
         source.states(),
         source.areas,
         combine(savedState.getStateFlow(KEY_FILTER, RoomFilter.All.key), savedState.getStateFlow(KEY_QUERY, ""), ::Pair),
-        source.link,
-    ) { entities, states, areas, (key, query), link ->
-        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels, query)
+        combine(source.link, history.available, ::Pair),
+    ) { entities, states, areas, (key, query), (link, historyOn) ->
+        val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels, query, historyOn)
         // The selected chip may no longer exist (its last card was unhidden, its area emptied…); build()
         // already falls back to All for this state, but the saved key must follow, or a stale "hidden"
         // key comes back to life and jumps the screen back there as soon as something is hidden again.
@@ -84,7 +86,7 @@ class HomeViewModel @Inject constructor(
             // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
             TapAction.TOGGLE -> send(card.id, if (card.on) Command.TurnOff else Command.TurnOn())
             TapAction.PRESS -> send(card.id, Command.Press)
-            TapAction.OPEN_SHEET, TapAction.NONE -> Unit
+            TapAction.OPEN_SHEET, TapAction.OPEN_HISTORY, TapAction.NONE -> Unit
         }
     }
 

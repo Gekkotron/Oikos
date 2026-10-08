@@ -51,7 +51,10 @@ object OnboardingPayload {
         }
         val prefix = if ("prefix" in root) root.string("prefix")?.trim()?.takeIf { it.isNotEmpty() } ?: return invalid("prefix") else DEFAULT_PREFIX
         val tokenTopic = (root["push"] as? JsonObject)?.string("token_topic")?.takeIf { it.isNotEmpty() }
-        return ParseResult.Ok(ConnectionProfile.Direct(broker, prefix, gateway, tokenTopic))
+        val history = (root["history"] as? JsonObject)?.let { h ->
+            h.string("url")?.let(::normalizeHistoryUrl) ?: return invalid("history.url")
+        }
+        return ParseResult.Ok(ConnectionProfile.Direct(broker, prefix, gateway, tokenTopic, history))
     }
 
     private fun error(e: PayloadError) = ParseResult.Error(e)

@@ -146,4 +146,24 @@ class EnergyMetersTest {
         val kwh = water("daily", "L", meter = "e")
         assertNull(waterMeter(kwh, listOf(kwh, counter("e", "Energy"))))
     }
+
+    @Test
+    fun `house meters add solar and grid and subtract export and draw, or give no total`() {
+        fun role(id: String, r: EnergyRole, device: String) = energyEntity(id, r, name = id).copy(deviceId = device)
+        val inverter = role("inv_power_a", EnergyRole.SOLAR, "inv")
+        val grid = role("grid_power_a", EnergyRole.GRID, "grid")
+        val all = listOf(
+            inverter, counter("inv_energy_produced_a", "Produced", device = "inv"), counter("inv_energy_a", "Draw", device = "inv"),
+            grid, counter("grid_energy_a", "Import", device = "grid"), counter("grid_energy_produced_a", "Export", device = "grid"),
+        )
+        val byRole = all.filter { it.ui.energyRole != null }.groupBy { it.ui.energyRole!! }
+        val meters = EnergyMeters.houseMeters(byRole, all)!!
+        assertEquals(listOf("inv_energy_produced_a", "grid_energy_a"), meters.plus.map { it.uniqueId })
+        assertEquals(listOf("grid_energy_produced_a", "inv_energy_a"), meters.minus.map { it.uniqueId })
+
+        val battery = role("battery", EnergyRole.BATTERY, "b")
+        assertNull(EnergyMeters.houseMeters(byRole + (EnergyRole.BATTERY to listOf(battery)), all + battery))
+        val noExport = all.filter { it.uniqueId != "grid_energy_produced_a" }
+        assertNull(EnergyMeters.houseMeters(byRole, noExport))
+    }
 }

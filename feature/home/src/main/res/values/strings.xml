@@ -64,6 +64,7 @@
     <string name="action_customize">Customize</string>
     <string name="action_controls">Controls</string>
     <string name="sheet_customize">Customize…</string>
+    <string name="sheet_history">History</string>
     <string name="customize_title">Customize</string>
     <string name="customize_name">Name</string>
     <string name="customize_name_hint">Leave empty to use the device\'s own name.</string>

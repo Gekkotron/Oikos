@@ -13,9 +13,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.error
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -92,7 +100,7 @@ fun SettingsRoute(
     }
     SettingsScreen(
         state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack,
-        onRegisterAgain = viewModel::registerAgain, now = now,
+        onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl,
         onOpenChannels = { openNotificationSettings(context) },
     )
 }
@@ -111,9 +119,11 @@ fun SettingsScreen(
     onRegisterAgain: () -> Unit = {},
     onOpenChannels: () -> Unit = {},
     now: Instant = Instant.now(),
+    onSaveHistoryUrl: (String) -> Boolean = { true },
 ) {
     var confirm by rememberSaveable { mutableStateOf(false) }
     var pushSheet by rememberSaveable { mutableStateOf(false) }
+    var historyDialog by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
@@ -133,7 +143,7 @@ fun SettingsScreen(
             NavRow(stringResource(R.string.settings_rooms), stringResource(R.string.settings_rooms_summary), onOpenRooms)
             NavRow(stringResource(R.string.settings_push), pushStatusText(state.push, now), onClick = { pushSheet = true })
             Section(stringResource(R.string.settings_connection)) {
-                ConnectionRows(state.connection)
+                ConnectionRows(state.connection, onEditHistory = { historyDialog = true })
                 if (route != null) RoutePicker(route, onRouteChange, Modifier.padding(top = 8.dp))
                 OutlinedButton(onClick = { confirm = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Text(stringResource(R.string.settings_set_up_again))
@@ -154,6 +164,10 @@ fun SettingsScreen(
             confirmButton = { TextButton(onClick = { confirm = false; onSetUpAgain() }) { Text(stringResource(R.string.settings_set_up_again_confirm)) } },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.settings_cancel)) } },
         )
+    }
+    if (historyDialog) {
+        val direct = state.connection as? ConnectionSummary.Direct
+        HistoryUrlDialog(direct?.historyUrl.orEmpty(), direct?.historyDefault.orEmpty(), onSave = onSaveHistoryUrl, onDismiss = { historyDialog = false })
     }
     if (pushSheet) {
         PushSheet(state.push, now, onRegisterAgain, onOpenChannels, onDismiss = { pushSheet = false })
@@ -199,7 +213,7 @@ private fun NavRow(title: String, summary: String?, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ConnectionRows(summary: ConnectionSummary?) {
+private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Unit) {
     when (summary) {
         null -> Unit
         ConnectionSummary.Demo -> Text(stringResource(R.string.settings_demo), style = OikosTheme.type.body)
@@ -212,17 +226,66 @@ private fun ConnectionRows(summary: ConnectionSummary?) {
             InfoRow(stringResource(R.string.settings_user), summary.username ?: stringResource(R.string.settings_none))
             InfoRow(stringResource(R.string.settings_prefix), summary.prefix)
             summary.gatewayUrl?.let { InfoRow(stringResource(R.string.settings_gateway), it) }
+            InfoRow(
+                stringResource(R.string.settings_history),
+                summary.historyUrl ?: stringResource(R.string.settings_history_auto, summary.historyDefault),
+                onClick = onEditHistory,
+                onClickLabel = stringResource(R.string.settings_history_edit),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryUrlDialog(initial: String, hint: String, onSave: (String) -> Boolean, onDismiss: () -> Unit) {
+    var text by rememberSaveable { mutableStateOf(initial) }
+    var failed by rememberSaveable { mutableStateOf(false) }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = AlertDialogDefaults.shape, color = AlertDialogDefaults.containerColor, tonalElevation = AlertDialogDefaults.TonalElevation) {
+            HistoryUrlDialogContent(
+                text, failed, hint,
+                onTextChange = { text = it; failed = false },
+                onSave = { if (onSave(text)) onDismiss() else failed = true },
+                onCancel = onDismiss,
+            )
+        }
+    }
+}
+
+/** Stateless body of the history URL dialog, so it can be tested without a dialog window. */
+@Composable
+internal fun HistoryUrlDialogContent(text: String, failed: Boolean, hint: String, onTextChange: (String) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
+    val error = stringResource(R.string.settings_history_error)
+    Column(Modifier.padding(24.dp)) {
+        Text(stringResource(R.string.settings_history), style = OikosTheme.type.display)
+        OutlinedTextField(
+            value = text,
+            onValueChange = onTextChange,
+            label = { Text(hint) },
+            singleLine = true,
+            isError = failed,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp).semantics { if (failed) error(error) },
+        )
+        // Always laid out (blank until a refusal) so the dialog does not resize when the error appears.
+        Text(if (failed) error else "", style = OikosTheme.type.label, color = MaterialTheme.colorScheme.error, minLines = 1, modifier = Modifier.padding(top = 4.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
+            TextButton(onClick = onSave) { Text(stringResource(R.string.settings_history_save)) }
         }
     }
 }
 
 @Composable
-private fun InfoRow(label: String, value: String, extra: String? = null) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun InfoRow(label: String, value: String, extra: String? = null, onClick: (() -> Unit)? = null, onClickLabel: String? = null) {
+    val tap = if (onClick != null) Modifier.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick) else Modifier
+    Row(Modifier.fillMaxWidth().then(tap).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted, modifier = Modifier.width(140.dp))
         Column(Modifier.weight(1f)) {
             Text(value, style = OikosTheme.type.body)
             if (extra != null) Text(extra, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
         }
+        if (onClick != null) Text("›", style = OikosTheme.type.body, color = OikosTheme.colors.contentMuted)
     }
 }

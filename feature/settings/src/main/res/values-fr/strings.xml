@@ -43,4 +43,9 @@
     <string name="settings_push_demo">Indisponible dans la démo</string>
     <string name="settings_push_register_again">Enregistrer à nouveau</string>
     <string name="settings_push_channels">Canaux de notification</string>
+    <string name="settings_history">Service d\'historique</string>
+    <string name="settings_history_auto">Automatique (%1$s)</string>
+    <string name="settings_history_error">Format http(s)://hôte[:port], rien après</string>
+    <string name="settings_history_save">Enregistrer</string>
+    <string name="settings_history_edit">Modifier</string>
 </resources>

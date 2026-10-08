@@ -21,6 +21,7 @@ fun EntityControlSheet(
     id: String,
     onDismiss: () -> Unit,
     onSaveFailed: () -> Unit,
+    onOpenHistory: ((String) -> Unit)? = null,
     viewModel: CustomizeViewModel = hiltViewModel(),
 ) {
     val load by remember(id) { viewModel.load(id) }.collectAsStateWithLifecycle(CustomizeLoad.Loading)
@@ -37,7 +38,13 @@ fun EntityControlSheet(
                     onDismiss = { customizing = false },
                 )
             } else {
-                ControlSheet(l.card, onSend = viewModel::send, onCustomize = { customizing = true }, onDismiss = onDismiss)
+                ControlSheet(
+                    l.card,
+                    onSend = viewModel::send,
+                    onCustomize = { customizing = true },
+                    onDismiss = onDismiss,
+                    onOpenHistory = onOpenHistory?.let { open -> { open(id) } },
+                )
             }
     }
 }

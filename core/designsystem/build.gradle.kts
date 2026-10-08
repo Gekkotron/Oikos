@@ -14,4 +14,5 @@ dependencies {
     api(project(":core:model"))
     implementation(libs.androidx.activity.compose) // the permission launcher
     implementation(libs.androidx.core.ktx)
+    implementation(libs.vico.compose.m3)
 }

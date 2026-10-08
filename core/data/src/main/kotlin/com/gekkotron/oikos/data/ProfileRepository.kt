@@ -60,6 +60,11 @@ class ProfileRepository internal constructor(
         store.updateData { it.copy(route = route) }
     }
 
+    /** Edits the history URL in place: no new pairing, rooms and route are kept. */
+    suspend fun setHistoryUrl(url: String?) {
+        store.updateData { it.copy(historyUrl = url) }
+    }
+
     suspend fun installId(): String =
         store.updateData { if (it.installId.isEmpty()) it.copy(installId = newId()) else it }.installId
 
@@ -80,6 +85,7 @@ class ProfileRepository internal constructor(
             prefix = prefix,
             gateway = gateway?.let { GatewayConfig(it.url, open(it.keyCipher), it.brokerHost) },
             pushTokenTopic = pushTokenTopic,
+            historyUrl = historyUrl,
         )
     }
 
@@ -92,6 +98,7 @@ class ProfileRepository internal constructor(
             gateway = p.gateway?.let { StoredGateway(it.url, it.brokerHost, seal(it.key)) },
             prefix = p.prefix,
             pushTokenTopic = p.pushTokenTopic,
+            historyUrl = p.historyUrl,
             roomsPending = true,
             notificationsPending = true,
         )

@@ -63,6 +63,8 @@ import com.gekkotron.oikos.designsystem.R as DsR
 fun EnergyRoute(
     onOpenHome: () -> Unit,
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    /** An entity's history, or the derived house's for null. */
+    onOpenHistory: (entityId: String?) -> Unit = {},
     viewModel: EnergyViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -75,7 +77,7 @@ fun EnergyRoute(
             }
         }
     }
-    EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, snackbarHostState = snackbar)
+    EnergyScreen(state, onOpenHome, windowInsets, onSave = viewModel::save, onOpenHistory = onOpenHistory, snackbarHostState = snackbar)
 }
 
 @Composable
@@ -85,6 +87,7 @@ fun EnergyScreen(
     windowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     locale: Locale = Locale.getDefault(),
     onSave: (String, SensorEdit) -> Unit = { _, _ -> },
+    onOpenHistory: (entityId: String?) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val layoutDirection = LocalLayoutDirection.current
@@ -139,7 +142,7 @@ fun EnergyScreen(
     // A node that left Energy (its role was cleared) closes its sheet.
     val detail = detailId?.let { id -> state.node(id) ?: state.consumers.firstOrNull { it.id == id } }
     if (detail != null) {
-        EnergyDetailSheet(detail, state, locale, onSave = onSave, onDismiss = { detailId = null })
+        EnergyDetailSheet(detail, state, locale, onSave = onSave, onOpenHistory = onOpenHistory, onDismiss = { detailId = null })
     }
 }
 
@@ -177,6 +180,7 @@ private fun EnergyValueCard(node: EnergyNode, locale: Locale, onClick: () -> Uni
             if (!water && !node.hasMeter) {
                 Text(stringResource(R.string.energy_no_meter), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
             }
+            TodayText(node, locale)
             if (water && node.waterTotal != null) {
                 Text(
                     stringResource(R.string.energy_water_meter, EnergyFormat.meter(node.waterTotal, node.waterTotalUnit, locale)),
@@ -186,6 +190,13 @@ private fun EnergyValueCard(node: EnergyNode, locale: Locale, onClick: () -> Uni
             }
         }
     }
+}
+
+/** "3.4 kWh today" under a node's value, when history answered for it. */
+@Composable
+internal fun TodayText(node: EnergyNode, locale: Locale) {
+    val kwh = node.todayKwh ?: return
+    Text(stringResource(R.string.energy_today, EnergyFormat.energy(kwh, locale)), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
 }
 
 @Composable

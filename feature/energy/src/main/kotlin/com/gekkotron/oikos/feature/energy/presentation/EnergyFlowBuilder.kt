@@ -30,6 +30,7 @@ object EnergyFlowBuilder {
         link: LinkState,
         nowMillis: Long,
         previous: ConsumerOrder? = null,
+        today: Map<String, Double> = emptyMap(),
     ): EnergyUiState {
         if (entities.isEmpty()) return EnergyUiState(loading = true, link = link)
         val byRole = entities.values.filter { it.ui.energyRole != null }.groupBy { it.ui.energyRole!! }
@@ -64,8 +65,11 @@ object EnergyFlowBuilder {
         fun ids(vararg roles: EnergyRole) = roles.flatMap { byRole[it].orEmpty() }.sortedWith(byName).map { it.uniqueId }
 
         val all = entities.values
-        fun EnergyNode.withTotal(sensors: List<Entity>?): EnergyNode = total(sensors.orEmpty(), all, states).let {
-            copy(totalKwh = it.kwh, totalStatus = it.status, hasMeter = it.hasMeter)
+        // The same formulas run twice: on the meters' live counters, and on today's values from history.
+        val live = { m: Entity -> kwh(m, states) }
+        val ofToday = { m: Entity -> Reading(today[m.uniqueId], NodeStatus.LIVE) }
+        fun EnergyNode.withTotal(sensors: List<Entity>?): EnergyNode = total(sensors.orEmpty(), all, live).let {
+            copy(totalKwh = it.kwh, totalStatus = it.status, hasMeter = it.hasMeter, todayKwh = todayOf(sensors.orEmpty(), all, today, ofToday))
         }
 
         val consumerNodes = consumerEntities.associate { e ->
@@ -90,7 +94,9 @@ object EnergyFlowBuilder {
             if (measured != null) {
                 node.withTotal(byRole[EnergyRole.HOUSE])
             } else {
-                derivedTotal(byRole, all, states).let { t -> node.copy(totalKwh = t.kwh, totalStatus = t.status, hasMeter = t.hasMeter) }
+                derivedTotal(byRole, all, live).let { t ->
+                    node.copy(totalKwh = t.kwh, totalStatus = t.status, hasMeter = t.hasMeter, todayKwh = derivedTotal(byRole, all, ofToday).kwh)
+                }
             }
         }
         val waterNode = byRole[EnergyRole.WATER]?.firstOrNull()?.let { e -> water(e, states, all) }
@@ -131,37 +137,37 @@ object EnergyFlowBuilder {
     /** A node's lifetime energy: the paired meters of its power [sensors] (each counted once), summed in kWh. */
     private data class Total(val hasMeter: Boolean, val kwh: Double?, val status: NodeStatus)
 
-    private fun total(sensors: List<Entity>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
-        val meters = sensors.filter { it.ui.energyRole?.power == true }.mapNotNull { EnergyMeters.meterFor(it, all) }.distinctBy { it.uniqueId }
+    private fun total(sensors: List<Entity>, all: Collection<Entity>, value: (Entity) -> Reading): Total {
+        val meters = EnergyMeters.nodeMeters(sensors, all)
         if (meters.isEmpty()) return NO_TOTAL
-        val parts = meters.map { kwh(it, states) }
+        val parts = meters.map(value)
         val kwh = if (parts.any { it.watts == null }) null else parts.sumOf { it.watts!! }
         return Total(true, kwh, worst(parts.map { it.status }))
     }
 
     private val NO_TOTAL = Total(false, null, NodeStatus.LIVE)
 
-    /**
-     * A house without its own sensor: Σsolar + Σgrid import − Σgrid export − Σinverter draw, like its live watts
-     * (spec §3). Every solar
-     * and grid sensor needs a counter, and solar needs an export counter too (else the export would count as
-     * consumption); a battery has no counter pairing yet, so a house with one has no total.
-     */
-    private fun derivedTotal(byRole: Map<EnergyRole, List<Entity>>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
-        if (byRole[EnergyRole.BATTERY] != null) return NO_TOTAL
-        val solar = byRole[EnergyRole.SOLAR].orEmpty()
-        val grid = byRole[EnergyRole.GRID].orEmpty()
-        val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
-        if (solar.isEmpty() && grid.isEmpty()) return NO_TOTAL
-        val added = (solar + grid).map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
-        val exports = grid.mapNotNull { EnergyMeters.reverseFor(it, all) } + gridExport.map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
-        if (solar.isNotEmpty() && exports.isEmpty()) return NO_TOTAL
-        val draws = solar.mapNotNull { EnergyMeters.reverseFor(it, all) }
-        val plus = added.distinctBy { it.uniqueId }.map { kwh(it, states) }
-        val minus = (exports + draws).distinctBy { it.uniqueId }.map { kwh(it, states) }
+    /** A house without its own sensor: Σsolar + Σgrid import − Σgrid export − Σinverter draw ([EnergyMeters.houseMeters]). */
+    private fun derivedTotal(byRole: Map<EnergyRole, List<Entity>>, all: Collection<Entity>, value: (Entity) -> Reading): Total {
+        val meters = EnergyMeters.houseMeters(byRole, all) ?: return NO_TOTAL
+        val plus = meters.plus.map(value)
+        val minus = meters.minus.map(value)
         val parts = plus + minus
         val kwh = if (parts.any { it.watts == null }) null else plus.sumOf { it.watts!! } - minus.sumOf { it.watts!! }
         return Total(true, kwh?.coerceAtLeast(0.0), worst(parts.map { it.status }))
+    }
+
+    /**
+     * A node's energy today: [total] over today's meter values, or, when its sensors have no meter and none is signed
+     * (grid, battery), the sum of their own power integrals ([EnergyToday.requests]); null if any is missing.
+     */
+    private fun todayOf(sensors: List<Entity>, all: Collection<Entity>, today: Map<String, Double>, ofToday: (Entity) -> Reading): Double? {
+        val t = total(sensors, all, ofToday)
+        if (t.hasMeter) return t.kwh
+        val powers = sensors.filter { it.ui.energyRole?.power == true }
+        // A signed role's integral nets import against export (charge against discharge), so it has no "today".
+        if (powers.isEmpty() || powers.any { it.ui.energyRole!!.signed }) return null
+        return powers.map { today[it.uniqueId] ?: return null }.sum()
     }
 
     /** A counter's reading in kWh, carried in [Reading.watts]. */

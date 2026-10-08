@@ -20,7 +20,11 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.data.LocalBroker
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
@@ -86,5 +90,22 @@ class SettingsViewModelTest {
         vm.refreshPush()
         assertEquals(1, push.registerAgains)
         assertEquals(1, push.refreshes)
+    }
+
+    private suspend fun ProfileRepository.awaitHistoryUrl(u: String?) =
+        state.first { ((it as? ProfileState.Ready)?.profile as? ConnectionProfile.Direct)?.historyUrl == u }
+
+    @Test
+    fun `a valid history url is saved normalised, an invalid one is refused, blank clears`() = runTest(dispatcher) {
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs4.json"), backgroundScope)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile4.json"), PassThrough, backgroundScope)
+        profiles.save(ConnectionProfile.Direct(LocalBroker("h")))
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource())
+        assertTrue(vm.setHistoryUrl(" http://192.168.1.91:8090/ "))
+        profiles.awaitHistoryUrl("http://192.168.1.91:8090")
+        assertFalse(vm.setHistoryUrl("192.168.1.91"))
+        profiles.awaitHistoryUrl("http://192.168.1.91:8090")
+        assertTrue(vm.setHistoryUrl("  "))
+        profiles.awaitHistoryUrl(null)
     }
 }

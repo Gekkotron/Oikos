@@ -20,6 +20,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,6 +65,7 @@ internal fun EnergyDetailSheet(
     locale: Locale,
     onSave: (String, SensorEdit) -> Unit,
     onDismiss: () -> Unit,
+    onOpenHistory: (entityId: String?) -> Unit = {},
 ) {
     val sensors = node.sensorIds.mapNotNull(state.sensors::get)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -74,7 +76,10 @@ internal fun EnergyDetailSheet(
             Text(nodeLabel(node), style = OikosTheme.type.display.copy(fontSize = 22.sp))
             Text(nodeValueText(node, locale), style = OikosTheme.type.display.copy(fontSize = 28.sp), modifier = Modifier.alpha(statusAlpha(node.status)))
             Text(statusText(node.status), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
-            if (node.kind == NodeKind.HOUSE && sensors.isEmpty()) {
+            TodayText(node, locale)
+            val derivedHouse = node.kind == NodeKind.HOUSE && sensors.isEmpty()
+            if (derivedHouse && state.historyAvailable) HistoryButton { onOpenHistory(null) }
+            if (derivedHouse) {
                 val inputs = state.diagram.filter { it.kind == NodeKind.SOLAR || it.kind == NodeKind.GRID || it.kind == NodeKind.BATTERY }
                 if (inputs.isNotEmpty()) {
                     val joined = inputs.map { nodeLabel(it) }.joinToString(" + ")
@@ -84,7 +89,11 @@ internal fun EnergyDetailSheet(
             if (sensors.isNotEmpty()) {
                 Text(stringResource(R.string.energy_details_sensors), style = OikosTheme.type.label)
                 sensors.forEach { sensor ->
-                    SensorRow(sensor, state.meters, state.waterMeters, locale, startOpen = sensors.size == 1, onSave = { onSave(sensor.id, it); onDismiss() })
+                    SensorRow(
+                        sensor, state.meters, state.waterMeters, locale, startOpen = sensors.size == 1,
+                        onSave = { onSave(sensor.id, it); onDismiss() },
+                        onOpenHistory = if (state.historyAvailable) ({ onOpenHistory(sensor.id) }) else null,
+                    )
                 }
             }
         }
@@ -92,7 +101,16 @@ internal fun EnergyDetailSheet(
 }
 
 @Composable
-private fun SensorRow(sensor: SensorUi, meters: List<MeterOption>, waterMeters: List<MeterOption>, locale: Locale, startOpen: Boolean, onSave: (SensorEdit) -> Unit) {
+private fun SensorRow(
+    sensor: SensorUi,
+    meters: List<MeterOption>,
+    waterMeters: List<MeterOption>,
+    locale: Locale,
+    startOpen: Boolean,
+    onSave: (SensorEdit) -> Unit,
+    /** Null hides the History button (no history service). */
+    onOpenHistory: (() -> Unit)?,
+) {
     var open by rememberSaveable(sensor.id) { mutableStateOf(startOpen) }
     HorizontalDivider()
     Row(
@@ -106,8 +124,14 @@ private fun SensorRow(sensor: SensorUi, meters: List<MeterOption>, waterMeters: 
     ) {
         Text(sensor.name, style = OikosTheme.type.body, modifier = Modifier.weight(1f))
         Text(sensorValueText(sensor, locale), style = OikosTheme.type.body)
+        if (onOpenHistory != null) HistoryButton(onOpenHistory)
     }
     if (open) SensorEditor(sensor, meters, waterMeters, onSave)
+}
+
+@Composable
+private fun HistoryButton(onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.heightIn(min = OikosDimens.minTouch)) { Text(stringResource(R.string.energy_history)) }
 }
 
 @Composable

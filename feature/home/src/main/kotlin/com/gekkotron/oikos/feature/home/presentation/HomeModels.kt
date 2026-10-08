@@ -46,7 +46,7 @@ sealed interface RoomFilter {
 /** A null [label] is localized by the UI: All, Favourites or Unassigned. */
 data class ChipUi(val filter: RoomFilter, val label: String?)
 
-enum class TapAction { TOGGLE, PRESS, OPEN_SHEET, NONE }
+enum class TapAction { TOGGLE, PRESS, OPEN_SHEET, OPEN_HISTORY, NONE }
 
 /** What a card shows, before localisation. */
 sealed interface CardValue {
@@ -80,6 +80,8 @@ data class CardUi(
     val stale: Boolean = false,
     val tap: TapAction,
     val hasSheet: Boolean,
+    /** The entity is recorded by the history service and history is on: a sensor card opens it, the sheet links to it. */
+    val hasHistory: Boolean = false,
     /** Effective area id; [UNASSIGNED_AREA] when the entity has no room. */
     val areaId: String,
     /** The override as it is now, for the override sheet. */
