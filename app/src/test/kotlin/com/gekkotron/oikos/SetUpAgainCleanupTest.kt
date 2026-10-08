@@ -143,4 +143,15 @@ class SetUpAgainCleanupTest {
         assertTrue(repo.all(null).first().isEmpty())
         assertTrue("cancelReplies" in events)
     }
+
+    @Test
+    fun `the widgets are reset last, even after a failing step`(): Unit = runBlocking {
+        val store = RegistrationStore.create(tmp.newFile().also { it.delete() }, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined))
+        val registrar = PushRegistrar(targets, tokens, TopicPublisher { _, _, _ -> Result.success(Unit) }, store, queue, { PushRegistrar.DeviceInfo("p", "en") })
+        SetUpAgainCleanup(
+            registrar, repo, replies, newImageCache(), VideoCache(tmp.newFolder(), clips),
+            resetWidgets = { events += "resetWidgets" },
+        ) { throw IllegalStateException("no notification service") }.run()
+        assertEquals("resetWidgets", events.last())
+    }
 }

@@ -64,7 +64,7 @@ New module **`:feature:widget`** (Glance `glance-appwidget` + `glance-material3`
 |---|---|---|
 | `OikosWidget`, `OikosWidgetReceiver` | widget | Glance UI. Reads `WidgetConfigStore` and `WidgetSnapshotStore` only; never connects. Action callbacks enqueue workers. |
 | `WidgetConfigActivity` | widget | The entity picker (§2.1); writes `WidgetConfigStore`, enqueues the periodic refresh, sets the result. |
-| `WidgetCodeActivity` | widget | Transparent activity hosting `CodeKeypadSheet` (format from the snapshot). OK enqueues `WidgetCommandWorker` with the code; the code lives only in the activity state and the work input, never on disk. |
+| `WidgetCodeActivity` | widget | Transparent activity hosting `CodeKeypadSheet` (format from the snapshot). OK enqueues `WidgetCommandWorker`. The code goes into the in-memory `CodeVault`, and the work input carries only a one-time token. The code is never on disk. |
 | `WidgetConfigStore` | widget | DataStore: `appWidgetId → WidgetConfig(uniqueIds: List<String>, armMode: AlarmMode?)`. |
 | `WidgetSnapshotStore` | widget | DataStore in `noBackupFilesDir`: `uniqueId → TileSnapshot(name, icon, kind, stateText, available, alarm/climate extras, codeArmRequired, codeDisarmRequired, codeFormat, historyAvailable, status: OK/PENDING/FAILED/REMOVED, pendingSince, updatedAt)` plus a global `footer: Fresh/Offline/AuthFailed/NotConfigured` with a timestamp. Display data only, no secrets. |
 | `TileMapper` | widget | Pure `EntityState + UiOverride → TileSnapshot` (state text, icon, kind extras) for every `Kind`. |
@@ -73,17 +73,17 @@ New module **`:feature:widget`** (Glance `glance-appwidget` + `glance-material3`
 | `WidgetEntities` | widget (interface) | `suspend fun refresh(ids: Set<String>): RefreshResult` and `suspend fun send(id: String, command: Command): SendResult`. Results carry `TileSnapshot`s or a failure class (`Offline`, `AuthFailed`, `NotConfigured`). |
 | `HeadlessEntities` | app | Implements `WidgetEntities` (§3.3). |
 | `WidgetMirror` | app | While the foreground session is connected, collects `states()`, maps the ids present on any widget through `TileMapper`, writes the snapshot (debounced 1 s) and calls `OikosWidget().updateAll()`. |
-| `RoutePicker` | core:transport | Extracted from `OneShotPublisher`: given the stored `TransportSpec`, opens a short-lived `MqttTransport` for the right route (Direct; Gateway; Routed AUTO = TCP probe then direct, else gateway), and reports `Connected`, `Rejected` or `Unreachable` within a budget. `OneShotPublisher` is refactored onto it; its existing tests keep passing unchanged. |
+| (no new transport code) | app | `HeadlessEntities` builds a private `TransportFactory(sessionScope, emptyFlow(), http)` per session. The factory already covers Demo, Direct, Gateway and Routed AUTO (TCP probe, then fallback). `OneShotPublisher` is unchanged. |
 
 ### 3.3 `HeadlessEntities`
 
 - **Foreground short-circuit:** when `EntitySourceSession` holds a connected source, `refresh` reads its current `states()` value and `send` calls its `send()` and awaits the tracker confirmation. No second connection.
 - **Headless path** (app not connected), under a process-wide `Mutex`:
-  1. `RoutePicker` opens a transport (10 s budget). `Rejected` → `AuthFailed`; `Unreachable` → `Offline`; no profile or Demo → `NotConfigured` (Demo is handled separately, see §4).
+  1. A private `TransportFactory` builds the transport for the profile's spec, with client id `clientIdFor(installId) + "-widget"`, and the session waits for the link (10 s budget). `Offline(REJECTED | KEY_REJECTED)` → `AuthFailed`; no link in time → `Offline`; no profile → `NotConfigured`. The Demo spec gets the in-process `DemoBroker` the same way.
   2. Build a fresh `MqttDiscoverySource(transport, scope, prefix)` with the profile's prefix; `restore(entityCache.load(key))`; set subscriptions as the foreground session does.
-  3. `refresh`: wait until every requested id has a non-cached (live) state, or 8 s. Ids still cached are returned with their cached state and their old `updatedAt`. An id absent from both discovery and the cache after the wait is `REMOVED`.
-  4. `send`: wait for the id to be discovered (8 s), then `send(command)`; wait for the `CommandTracker` result (its 5 s timeout). Confirmed → `OK` snapshot; `CommandFailure` or `Rejected` → `FAILED` with the previous state.
-  5. Save the source's messages back with `entityCache.save(key, …)`, but only if the foreground session is still not active. Close the transport in `finally` (`NonCancellable`), as `OneShotPublisher` does.
+  3. `refresh`: wait until every requested id has a non-cached (live) state, or 8 s, then up to 6 s more for the source to settle (live traffic, then a 2 s quiet window that each newly replayed topic restarts: about 4 s on a small house). Ids still cached are returned with their cached state and their old `updatedAt`. An id absent from discovery is `REMOVED` only when the source settled.
+  4. `send`: wait for the id to be discovered, then for its live state (8 s each). Otherwise the retained state replay, which arrives after the subscription debounce, would "confirm" the old value. Then `send(command)` and wait for the `CommandTracker` result (its 5 s timeout). Confirmed means `pending` cleared **and** `lastUpdate` moved: a timeout reverts the store (keeping `lastUpdate`) before it emits the failure. Confirmed → `OK` snapshot; `CommandFailure` or `Rejected` → `FAILED` with the previous state.
+  5. Save the source's journal back with `entityCache.save(key, …)`, but only if the source settled (a partial journal would shrink the app's cold-start house) and the foreground session is still not active. Close the transport in `finally` (`NonCancellable`), as `OneShotPublisher` does.
 - The `CommandTracker` 5 s timeout and the 8 s waits keep a tap well under the 10-minute WorkManager limit and the expedited-work quota.
 
 ### 3.4 Data flow
@@ -91,7 +91,7 @@ New module **`:feature:widget`** (Glance `glance-appwidget` + `glance-material3`
 ```
 tap ─▶ Glance ActionCallback ─▶ WidgetCommandWorker (expedited)
          │                          ├─ snapshot: PENDING ─▶ updateAll
-         │                          ├─ WidgetEntities.send ─▶ HeadlessEntities ─▶ (live source | RoutePicker + MqttDiscoverySource)
+         │                          ├─ WidgetEntities.send ─▶ HeadlessEntities ─▶ (live source | TransportFactory + MqttDiscoverySource)
          │                          └─ snapshot: OK / FAILED ─▶ updateAll
 ↻ / 15 min ─▶ WidgetRefreshWorker ─▶ WidgetEntities.refresh ─▶ snapshot + footer ─▶ updateAll
 app connected ─▶ WidgetMirror ─▶ snapshot (debounced) ─▶ updateAll
@@ -101,19 +101,18 @@ OikosWidget.provideGlance ─▶ reads WidgetConfigStore + WidgetSnapshotStore o
 ## 4. Errors, privacy, demo
 
 - **No profile:** footer "Set up Oikos"; tapping anywhere opens onboarding. The periodic worker returns `success` without connecting.
-- **Demo profile:** `HeadlessEntities` drives the widget from `:core:demo` in-process, so a fresh install in demo mode shows a live widget.
+- **Demo profile:** `HeadlessEntities` gets the in-process `DemoBroker` from the same `TransportFactory`, so a fresh install in demo mode shows a live widget.
 - **Unreachable:** the snapshot keeps the last values; footer "Offline · <last fresh time>"; the worker returns `success` (no retry storm; the next period retries). Commands → `FAILED`.
 - **Rejected credentials:** footer "Sign-in failed"; tapping the footer opens Settings.
 - **Worker killed mid-session:** the transport closes in `finally`; on the next render a `PENDING` older than 30 s is shown as `FAILED`.
 - **Profile reset:** clearing the profile also clears `WidgetSnapshotStore` (same hook as `EntityCache.clear()`) and updates the widgets to "Set up Oikos". `WidgetConfigStore` is kept; unknown ids then render "—".
-- **Privacy:** the snapshot and config hold no codes or credentials, and live in `noBackupFilesDir`. The alarm code exists only in `WidgetCodeActivity` state and the expedited work's input data (deleted when the work completes). The PIN never reaches the cache (`MqttDiscoverySource.redact`, unchanged).
+- **Privacy:** the snapshot and config hold no codes or credentials, and live in `noBackupFilesDir`. The alarm code exists only in `WidgetCodeActivity` state and in the process-memory `CodeVault`, which hands it out once. WorkManager keeps a finished job's input on disk for about a day, so that input holds only a one-time token. After a process death the code is gone: the tile shows "!" and nothing is sent without it. The PIN never reaches the cache (`MqttDiscoverySource.redact`, unchanged).
 
 ## 5. Testing
 
 - **Unit**
   - `TileMapper` for every `Kind`, including stale, unavailable, alarm states and climate last mode.
-  - `HeadlessEntities` with a fake `RoutePicker`/transport: foreground short-circuit; live-ids wait and 8 s budget; cached-only ids; `REMOVED`; send confirmed / not confirmed / rejected; `Offline`, `AuthFailed`, `NotConfigured`; mutex serialises refresh and send; cache saved only when headless; transport closed on cancellation.
-  - `RoutePicker` route choice; `OneShotPublisher` existing tests unchanged.
+  - `HeadlessEntities` with a fake transport factory: foreground short-circuit; live-ids wait and 8 s budget; cached-only ids; `REMOVED`; send confirmed / not confirmed / rejected; `Offline`, `AuthFailed`, `NotConfigured`; mutex serialises refresh and send; cache saved only when headless; transport closed on cancellation.
   - `WidgetRefreshWorker` and `WidgetCommandWorker` (WorkManager test helpers): snapshot transitions and footer states.
   - `WidgetConfigStore` / `WidgetSnapshotStore` round-trips and corruption fallback.
   - `WidgetMirror`: only configured ids, debounce.

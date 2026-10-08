@@ -5,11 +5,16 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
+import androidx.work.DelegatingWorkerFactory
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import com.gekkotron.oikos.connection.HistoryWiring
 import com.gekkotron.oikos.connection.PushWiring
+import com.gekkotron.oikos.connection.WidgetMirror
+import com.gekkotron.oikos.feature.widget.WidgetComponent
+import com.gekkotron.oikos.feature.widget.WidgetComponentProvider
+import com.gekkotron.oikos.feature.widget.work.WidgetWorkerFactory
 import com.gekkotron.oikos.push.AlertChannels
 import com.gekkotron.oikos.push.PushComponent
 import com.gekkotron.oikos.push.PushComponentProvider
@@ -20,7 +25,7 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class OikosApplication : Application(), PushComponentProvider, Configuration.Provider, SingletonImageLoader.Factory {
+class OikosApplication : Application(), PushComponentProvider, WidgetComponentProvider, Configuration.Provider, SingletonImageLoader.Factory {
     @Inject
     lateinit var transport: ActiveTransport
 
@@ -42,11 +47,24 @@ class OikosApplication : Application(), PushComponentProvider, Configuration.Pro
     @Inject
     lateinit var historyWiring: HistoryWiring
 
+    @Inject
+    lateinit var widgets: WidgetComponent
+
+    @Inject
+    lateinit var widgetMirror: WidgetMirror
+
     override fun pushComponent(): PushComponent = component
 
-    /** On-demand WorkManager with our worker factory; the default initializer is removed from the manifest. */
+    override fun widgetComponent(): WidgetComponent = widgets
+
+    /** On-demand WorkManager with the push and widget worker factories; the default initializer is removed from the manifest. */
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+        get() = Configuration.Builder().setWorkerFactory(
+            DelegatingWorkerFactory().apply {
+                addFactory(workerFactory)
+                addFactory(WidgetWorkerFactory { widgets.refresher })
+            },
+        ).build()
 
     override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader.get()
 
@@ -55,6 +73,7 @@ class OikosApplication : Application(), PushComponentProvider, Configuration.Pro
         channels.ensure()
         pushWiring.start()
         historyWiring.start()
+        widgetMirror.start()
         // Connected only in the foreground; ActiveTransport closes 30 s after onStop (spec §3.3).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = transport.setForeground(true)

@@ -42,4 +42,31 @@ class DeepLinksTest {
         assertNull(DeepLinks.alertToOpen(view(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)))
         assertNull(DeepLinks.alertToOpen(null))
     }
+
+    @Test
+    fun `a widget history link names the entity`() {
+        assertEquals(AppLink.History("0x01_temp"), DeepLinks.link(Uri.parse("oikos://history/0x01_temp")))
+    }
+
+    @Test
+    fun `a history link decodes its entity id`() {
+        assertEquals(AppLink.History("a/b c"), DeepLinks.link(Uri.parse("oikos://history/" + Uri.encode("a/b c"))))
+    }
+
+    @Test
+    fun `the settings link`() {
+        assertEquals(AppLink.Settings, DeepLinks.link(Uri.parse("oikos://settings")))
+    }
+
+    @Test
+    fun `the alert link is still an alert`() {
+        assertEquals(AppLink.Alert("42"), DeepLinks.link(Uri.parse("oikos://alert/42")))
+    }
+
+    @Test
+    fun `other links are ignored`() {
+        assertNull(DeepLinks.link(Uri.parse("https://example.com/history/1")))
+        assertNull(DeepLinks.link(Uri.parse("oikos://history/")))
+        assertNull(DeepLinks.link(Uri.parse("oikos://unknown/x")))
+    }
 }

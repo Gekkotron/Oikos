@@ -31,6 +31,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="oikos" android:host="alert" />
             </intent-filter>
+            <!-- The home-screen widget's links (widgets spec §2.3); the widget's intents name this package. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="oikos" android:host="history" />
+                <data android:scheme="oikos" android:host="settings" />
+            </intent-filter>
         </activity>
 
         <!-- WorkManager starts on demand with PushWorkerFactory (OikosApplication.workManagerConfiguration). -->

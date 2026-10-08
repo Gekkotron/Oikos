@@ -1,0 +1,37 @@
+<resources>
+    <string name="widget_name">Appareils Oikos</string>
+    <string name="widget_description">Vos appareils choisis d’un coup d’œil, pilotables d’un geste.</string>
+    <string name="widget_sending">Envoi…</string>
+    <string name="widget_updated">Mis à jour %1$s</string>
+    <string name="widget_offline">Hors ligne · %1$s</string>
+    <string name="widget_offline_never">Hors ligne</string>
+    <string name="widget_sign_in_failed">Échec de connexion</string>
+    <string name="widget_set_up">Configurer Oikos</string>
+    <string name="widget_refresh">Actualiser</string>
+    <string name="widget_removed">Supprimé</string>
+    <string name="widget_on">Allumé</string>
+    <string name="widget_off">Éteint</string>
+    <string name="widget_open">Ouvert</string>
+    <string name="widget_closed">Fermé</string>
+    <string name="widget_opening">Ouverture</string>
+    <string name="widget_closing">Fermeture</string>
+    <string name="widget_stopped">Arrêté</string>
+    <string name="widget_open_percent">Ouvert à %1$d %%</string>
+    <string name="widget_detected">Détecté</string>
+    <string name="widget_clear">RAS</string>
+    <string name="widget_cover_open">Ouvrir</string>
+    <string name="widget_cover_stop">Stop</string>
+    <string name="widget_cover_close">Fermer</string>
+    <string name="widget_failed">Non confirmé</string>
+    <string name="widget_empty">Appui long pour choisir les appareils</string>
+    <string name="widget_config_title">Choisir les appareils</string>
+    <string name="widget_config_hint">Jusqu’à %1$d. %2$d tiennent à cette taille.</string>
+    <string name="widget_config_save">OK</string>
+    <string name="widget_config_arm_mode">Mode d’armement pour %1$s</string>
+    <string name="widget_config_offline">Maison injoignable ; voici les appareils vus en dernier par Oikos.</string>
+    <string name="widget_config_search">Rechercher</string>
+    <string name="widget_config_selected">Sur le widget</string>
+    <string name="widget_config_move_up">Monter</string>
+    <string name="widget_config_move_down">Descendre</string>
+    <string name="widget_config_open_app">Ouvrir Oikos</string>
+</resources>

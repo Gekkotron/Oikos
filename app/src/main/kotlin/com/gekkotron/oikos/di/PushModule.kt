@@ -8,10 +8,13 @@ import com.gekkotron.oikos.alerts.AlertRepository
 import com.gekkotron.oikos.alerts.media.AlertImageCache
 import com.gekkotron.oikos.alerts.media.MediaSource
 import com.gekkotron.oikos.alerts.media.VideoCache
-import com.gekkotron.oikos.connection.PushWiring
 import com.gekkotron.oikos.connection.ProfilePushTargets
+import com.gekkotron.oikos.connection.PushWiring
 import com.gekkotron.oikos.connection.oneShotSpec
 import com.gekkotron.oikos.data.ProfileRepository
+import com.gekkotron.oikos.feature.widget.WidgetUpdater
+import com.gekkotron.oikos.feature.widget.store.WidgetSnapshotStore
+import com.gekkotron.oikos.feature.widget.store.resetForSetUp
 import com.gekkotron.oikos.push.AlertChannels
 import com.gekkotron.oikos.push.AlertIngestor
 import com.gekkotron.oikos.push.AlertNotifier
@@ -37,10 +40,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineScope
-import okhttp3.OkHttpClient
 import java.util.Locale
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import okhttp3.OkHttpClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -88,8 +91,14 @@ object PushModule {
         replies: ReplyQueue,
         images: AlertImageCache,
         videos: VideoCache,
+        widgetSnapshots: WidgetSnapshotStore,
+        widgetUpdater: WidgetUpdater,
     ): SetUpAgainCleanup = SetUpAgainCleanup(
         registrar, repository, replies, images, videos,
+        resetWidgets = {
+            widgetSnapshots.resetForSetUp()
+            widgetUpdater.updateAll()
+        },
         dismissNotifications = { NotificationManagerCompat.from(context).cancelAll() },
     )
 

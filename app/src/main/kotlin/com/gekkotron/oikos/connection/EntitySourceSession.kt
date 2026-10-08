@@ -65,6 +65,10 @@ class EntitySourceSession(
         }
     }
 
+    /** The current source without building one; null before the first [current] or after [reset]. */
+    @Synchronized
+    fun peek(): EntitySource? = source
+
     /**
      * Restores, then saves once the source has settled (before that its journal is partial, or just the
      * cache itself), and afterwards at most every [SAVE_INTERVAL]: a busy house never goes quiet, so a
