@@ -214,7 +214,7 @@ private fun BarsBody(state: HistoryUi, bars: ChartContent.Bars, zone: ZoneId, lo
     val chartBars = remember(bars) { bars.days.days.map { ChartBar(it.t, it.kwh) } }
     val title = state.title ?: stringResource(DsR.string.energy_house)
     val total = format(bars.total, 1, locale)
-    val description = stringResource(R.string.history_cd_bars, title, stringResource(rangeDescription(state.range)))
+    val description = stringResource(R.string.history_cd_bars, title, stringResource(rangeDescription(state.range)), total)
     DailyBarsChart(
         bars = chartBars,
         color = OikosTheme.colors.solar,
