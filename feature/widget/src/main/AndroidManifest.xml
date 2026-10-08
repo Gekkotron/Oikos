@@ -11,5 +11,14 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/oikos_widget_info" />
         </receiver>
+        <activity
+            android:name=".config.WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
