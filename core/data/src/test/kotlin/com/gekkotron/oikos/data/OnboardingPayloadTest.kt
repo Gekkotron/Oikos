@@ -32,6 +32,18 @@ class OnboardingPayloadTest {
         assertEquals(DEFAULT_PREFIX, p.prefix)
         assertNull(p.gateway)
         assertNull(p.pushTokenTopic)
+        assertNull(p.historyUrl)
+    }
+
+    @Test
+    fun `history url is read and normalised`() {
+        val p = ok("""{"v":1,"local":{"host":"h","tls":false,"ws":false},"history":{"url":"http://192.168.1.91:8090/"}}""")
+        assertEquals("http://192.168.1.91:8090", p.historyUrl)
+    }
+
+    @Test
+    fun `an invalid history url is named`() {
+        assertEquals(PayloadError.InvalidField("history.url"), error("""{"v":1,"local":{"host":"h","tls":false,"ws":false},"history":{"url":"192.168.1.91"}}"""))
     }
 
     @Test

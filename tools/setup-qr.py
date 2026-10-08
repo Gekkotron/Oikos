@@ -5,6 +5,9 @@ Starts from an existing setup JSON (the `local` section, `prefix`, `push`) and a
 `gateway` section: {"url", "key", "broker_host"?}. Without --gateway-url the gateway section is left
 as it is, and --no-gateway removes it. The key is read from a file and never printed.
 
+The optional `history` section ({"url"}) is set with --history-url http://192.168.1.91:8090 and
+removed with --no-history; without either it is left as it is.
+
     tools/setup-qr.py --gateway-url https://house.example.ts.net \\
         --gateway-key-file ../HttpMqttEnd2EndEncryption/secret_key.txt --broker-host 192.168.1.91
 
@@ -49,6 +52,8 @@ def main():
     parser.add_argument("--gateway-key-file")
     parser.add_argument("--broker-host", help="the broker as the gateway sees it (optional)")
     parser.add_argument("--no-gateway", action="store_true", help="remove the gateway section")
+    parser.add_argument("--history-url", help="OikosHistory service, e.g. http://192.168.1.91:8090")
+    parser.add_argument("--no-history", action="store_true", help="remove the history section")
     args = parser.parse_args()
 
     payload = json.loads(args.source.read_text())
@@ -67,11 +72,18 @@ def main():
     elif args.gateway_key_file or args.broker_host:
         fail("--gateway-key-file and --broker-host need --gateway-url")
 
+    if args.no_history:
+        payload.pop("history", None)
+    elif args.history_url:
+        if not re.fullmatch(r"https?://[A-Za-z0-9._-]+(:\d{1,5})?/?", args.history_url):
+            fail("--history-url must be http(s)://host[:port]")
+        payload["history"] = {"url": args.history_url.rstrip("/")}
+
     text = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     json_path, png_path = args.out.with_suffix(".json"), args.out.with_suffix(".png")
     json_path.write_text(text + "\n")
     subprocess.run(["qrencode", "-l", "M", "-s", "8", "-o", str(png_path), text], check=True)
-    sections = ", ".join(k for k in ("local", "gateway", "push") if k in payload)
+    sections = ", ".join(k for k in ("local", "gateway", "push", "history") if k in payload)
     print(f"wrote {json_path.name} and {png_path.name} ({sections})")
 
 

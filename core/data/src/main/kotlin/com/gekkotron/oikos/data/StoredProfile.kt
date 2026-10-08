@@ -32,6 +32,7 @@ internal data class StoredProfile(
     val gateway: StoredGateway? = null,
     val prefix: String = DEFAULT_PREFIX,
     val pushTokenTopic: String? = null,
+    val historyUrl: String? = null,
     /** A direct profile was just set up and the Rooms step has not been finished or skipped (spec §5.2 step 5). */
     val roomsPending: Boolean = false,
     /**

@@ -11,6 +11,7 @@ import java.util.Base64
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProfileRepositoryTest {
@@ -237,5 +238,25 @@ class ProfileRepositoryTest {
         r.setRoute(RoutePreference.GATEWAY)
         r.route.first { it == RoutePreference.GATEWAY }
         assertEquals(true, (r.state.value as ProfileState.Ready).notificationsPending)
+    }
+
+    @Test
+    fun `history url round-trips and can be set and cleared in place`() = runTest {
+        val r = repo()
+        r.save(direct.copy(historyUrl = "http://192.168.1.91:8090"))
+        assertEquals("http://192.168.1.91:8090", ((r.state.first { it is ProfileState.Ready } as ProfileState.Ready).profile as ConnectionProfile.Direct).historyUrl)
+        r.finishRooms()
+        r.setHistoryUrl("http://10.0.0.2:8090")
+        val ready = r.state.first { ((it as? ProfileState.Ready)?.profile as? ConnectionProfile.Direct)?.historyUrl == "http://10.0.0.2:8090" } as ProfileState.Ready
+        assertFalse(ready.roomsPending) // an in-place edit, not a new pairing
+        r.setHistoryUrl(null)
+        r.state.first { ((it as? ProfileState.Ready)?.profile as? ConnectionProfile.Direct)?.historyUrl == null }
+    }
+
+    @Test
+    fun `a profile file from before the history url has none`() = runTest {
+        val f = file()
+        f.writeText("""{"installId":"x","mode":"DIRECT","local":{"host":"h","port":1883,"tls":false,"ws":false},"prefix":"homeassistant"}""")
+        assertNull(((repo(f).settled() as ProfileState.Ready).profile as ConnectionProfile.Direct).historyUrl)
     }
 }
