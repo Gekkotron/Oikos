@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -26,6 +27,7 @@ class FrigateAuthTest {
         val a = auth()
         assertEquals(AuthHeaders.Ready(mapOf("Cookie" to "frigate_token=t1")), a.headersFor(snap))
         assertEquals(AuthHeaders.Ready(mapOf("Cookie" to "frigate_token=t1")), a.headersFor(snap))
+        assertFalse("t1" in a.headersFor(snap).toString())
         assertEquals(listOf("http://192.168.1.91:8971/api/login" to """{"user":"admin","password":"pw"}"""), posts)
     }
 

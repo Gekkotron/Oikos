@@ -249,7 +249,7 @@ private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Uni
             InfoRow(
                 stringResource(R.string.settings_frigate),
                 summary.frigateUrl ?: stringResource(R.string.settings_frigate_none),
-                summary.frigateUser?.let { stringResource(R.string.settings_frigate_login, it) },
+                summary.frigateUser?.takeIf { summary.frigateHasPassword }?.let { stringResource(R.string.settings_frigate_login, it) },
                 onClick = onEditFrigate,
                 onClickLabel = stringResource(R.string.settings_history_edit),
             )
@@ -309,7 +309,7 @@ private fun FrigateDialog(initialUrl: String, initialUser: String, hasPassword: 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = AlertDialogDefaults.shape, color = AlertDialogDefaults.containerColor, tonalElevation = AlertDialogDefaults.TonalElevation) {
             FrigateDialogContent(
-                url, user, password, hasPassword, failed,
+                url, user, initialUser, password, hasPassword, failed,
                 onUrl = { url = it; failed = false },
                 onUser = { user = it },
                 onPassword = { password = it },
@@ -325,6 +325,7 @@ private fun FrigateDialog(initialUrl: String, initialUser: String, hasPassword: 
 internal fun FrigateDialogContent(
     url: String,
     user: String,
+    initialUser: String,
     password: String,
     hasPassword: Boolean,
     failed: Boolean,
@@ -359,7 +360,8 @@ internal fun FrigateDialogContent(
             value = password,
             onValueChange = onPassword,
             label = { Text(stringResource(R.string.settings_frigate_password)) },
-            supportingText = if (hasPassword) ({ Text(stringResource(R.string.settings_frigate_unchanged)) }) else null,
+            // The stored password is kept only for the same user (see the ViewModel).
+            supportingText = if (hasPassword && user.trim() == initialUser.trim()) ({ Text(stringResource(R.string.settings_frigate_unchanged)) }) else null,
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),

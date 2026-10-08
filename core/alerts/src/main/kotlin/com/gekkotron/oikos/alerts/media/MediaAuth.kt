@@ -5,7 +5,10 @@ sealed interface AuthHeaders {
     /** No login applies: another host, or no credentials. */
     data object None : AuthHeaders
 
-    data class Ready(val headers: Map<String, String>) : AuthHeaders
+    data class Ready(val headers: Map<String, String>) : AuthHeaders {
+        // Header values carry the login cookie; never print them.
+        override fun toString() = "Ready(headers=${headers.keys.joinToString(prefix = "[", postfix = "]") { "$it=***" }})"
+    }
 
     data class Failed(val failure: MediaFailure) : AuthHeaders
 }

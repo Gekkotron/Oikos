@@ -125,8 +125,10 @@ class SettingsViewModelTest {
         assertTrue(vm.setFrigate(" http://192.168.1.91:8971/ ", " admin ", "pw"))
         profiles.state.first { frigateOf(profiles) == FrigateConfig("http://192.168.1.91:8971", "admin", "pw") }
 
+        assertTrue(vm.setFrigate("http://192.168.1.91:8971", "admin", "pw2"))
+        profiles.state.first { frigateOf(profiles)?.password == "pw2" }
         assertTrue(vm.setFrigate("http://192.168.1.91:8971", "admin", "")) // blank = unchanged
-        profiles.state.first { frigateOf(profiles)?.password == "pw" }
+        profiles.state.first { frigateOf(profiles) == FrigateConfig("http://192.168.1.91:8971", "admin", "pw2") }
 
         assertTrue(vm.setFrigate("http://192.168.1.91:8971", "other", "")) // new user: the old password is not reused
         profiles.state.first { frigateOf(profiles) == FrigateConfig("http://192.168.1.91:8971", "other", null) }

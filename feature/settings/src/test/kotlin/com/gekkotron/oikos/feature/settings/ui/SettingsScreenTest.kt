@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.data.ThemePreference
@@ -319,7 +320,7 @@ class SettingsScreenTest {
             OikosTheme(ThemeChoice.NIGHT_GLASS) {
                 var failed by remember { mutableStateOf(false) }
                 FrigateDialogContent(
-                    "nope", "", "", hasPassword = false, failed = failed,
+                    "nope", "", initialUser = "", password = "", hasPassword = false, failed = failed,
                     onUrl = {}, onUser = {}, onPassword = {},
                     onSave = { if (frigateAccepts) dismissed++ else failed = true },
                     onCancel = {},
@@ -331,5 +332,27 @@ class SettingsScreenTest {
         compose.onNodeWithText("Save").performClick()
         compose.onNodeWithText("Use http(s)://host[:port], nothing after it").assertExists()
         assertEquals(0, dismissed)
+    }
+
+    @Test
+    fun `the Unchanged hint shows for the stored user only`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                var user by remember { mutableStateOf("admin") }
+                FrigateDialogContent(
+                    "http://frigate:8971", user, initialUser = "admin", password = "", hasPassword = true, failed = false,
+                    onUrl = {}, onUser = { user = it }, onPassword = {}, onSave = {}, onCancel = {},
+                )
+            }
+        }
+        compose.onNodeWithText("Unchanged").assertExists()
+        compose.onNodeWithText("admin").performTextInput("x")
+        compose.onNodeWithText("Unchanged").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a frigate user without a password shows no Login line`() {
+        showFrigate(direct.copy(frigateUrl = "http://192.168.1.91:8971", frigateUser = "admin", frigateHasPassword = false))
+        compose.onNodeWithText("Login: admin").assertDoesNotExist()
     }
 }
