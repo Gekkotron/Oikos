@@ -54,7 +54,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCustomize: () -> Unit, onDismiss: () -> Unit) {
+internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCustomize: () -> Unit, onDismiss: () -> Unit, onOpenHistory: (() -> Unit)? = null) {
     val send: (Command) -> Unit = { onSend(card.id, it) }
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -72,6 +72,9 @@ internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCus
                 Kind.SELECT -> SelectControls(card, send)
                 Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
                 else -> Unit
+            }
+            if (card.hasHistory && onOpenHistory != null) {
+                TextButton(onClick = { onDismiss(); onOpenHistory() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_history)) }
             }
             TextButton(onClick = onCustomize, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_customize)) }
         }

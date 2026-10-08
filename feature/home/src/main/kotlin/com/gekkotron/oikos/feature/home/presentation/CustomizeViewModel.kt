@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.home.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.oikos.history.HistoryClient
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
@@ -30,13 +31,14 @@ sealed interface CustomizeLoad {
 class CustomizeViewModel @Inject constructor(
     private val source: EntitySource,
     private val labels: LabelText,
+    private val history: HistoryClient = HistoryClient.None,
 ) : ViewModel() {
     private val editor = OverrideEditor(source)
 
     fun load(id: String): Flow<CustomizeLoad> = combine(source.entities, source.states(), source.areas) { entities, states, areas ->
         when {
             entities.isEmpty() -> CustomizeLoad.Loading
-            else -> HomeUiBuilder.cardFor(entities, states, areas, id, Locale.getDefault(), labels)
+            else -> HomeUiBuilder.cardFor(entities, states, areas, id, Locale.getDefault(), labels, history.available.value)
                 ?.let { CustomizeLoad.Ready(it, areas.filter { a -> a.id != UNASSIGNED_AREA }) }
                 ?: CustomizeLoad.Gone
         }

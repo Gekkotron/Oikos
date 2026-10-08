@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.home.presentation
 
+import com.gekkotron.oikos.history.HistoryRefs
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Entity
@@ -33,13 +34,14 @@ object HomeUiBuilder {
         labels: LabelText = LabelText { null },
         /** Non-blank: search every room, hidden devices included, instead of [selected]. */
         query: String = "",
+        historyEnabled: Boolean = false,
     ): HomeUiState {
         val names = entities.mapValues { (_, e) -> displayName(e, labels) }
         val areaIndex = areas.withIndex().associate { (i, a) -> a.id to i }
         val areaNames = areas.associate { it.id to it.name }
         val standalone = entities.values.filter { it.partOf == null }
         val children = childrenByParent(entities)
-        fun companionsOf(e: Entity): List<CardUi> = companions(e, children, states, areaNames, locale, labels)
+        fun companionsOf(e: Entity): List<CardUi> = companions(e, children, states, areaNames, locale, labels, historyEnabled)
         // What Energy or Security already shows stays off Home unless pinned; search still finds it.
         val visible = standalone.filter { Placement.onHome(it.kind, it.deviceClass, it.ui) }
         val hidden = standalone.filter { it.ui.hidden }
@@ -71,12 +73,12 @@ object HomeUiBuilder {
                     { it.uniqueId },
                 ),
             )
-            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it)) }
+            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled) }
 
         return HomeUiState(
             loading = entities.isEmpty(),
             link = link,
-            hero = hero?.let { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it)) },
+            hero = hero?.let { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled) },
             chips = chips,
             selected = effective,
             cards = cards,
@@ -94,10 +96,11 @@ object HomeUiBuilder {
         id: String,
         locale: Locale,
         labels: LabelText = LabelText { null },
+        historyEnabled: Boolean = false,
     ): CardUi? {
         val e = entities[id]?.takeIf { it.partOf == null } ?: return null
         val areaNames = areas.associate { it.id to it.name }
-        return card(e, displayName(e, labels), states[id], areaNames, locale, companions(e, childrenByParent(entities), states, areaNames, locale, labels))
+        return card(e, displayName(e, labels), states[id], areaNames, locale, companions(e, childrenByParent(entities), states, areaNames, locale, labels, historyEnabled), historyEnabled)
     }
 
     private fun childrenByParent(entities: Map<String, Entity>): Map<String, List<Entity>> =
@@ -110,8 +113,9 @@ object HomeUiBuilder {
         areaNames: Map<String, String>,
         locale: Locale,
         labels: LabelText,
+        historyEnabled: Boolean,
     ): List<CardUi> = if (e.kind != Kind.LIGHT) emptyList() else children[e.uniqueId].orEmpty()
-        .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList()) }
+        .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList(), historyEnabled) }
         .sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id }))
 
     private fun matches(entity: Entity, filter: RoomFilter) = when (filter) {
@@ -148,7 +152,9 @@ object HomeUiBuilder {
         areaNames: Map<String, String>,
         locale: Locale,
         companions: List<CardUi>,
+        historyEnabled: Boolean,
     ): CardUi {
+        val hasHistory = historyEnabled && HistoryRefs.of(entity) != null
         val value = state?.value ?: StateValue.Unknown
         return CardUi(
             id = entity.uniqueId,
@@ -165,8 +171,9 @@ object HomeUiBuilder {
             available = state?.available ?: true,
             pending = state?.pending ?: false,
             stale = state?.stale ?: false,
-            tap = tapFor(entity.kind),
+            tap = tapFor(entity.kind, hasHistory),
             hasSheet = entity.kind in SHEET_KINDS || (entity.kind == Kind.LIGHT && hasLightSheet(entity, companions)),
+            hasHistory = hasHistory,
             areaId = entity.area,
             ui = entity.ui,
             hidden = entity.ui.hidden,
@@ -174,11 +181,12 @@ object HomeUiBuilder {
         )
     }
 
-    private fun tapFor(kind: Kind) = when (kind) {
+    private fun tapFor(kind: Kind, hasHistory: Boolean) = when (kind) {
         Kind.LIGHT, Kind.SWITCH -> TapAction.TOGGLE
         Kind.BUTTON -> TapAction.PRESS
         Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL -> TapAction.OPEN_SHEET
-        Kind.SENSOR, Kind.BINARY_SENSOR -> TapAction.NONE
+        Kind.SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
+        Kind.BINARY_SENSOR -> TapAction.NONE
     }
 
     private fun isOn(kind: Kind, v: StateValue) = when (v) {

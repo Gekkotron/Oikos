@@ -33,6 +33,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.ThemeChoice
 import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
+import com.gekkotron.oikos.feature.home.presentation.CardUi
+import com.gekkotron.oikos.feature.home.presentation.TapAction
 import com.gekkotron.oikos.feature.home.presentation.HomeUiState
 import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.testEntity
@@ -87,6 +89,7 @@ class HomeScreenTest {
     private val sends = mutableListOf<Pair<String, Command>>()
     private val selects = mutableListOf<RoomFilter>()
     private val customized = mutableListOf<Pair<String, UiOverride>>()
+    private val histories = mutableListOf<String>()
 
     private fun state(): HomeUiState =
         HomeUiBuilder.build(entities, states, areas, RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US)
@@ -101,6 +104,7 @@ class HomeScreenTest {
                     onTap = { taps += it.id },
                     onSend = { id, c -> sends += id to c },
                     onCustomize = { id, _, o -> customized += id to o },
+                    onOpenHistory = { histories += it },
                     now = LocalTime.NOON,
                     windowInsets = insets ?: ScaffoldDefaults.contentWindowInsets,
                 )
@@ -323,5 +327,42 @@ class HomeScreenTest {
         compose.onNodeWithContentDescription("Search devices").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("zzz")
         compose.onNodeWithText("No device matches “zzz”").assertExists()
+    }
+
+    @Test
+    fun `a card that opens history calls onOpenHistory instead of onTap`() {
+        val card = state().cards.first { it.id == "temp" }.copy(tap = TapAction.OPEN_HISTORY, hasHistory = true)
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = state().copy(cards = listOf(card)),
+                    onSelect = {},
+                    onTap = { taps += it.id },
+                    onSend = { _, _ -> },
+                    onOpenHistory = { histories += it },
+                    now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("card-temp").performClick()
+        assertEquals(listOf("temp"), histories)
+        assertEquals(emptyList(), taps)
+    }
+
+    @Test
+    fun `the control sheet offers History only when it can open it`() {
+        val card: CardUi = state().card("ac")!!.copy(hasHistory = true)
+        var opened = 0
+        var handler: (() -> Unit)? by mutableStateOf({ opened++ })
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                ControlSheet(card, onSend = { _, _ -> }, onCustomize = {}, onDismiss = {}, onOpenHistory = handler)
+            }
+        }
+        compose.onNodeWithText("History").performClick()
+        assertEquals(1, opened)
+        handler = null
+        compose.waitForIdle()
+        compose.onNodeWithText("History").assertDoesNotExist()
     }
 }

@@ -144,10 +144,14 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
             AlertLinkAction.WAIT, AlertLinkAction.NONE -> Unit
         }
     }
-    val deviceSheet: @Composable (String, () -> Unit) -> Unit = { id, dismiss ->
-        EntityControlSheet(id, dismiss, onSaveFailed = { Toast.makeText(context, R.string.device_save_failed, Toast.LENGTH_SHORT).show() })
-    }
     val openHistory: (HistoryTarget) -> Unit = { push(backStack, HistoryKey(it.encode())) }
+    val deviceSheet: @Composable (String, () -> Unit) -> Unit = { id, dismiss ->
+        EntityControlSheet(
+            id, dismiss,
+            onSaveFailed = { Toast.makeText(context, R.string.device_save_failed, Toast.LENGTH_SHORT).show() },
+            onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
+        )
+    }
     val top = backStack.lastOrNull()
     val tabs = showsTabBar(top)
     // The bar owns the bottom inset on the main tabs; their own Scaffolds then only pad top and sides.
@@ -181,6 +185,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         route = route,
                         onRouteChange = viewModel::setRoute,
                         windowInsets = tabInsets,
+                        onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
                     )
                 }
                 entry<SettingsKey> {

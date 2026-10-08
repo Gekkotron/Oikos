@@ -64,6 +64,7 @@
     <string name="action_customize">Personnaliser</string>
     <string name="action_controls">Commandes</string>
     <string name="sheet_customize">Personnaliser…</string>
+    <string name="sheet_history">Historique</string>
     <string name="customize_title">Personnaliser</string>
     <string name="customize_name">Nom</string>
     <string name="customize_name_hint">Laissez vide pour utiliser le nom de l\'appareil.</string>
