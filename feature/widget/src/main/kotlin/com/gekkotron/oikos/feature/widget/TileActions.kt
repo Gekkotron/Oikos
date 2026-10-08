@@ -15,12 +15,15 @@ sealed interface TileAction {
     data class AskCode(val id: String, val command: WidgetCommand, val format: CodeFormat) : TileAction
     data class OpenHistory(val id: String) : TileAction
     data object OpenHome : TileAction
+
+    /** A removed entity: pick another one (widgets spec §2.4). */
+    data object Reconfigure : TileAction
 }
 
 /** What a tap does, per kind (widgets spec §2.3). Pure. */
 object TileActions {
     fun forTap(tile: TileSnapshot, armMode: AlarmMode?): TileAction {
-        if (!actionable(tile)) return TileAction.OpenHome
+        notActionable(tile)?.let { return it }
         val id = tile.uniqueId
         return when (tile.kind) {
             Kind.LIGHT, Kind.SWITCH -> TileAction.Send(id, WidgetCommand.Toggle)
@@ -37,10 +40,14 @@ object TileActions {
     }
 
     /** The Open / Stop / Close buttons of a wide cover tile. */
-    fun coverButton(tile: TileSnapshot, command: WidgetCommand): TileAction =
-        if (actionable(tile)) TileAction.Send(tile.uniqueId, command) else TileAction.OpenHome
+    fun coverButton(tile: TileSnapshot, command: WidgetCommand): TileAction = notActionable(tile) ?: TileAction.Send(tile.uniqueId, command)
 
-    private fun actionable(tile: TileSnapshot) = tile.status != TileStatus.REMOVED && tile.available
+    /** Where a tap on a tile that cannot act goes, or null when it can act. */
+    private fun notActionable(tile: TileSnapshot): TileAction? = when {
+        tile.status == TileStatus.REMOVED -> TileAction.Reconfigure
+        !tile.available -> TileAction.OpenHome
+        else -> null
+    }
 
     private fun climate(tile: TileSnapshot): TileAction {
         val onModes = tile.hvacModes.filter { it != "off" }

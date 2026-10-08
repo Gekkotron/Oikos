@@ -79,8 +79,10 @@ class TileActionsTest {
     }
 
     @Test
-    fun removed_or_unavailable_tiles_open_home() {
-        assertEquals(TileAction.OpenHome, TileActions.forTap(tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(status = TileStatus.REMOVED) }, null))
+    fun removed_tiles_open_reconfigure_and_unavailable_ones_open_home() {
+        val removed = tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(status = TileStatus.REMOVED) }
+        assertEquals(TileAction.Reconfigure, TileActions.forTap(removed, null))
+        assertEquals(TileAction.Reconfigure, TileActions.coverButton(removed, WidgetCommand.Stop))
         assertEquals(TileAction.OpenHome, TileActions.forTap(tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(available = false) }, null))
     }
 

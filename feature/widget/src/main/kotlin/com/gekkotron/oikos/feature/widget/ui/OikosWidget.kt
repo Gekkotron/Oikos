@@ -79,6 +79,7 @@ class OikosWidget : GlanceAppWidget() {
             is TileAction.AskCode -> actionStartActivity(WidgetCodeActivity.intent(context, action.id, action.command, action.format))
             is TileAction.OpenHistory -> actionStartActivity(view(AppLinks.HISTORY + Uri.encode(action.id)))
             TileAction.OpenHome -> openApp()
+            TileAction.Reconfigure -> reconfigure()
         }
 
         override fun refresh(): Action = actionRunCallback<RefreshCallback>()
