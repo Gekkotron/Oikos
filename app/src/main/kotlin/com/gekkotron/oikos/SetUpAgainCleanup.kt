@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Everything push-related that "Set up again" forgets, before the profile is wiped (push alerts spec §5.4, §6.3).
+ * Everything push- and widget-related that "Set up again" forgets, before the profile is wiped (push alerts spec §5.4, §6.3).
  * Each step is best effort: whatever fails, the next one still runs and the caller still resets the profile.
  */
 class SetUpAgainCleanup(
@@ -19,6 +19,8 @@ class SetUpAgainCleanup(
     private val replies: ReplyQueue,
     private val images: AlertImageCache,
     private val videos: VideoCache,
+    /** Clears the widgets' display data and redraws them; their config is kept (widgets spec §4). */
+    private val resetWidgets: suspend () -> Unit = {},
     private val dismissNotifications: () -> Unit,
 ) {
     suspend fun run() {
@@ -33,6 +35,7 @@ class SetUpAgainCleanup(
                 videos.clear()
             }
         }
+        step { resetWidgets() }
     }
 
     private suspend fun step(block: suspend () -> Unit) {
