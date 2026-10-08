@@ -14,6 +14,7 @@ sealed interface ConnectionSummary {
         val username: String?,
         val prefix: String,
         val gatewayUrl: String?,
+        val historyUrl: String?,
     ) : ConnectionSummary
 
     companion object {
@@ -27,6 +28,7 @@ sealed interface ConnectionSummary {
                     username = p.local.username,
                     prefix = p.prefix,
                     gatewayUrl = p.gateway?.url,
+                    historyUrl = p.historyUrl,
                 )
             }
             ProfileState.Loading, ProfileState.None, ProfileState.Locked -> null

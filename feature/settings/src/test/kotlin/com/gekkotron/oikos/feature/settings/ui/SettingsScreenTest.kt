@@ -32,7 +32,7 @@ class SettingsScreenTest {
     private var rooms = 0
     private var licences = 0
 
-    private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example")
+    private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null)
 
     private fun show(state: SettingsUi = SettingsUi(connection = direct), route: Route? = Route.AUTO) = compose.setContent {
         OikosTheme(ThemeChoice.NIGHT_GLASS) {
@@ -40,9 +40,14 @@ class SettingsScreenTest {
                 state, version = "0.12 · debug", route = route,
                 onTheme = { themes += it }, onRouteChange = {}, onSetUpAgain = { setUpAgain++ },
                 onOpenRooms = { rooms++ }, onOpenLicences = { licences++ }, onBack = {},
+                onSaveHistoryUrl = { saveHistory(it) },
             )
         }
     }
+
+    private val savedHistory = mutableListOf<String>()
+    private var historyAccepts = false
+    private fun saveHistory(text: String): Boolean { savedHistory += text; return historyAccepts }
 
     @Test
     fun `theme rows show the choice and report a pick`() {
@@ -162,5 +167,58 @@ class SettingsScreenTest {
         showPush(PushStatus.Demo)
         compose.onNodeWithText("Push alerts").performScrollTo().performClick()
         compose.onNodeWithText("Register again").assertIsNotEnabled()
+    }
+
+    /** Drives the paused clock and lets the dialog window attach. */
+    private fun settle() {
+        repeat(3) {
+            org.robolectric.shadows.ShadowLooper.idleMainLooper(100, java.util.concurrent.TimeUnit.MILLISECONDS)
+            compose.mainClock.advanceTimeBy(200)
+        }
+    }
+
+    // The dialog's field recomposes once the window takes focus, and Robolectric then never reports Compose idle
+    // while the dialog stays open; so the clock is driven by hand and each test ends as the dialog closes.
+    private fun showHistory() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                SettingsScreen(
+                    SettingsUi(connection = direct), version = "0.12 · debug", route = null,
+                    onTheme = {}, onRouteChange = {}, onSetUpAgain = {}, onOpenRooms = {}, onOpenLicences = {}, onBack = {},
+                    onSaveHistoryUrl = { saveHistory(it) },
+                )
+            }
+        }
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithText("History service").performScrollTo()
+        compose.onNodeWithText("Not set").performClick()
+        settle()
+    }
+
+    @Test
+    fun `an unset history url shows Not set and tapping it opens the dialog, Cancel closes it`() {
+        showHistory()
+        compose.onNodeWithText("Save").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        settle()
+        compose.onNodeWithText("Save").assertDoesNotExist()
+        assertEquals(emptyList(), savedHistory)
+    }
+
+    @Test
+    fun `an accepted save closes the dialog`() {
+        historyAccepts = true
+        showHistory()
+        compose.onNodeWithText("Save").performClick()
+        settle()
+        assertEquals(listOf(""), savedHistory)
+        compose.onNodeWithText("Save").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a refused save is reported to the caller`() {
+        showHistory()
+        compose.onNodeWithText("Save").performClick()
+        assertEquals(listOf(""), savedHistory)
     }
 }

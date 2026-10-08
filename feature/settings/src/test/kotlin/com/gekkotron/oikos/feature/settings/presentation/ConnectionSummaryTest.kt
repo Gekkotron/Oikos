@@ -20,7 +20,7 @@ class ConnectionSummaryTest {
     @Test
     fun `direct profile with a gateway`() {
         assertEquals(
-            ConnectionSummary.Direct("192.168.1.91:8883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example"),
+            ConnectionSummary.Direct("192.168.1.91:8883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null),
             ConnectionSummary.from(ProfileState.Ready(direct)),
         )
     }
@@ -29,7 +29,7 @@ class ConnectionSummaryTest {
     fun `direct profile without a gateway or user`() {
         val plain = ConnectionProfile.Direct(LocalBroker("mqtt.local"))
         assertEquals(
-            ConnectionSummary.Direct("mqtt.local:1883", tls = false, ws = false, username = null, prefix = "homeassistant", gatewayUrl = null),
+            ConnectionSummary.Direct("mqtt.local:1883", tls = false, ws = false, username = null, prefix = "homeassistant", gatewayUrl = null, historyUrl = null),
             ConnectionSummary.from(ProfileState.Ready(plain)),
         )
     }
@@ -52,5 +52,11 @@ class ConnectionSummaryTest {
         assertFalse("hunter2-secret" in text)
         assertFalse(key.joinToString("") { "%02x".format(it) } in text)
         assertFalse("5a5a" in text.lowercase())
+    }
+
+    @Test
+    fun `the history url is shown`() {
+        val s = ConnectionSummary.from(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("h"), historyUrl = "http://h:8090"))) as ConnectionSummary.Direct
+        assertEquals("http://h:8090", s.historyUrl)
     }
 }
