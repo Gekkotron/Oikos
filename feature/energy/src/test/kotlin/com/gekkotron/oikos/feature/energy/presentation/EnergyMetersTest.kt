@@ -113,4 +113,37 @@ class EnergyMetersTest {
         val all = listOf(p, counter("e", "Energy A"), counter("other", "Total", device = "d2"))
         assertEquals("e", EnergyMeters.auto(p, all)?.uniqueId)
     }
+
+    private fun water(id: String, unit: String, device: String? = "d1", meter: String? = null): Entity =
+        energyEntity(id, EnergyRole.WATER, unit = unit).let { it.copy(deviceId = device, ui = it.ui.copy(energyMeter = meter)) }
+
+    private fun waterMeter(e: Entity, all: List<Entity>) = EnergyMeters.waterMeterFor(e, all)?.uniqueId
+
+    @Test
+    fun `water auto pairs a meter scale sensor on its device`() {
+        listOf("m³", "ft³", "CCF").forEach { unit ->
+            val w = water("daily", "L")
+            assertEquals("index", waterMeter(w, listOf(w, counter("index", "Index", unit = unit), counter("far", "Far", device = "d2", unit = unit))), unit)
+        }
+    }
+
+    @Test
+    fun `water auto pairs nothing for same-unit pairs, a meter itself or no device`() {
+        val gal = water("daily", "gal")
+        assertNull(waterMeter(gal, listOf(gal, counter("total", "Total", unit = "gal"))))
+        val index = water("index", "m³")
+        assertNull(waterMeter(index, listOf(index, counter("other", "Other", unit = "m³"))))
+        val loose = water("daily", "L", device = null)
+        assertNull(waterMeter(loose, listOf(loose, counter("index", "Index", device = null, unit = "m³"))))
+    }
+
+    @Test
+    fun `water's explicit choice takes any volume sensor, anywhere, but not itself or a non-volume`() {
+        val w = water("daily", "gal", device = null, meter = "utility")
+        assertEquals("utility", waterMeter(w, listOf(w, counter("utility", "Utility meter", device = null, unit = "gal"))))
+        val self = water("daily", "L", meter = "daily")
+        assertNull(waterMeter(self, listOf(self)))
+        val kwh = water("daily", "L", meter = "e")
+        assertNull(waterMeter(kwh, listOf(kwh, counter("e", "Energy"))))
+    }
 }

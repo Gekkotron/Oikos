@@ -4,8 +4,9 @@ import com.gekkotron.oikos.model.EnergyRole
 import com.gekkotron.oikos.model.EnergyUnits
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.PowerUnits
+import com.gekkotron.oikos.model.VolumeUnits
 
-/** Pairs a power sensor with the lifetime energy counter (kWh) its card shows. Pure; no Android types. */
+/** Pairs a power sensor with the lifetime energy counter (kWh) its card shows, and water with its meter index. Pure; no Android types. */
 object EnergyMeters {
     /** Every entity reporting an energy unit. */
     fun counters(entities: Collection<Entity>): List<Entity> = entities.filter { EnergyUnits.factor(it.unit) != null }
@@ -33,6 +34,27 @@ object EnergyMeters {
         twin(power, counters, "energy")?.let { return it }
         val powers = onDevice.filter { PowerUnits.factor(it.unit) != null }
         return if (counters.size == 1 && powers.size == 1) counters.single() else null
+    }
+
+    /** Every entity reporting a water volume unit, for the water meter picker. */
+    fun volumes(entities: Collection<Entity>): List<Entity> = entities.filter { VolumeUnits.isVolume(it.unit) }
+
+    /** The meter index for a [water] sensor: the user's explicit choice, else [waterAuto]. A dangling explicit choice pairs nothing. */
+    fun waterMeterFor(water: Entity, entities: Collection<Entity>): Entity? {
+        val chosen = water.ui.energyMeter ?: return waterAuto(water, entities)
+        return entities.firstOrNull { it.uniqueId == chosen && it.uniqueId != water.uniqueId && VolumeUnits.isVolume(it.unit) }
+    }
+
+    /**
+     * What automatic pairing picks for [water]: another sensor on its device in a meter-scale unit (m³, ft³, CCF; Suez's
+     * "Water meter reading"), unless [water] is itself in one, being the meter. Same-unit pairs (L and L, gal and gal)
+     * can't be told apart from a day's usage, so they need the explicit choice.
+     */
+    fun waterAuto(water: Entity, entities: Collection<Entity>): Entity? {
+        val device = water.deviceId ?: return null
+        if (VolumeUnits.isMeterScale(water.unit)) return null
+        return entities.filter { it.deviceId == device && it.uniqueId != water.uniqueId && VolumeUnits.isMeterScale(it.unit) }
+            .minByOrNull { it.uniqueId }
     }
 
     /**

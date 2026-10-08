@@ -26,7 +26,7 @@ object EnergyEdit {
             energyRole = edit.role,
             energyInvert = edit.invert && edit.role?.signed == true,
             energyIcon = edit.icon?.key.takeIf { edit.role == EnergyRole.CONSUMER },
-            energyMeter = edit.meter.takeIf { edit.role?.power == true },
+            energyMeter = edit.meter.takeIf { edit.role?.power == true || edit.role == EnergyRole.WATER },
         )
     }
 }

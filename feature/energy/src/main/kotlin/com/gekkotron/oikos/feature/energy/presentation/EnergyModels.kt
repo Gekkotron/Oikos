@@ -36,7 +36,7 @@ data class EnergyNode(
     val totalStatus: NodeStatus = NodeStatus.LIVE,
     /** At least one of the node's sensors has an energy meter. */
     val hasMeter: Boolean = false,
-    /** Water only: the cumulative meter index from a volume sensor on the same device, in [waterTotalUnit]; null without one. */
+    /** Water only: the meter index ([EnergyMeters.waterMeterFor]), in [waterTotalUnit]; null without one. */
     val waterTotal: Double? = null,
     val waterTotalUnit: String? = null,
 )
@@ -59,7 +59,7 @@ data class SensorUi(
     val deviceId: String? = null,
 )
 
-/** An energy counter the user can pair with a power sensor. */
+/** A counter the user can pair with a sensor: an energy counter for power, a volume sensor for water. */
 data class MeterOption(val id: String, val name: String, val deviceId: String?)
 
 enum class EnergyHint { CHECK_SIGN }
@@ -87,6 +87,8 @@ data class EnergyUiState(
     val sensors: Map<String, SensorUi> = emptyMap(),
     /** Every energy counter, by name, for the meter picker. */
     val meters: List<MeterOption> = emptyList(),
+    /** Every water volume sensor, by name, for the water meter picker. */
+    val waterMeters: List<MeterOption> = emptyList(),
 ) {
     fun node(id: String): EnergyNode? = diagram.firstOrNull { it.id == id } ?: cards.firstOrNull { it.id == id }
 }

@@ -32,6 +32,7 @@
     <string name="energy_details_invert">Inverser le signe</string>
     <string name="energy_details_unit_hint">Nécessite une unité de puissance (W, kW)</string>
     <string name="energy_details_meter">Compteur d\'énergie</string>
+    <string name="energy_details_water_meter">Compteur d\'eau</string>
     <string name="energy_meter_auto">Automatique</string>
     <string name="energy_no_meter">Aucun compteur d\'énergie</string>
     <string name="energy_water_meter">Compteur %1$s</string>

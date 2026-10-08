@@ -75,11 +75,15 @@ class EnergyEditTest {
     }
 
     @Test
-    fun `the meter is cleared when the role is water or none`() {
+    fun `the meter is cleared when the role is none`() {
         val withMeter = heater.copy(ui = heater.ui.copy(energyMeter = "kwh_b"))
         assertEquals("kwh_b", EnergyEdit.from(withMeter).meter)
-        assertNull(EnergyEdit.apply(withMeter, SensorEdit("PowerB", EnergyRole.WATER, invert = false, meter = "kwh_b")).energyMeter)
         assertNull(EnergyEdit.apply(withMeter, SensorEdit("PowerB", null, invert = false, meter = "kwh_b")).energyMeter)
+    }
+
+    @Test
+    fun `water keeps its chosen meter`() {
+        assertEquals("index", EnergyEdit.apply(heater, SensorEdit("PowerB", EnergyRole.WATER, invert = false, meter = "index")).energyMeter)
     }
 
     @Test

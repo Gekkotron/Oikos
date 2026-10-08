@@ -32,6 +32,7 @@
     <string name="energy_details_invert">Invert sign</string>
     <string name="energy_details_unit_hint">Needs a power unit (W, kW)</string>
     <string name="energy_details_meter">Energy meter</string>
+    <string name="energy_details_water_meter">Water meter</string>
     <string name="energy_meter_auto">Automatic</string>
     <string name="energy_no_meter">No energy meter</string>
     <string name="energy_water_meter">Meter %1$s</string>

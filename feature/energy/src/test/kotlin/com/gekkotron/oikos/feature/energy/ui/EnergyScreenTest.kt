@@ -242,4 +242,21 @@ class EnergyScreenTest {
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertEquals(listOf("heater" to SensorEdit("Water heater", EnergyRole.CONSUMER, invert = false, meter = "heater_kwh")), saves)
     }
+
+    @Test
+    fun `choosing a water meter in the editor saves it`() {
+        val water = listOf(
+            energyEntity("daily", EnergyRole.WATER, unit = "gal", name = "Daily water").copy(deviceId = "pulse"),
+            energyEntity("total", null, unit = "gal", name = "Water total").copy(deviceId = "pulse"),
+            energyEntity("heater_kwh", null, unit = "kWh", name = "Heater energy"),
+        )
+        showDetails(state(water, listOf(numeric("daily", 40.0), numeric("total", 12000.0))))
+        compose.onNodeWithTag("energy-card-water").performScrollTo().performClick()
+        compose.onNodeWithText("Water meter").performScrollTo().assertExists()
+        compose.onNodeWithTag("energy-meter-heater_kwh").assertDoesNotExist()
+        compose.onNodeWithTag("energy-meter-daily").assertDoesNotExist()
+        compose.onNodeWithTag("energy-meter-total").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(listOf("daily" to SensorEdit("Daily water", EnergyRole.WATER, invert = false, meter = "total")), saves)
+    }
 }

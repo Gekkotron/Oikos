@@ -84,7 +84,7 @@ internal fun EnergyDetailSheet(
             if (sensors.isNotEmpty()) {
                 Text(stringResource(R.string.energy_details_sensors), style = OikosTheme.type.label)
                 sensors.forEach { sensor ->
-                    SensorRow(sensor, state.meters, locale, startOpen = sensors.size == 1, onSave = { onSave(sensor.id, it); onDismiss() })
+                    SensorRow(sensor, state.meters, state.waterMeters, locale, startOpen = sensors.size == 1, onSave = { onSave(sensor.id, it); onDismiss() })
                 }
             }
         }
@@ -92,7 +92,7 @@ internal fun EnergyDetailSheet(
 }
 
 @Composable
-private fun SensorRow(sensor: SensorUi, meters: List<MeterOption>, locale: Locale, startOpen: Boolean, onSave: (SensorEdit) -> Unit) {
+private fun SensorRow(sensor: SensorUi, meters: List<MeterOption>, waterMeters: List<MeterOption>, locale: Locale, startOpen: Boolean, onSave: (SensorEdit) -> Unit) {
     var open by rememberSaveable(sensor.id) { mutableStateOf(startOpen) }
     HorizontalDivider()
     Row(
@@ -107,11 +107,11 @@ private fun SensorRow(sensor: SensorUi, meters: List<MeterOption>, locale: Local
         Text(sensor.name, style = OikosTheme.type.body, modifier = Modifier.weight(1f))
         Text(sensorValueText(sensor, locale), style = OikosTheme.type.body)
     }
-    if (open) SensorEditor(sensor, meters, onSave)
+    if (open) SensorEditor(sensor, meters, waterMeters, onSave)
 }
 
 @Composable
-private fun SensorEditor(sensor: SensorUi, meters: List<MeterOption>, onSave: (SensorEdit) -> Unit) {
+private fun SensorEditor(sensor: SensorUi, meters: List<MeterOption>, waterMeters: List<MeterOption>, onSave: (SensorEdit) -> Unit) {
     var name by rememberSaveable(sensor.id) { mutableStateOf(sensor.name) }
     var role by rememberSaveable(sensor.id) { mutableStateOf<EnergyRole?>(sensor.role) }
     var invert by rememberSaveable(sensor.id) { mutableStateOf(sensor.invert) }
@@ -155,11 +155,18 @@ private fun SensorEditor(sensor: SensorUi, meters: List<MeterOption>, onSave: (S
                 }
             }
         }
-        if (current?.power == true) {
-            Text(stringResource(R.string.energy_details_meter), style = OikosTheme.type.label)
+        // Power pairs with an energy counter, water with a volume meter; a choice from the other list doesn't carry over.
+        val options = when {
+            current?.power == true -> meters
+            current == EnergyRole.WATER -> waterMeters.filterNot { it.id == sensor.id }
+            else -> emptyList()
+        }
+        if (current?.power == true || current == EnergyRole.WATER) {
+            Text(stringResource(if (current == EnergyRole.WATER) R.string.energy_details_water_meter else R.string.energy_details_meter), style = OikosTheme.type.label)
             val deviceId = sensor.deviceId
-            val ordered = meters.filter { it.deviceId != null && it.deviceId == deviceId } + meters.filterNot { it.deviceId != null && it.deviceId == deviceId }
-            val autoName = meters.firstOrNull { it.id == sensor.autoMeterId }?.name
+            val ordered = options.filter { it.deviceId != null && it.deviceId == deviceId } + options.filterNot { it.deviceId != null && it.deviceId == deviceId }
+            // The auto pick was computed for the saved role; name it only while the chip is on the same kind (water or power).
+            val autoName = options.firstOrNull { it.id == sensor.autoMeterId }?.name.takeIf { (current == EnergyRole.WATER) == (sensor.role == EnergyRole.WATER) }
             val auto = stringResource(R.string.energy_meter_auto)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
@@ -179,7 +186,7 @@ private fun SensorEditor(sensor: SensorUi, meters: List<MeterOption>, onSave: (S
             }
         }
         Button(
-            onClick = { onSave(SensorEdit(name, role, invert, icon, meter)) },
+            onClick = { onSave(SensorEdit(name, role, invert, icon, meter.takeIf { m -> options.any { it.id == m } })) },
             modifier = Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch),
         ) { Text(stringResource(R.string.energy_details_save)) }
     }
