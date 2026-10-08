@@ -19,7 +19,7 @@ jobs:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v5
       - name: Build, test, coverage
-        run: ./gradlew check koverXmlReport :app:assembleDebug --stacktrace
+        run: ./gradlew check koverXmlReport :app:assembleDebug --stacktrace --continue
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

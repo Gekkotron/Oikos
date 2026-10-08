@@ -8,10 +8,8 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -32,11 +30,17 @@ interface EntityCache {
 internal data class StoredCache(val profileKey: String = "", val messages: Map<String, String> = emptyMap())
 
 class FileEntityCache private constructor(private val store: DataStore<StoredCache>, scope: CoroutineScope) : EntityCache {
-    // Read eagerly at launch, in parallel with the profile, so Home finds it warm.
-    private val current = store.data.stateIn(scope, SharingStarted.Eagerly, null)
+    init {
+        // Read eagerly at launch, in parallel with the profile, so Home finds it warm (DataStore keeps it in memory).
+        scope.launch { store.data.first() }
+    }
 
+    /**
+     * Straight from DataStore, which reflects every completed [save]. A snapshot collected on the caller's scope could
+     * still hold the value from before a save that just returned (seen on CI: a save, then an empty load).
+     */
     override suspend fun load(key: String): Map<String, String> {
-        val cache = current.filterNotNull().first()
+        val cache = store.data.first()
         return if (cache.profileKey == key) cache.messages else emptyMap()
     }
 
