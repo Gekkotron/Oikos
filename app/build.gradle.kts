@@ -89,6 +89,7 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:alerts"))
     implementation(project(":feature:history"))
+    implementation(project(":feature:widget"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
