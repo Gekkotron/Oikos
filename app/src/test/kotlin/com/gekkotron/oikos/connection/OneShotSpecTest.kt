@@ -12,6 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import com.gekkotron.oikos.data.ProfileState
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -34,6 +37,9 @@ class OneShotSpecTest {
     @After
     fun tearDown() = scope.cancel()
 
+    /** [ProfileRepository.state] is a snapshot of DataStore that follows a save shortly after, as the app observes it. */
+    private suspend fun ProfileRepository.awaitReady() = withTimeout(5_000) { state.first { it is ProfileState.Ready } }
+
     private fun repository() = ProfileRepository.create(tmp.newFile().also { it.delete() }, passThrough, scope)
 
     @Test
@@ -45,6 +51,7 @@ class OneShotSpecTest {
     fun `a direct profile gets its own client id, never the live one`(): Unit = runBlocking {
         val profiles = repository()
         profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
+        profiles.awaitReady()
         val live = clientIdFor(profiles.installId())
         val spec = assertIs<TransportSpec.Direct>(profiles.oneShotSpec())
         assertNotEquals(live, spec.clientId)
@@ -55,6 +62,7 @@ class OneShotSpecTest {
     fun `a routed profile keeps the route and gives the direct leg its own client id`(): Unit = runBlocking {
         val profiles = repository()
         profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91"), gateway = GatewayConfig("https://gw.example", ByteArray(32), "192.168.1.91")))
+        profiles.awaitReady()
         val live = clientIdFor(profiles.installId())
         val spec = assertIs<TransportSpec.Routed>(profiles.oneShotSpec())
         assertEquals(Route.AUTO, spec.route)

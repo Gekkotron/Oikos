@@ -8,6 +8,7 @@ import com.gekkotron.oikos.alerts.demo.DemoAlerts
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.LocalBroker
 import com.gekkotron.oikos.data.ProfileState
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,7 +47,8 @@ class DemoAlertSeederTest {
      * The seeder runs where production runs it (the app scope: SupervisorJob + Dispatchers.Default), not on runTest's
      * virtual-time scheduler: there its first Room access hung on CI until the poll gave up, with Room still empty.
      */
-    private val seederScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val seederErrors = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+    private val seederScope = CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> seederErrors += e })
 
     @After
     fun tearDown() {
@@ -69,7 +71,10 @@ class DemoAlertSeederTest {
             }
         }
         // A bare timeout says nothing in CI's console: name the step and what Room held.
-        if (done == null) throw AssertionError("$step: after 5 s Room held $seen, expected $expected")
+        if (done == null) {
+            val errors = seederErrors.joinToString { it.stackTraceToString().lines().take(6).joinToString(" | ") }
+            throw AssertionError("$step: after 5 s Room held $seen, expected $expected; seeder errors: [$errors]")
+        }
     }
 
     private suspend fun settle() = withContext(Dispatchers.Default) { delay(300) }
