@@ -98,6 +98,19 @@ class EnergyHistoryImplTest {
     }
 
     @Test
+    fun `a battery adds to the house series, charging subtracts`() = runBlocking {
+        given(power("solar", EnergyRole.SOLAR, "s"), power("battery", EnergyRole.BATTERY, "b"))
+        series(
+            "solar" to listOf(HistoryPoint(1, 3000.0, 2800.0, 3200.0), HistoryPoint(2, 0.0, 0.0, 0.0)),
+            "battery" to listOf(HistoryPoint(1, -1000.0, -1200.0, -800.0), HistoryPoint(2, 600.0, 500.0, 700.0)),
+        )
+        assertEquals(
+            listOf(HistoryPoint(1, 2000.0, 1600.0, 2400.0), HistoryPoint(2, 600.0, 500.0, 700.0)),
+            (impl.houseSeries(HistoryRange.H24) as HistoryResult.Ok).value.points,
+        )
+    }
+
+    @Test
     fun `a measured house is its own series`() = runBlocking {
         given(power("house", EnergyRole.HOUSE, "h"), power("solar", EnergyRole.SOLAR, "s"))
         series("house" to listOf(HistoryPoint(1, 700.0, 600.0, 800.0)))
@@ -125,6 +138,26 @@ class EnergyHistoryImplTest {
         // Day 1: 10 + 4 − 3; day 2 clamps 8 + 2 − 12 to 0; day 3 is missing from the grid meters.
         assertEquals(listOf(DayTotal(1, 11.0), DayTotal(2, 0.0)), d.days)
         assertEquals(setOf(EnergyKind.COUNTER), history.calls.map { EnergyKind.valueOf(it.substringAfterLast(' ')) }.toSet())
+    }
+
+    @Test
+    fun `house daily subtracts the inverter draw when solar counts its production twin`() = runBlocking {
+        given(
+            power("inv_power_a", EnergyRole.SOLAR, "inv"),
+            counter("inv_energy_produced_a", "inv"),
+            counter("inv_energy_a", "inv"),
+            power("grid_power", EnergyRole.GRID, "grid"),
+            counter("grid_energy", "grid"),
+            counter("grid_energy_produced", "grid"),
+        )
+        daily(
+            "inv_energy_produced_a" to listOf(DayTotal(1, 10.0)),
+            "inv_energy_a" to listOf(DayTotal(1, 0.5)),
+            "grid_energy" to listOf(DayTotal(1, 4.0)),
+            "grid_energy_produced" to listOf(DayTotal(1, 3.0)),
+        )
+        // 10 + 4 − 3 − 0.5.
+        assertEquals(listOf(DayTotal(1, 10.5)), (impl.houseDaily(7) as HistoryResult.Ok).value.days)
     }
 
     @Test

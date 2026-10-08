@@ -49,22 +49,13 @@ class EnergyHistoryImpl @Inject constructor(
         val all = source.entities.value.values
         val byRole = byRole()
         byRole[EnergyRole.HOUSE]?.let { house ->
-            val meters = house.filter { it.ui.energyRole?.power == true }.mapNotNull { EnergyMeters.meterFor(it, all) }.distinctBy { it.uniqueId }
+            val meters = EnergyMeters.nodeMeters(house, all)
             if (meters.isEmpty()) return HistoryResult.NotRecorded
             return dailySum(days, meters, emptyList(), clamp = false)
         }
-        // EnergyFlowBuilder.derivedTotal, per day.
-        if (byRole[EnergyRole.BATTERY] != null) return HistoryResult.NotRecorded
-        val solar = byRole[EnergyRole.SOLAR].orEmpty()
-        val grid = byRole[EnergyRole.GRID].orEmpty()
-        val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
-        if (solar.isEmpty() && grid.isEmpty()) return HistoryResult.NotRecorded
-        val added = (solar + grid).map { EnergyMeters.meterFor(it, all) ?: return HistoryResult.NotRecorded }
-        val exports = grid.mapNotNull { EnergyMeters.reverseFor(it, all) } +
-            gridExport.map { EnergyMeters.meterFor(it, all) ?: return HistoryResult.NotRecorded }
-        if (solar.isNotEmpty() && exports.isEmpty()) return HistoryResult.NotRecorded
-        val draws = solar.mapNotNull { EnergyMeters.reverseFor(it, all) }
-        return dailySum(days, added.distinctBy { it.uniqueId }, (exports + draws).distinctBy { it.uniqueId }, clamp = true)
+        // EnergyFlowBuilder's derived total, per day.
+        val meters = EnergyMeters.houseMeters(byRole, all) ?: return HistoryResult.NotRecorded
+        return dailySum(days, meters.plus, meters.minus, clamp = true)
     }
 
     /** Entities that sum together; a clamped group is floored at zero before joining the total. */

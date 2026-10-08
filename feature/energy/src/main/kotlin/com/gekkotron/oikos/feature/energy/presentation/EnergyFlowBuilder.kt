@@ -132,7 +132,7 @@ object EnergyFlowBuilder {
     private data class Total(val hasMeter: Boolean, val kwh: Double?, val status: NodeStatus)
 
     private fun total(sensors: List<Entity>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
-        val meters = sensors.filter { it.ui.energyRole?.power == true }.mapNotNull { EnergyMeters.meterFor(it, all) }.distinctBy { it.uniqueId }
+        val meters = EnergyMeters.nodeMeters(sensors, all)
         if (meters.isEmpty()) return NO_TOTAL
         val parts = meters.map { kwh(it, states) }
         val kwh = if (parts.any { it.watts == null }) null else parts.sumOf { it.watts!! }
@@ -141,24 +141,11 @@ object EnergyFlowBuilder {
 
     private val NO_TOTAL = Total(false, null, NodeStatus.LIVE)
 
-    /**
-     * A house without its own sensor: Σsolar + Σgrid import − Σgrid export − Σinverter draw, like its live watts
-     * (spec §3). Every solar
-     * and grid sensor needs a counter, and solar needs an export counter too (else the export would count as
-     * consumption); a battery has no counter pairing yet, so a house with one has no total.
-     */
+    /** A house without its own sensor: Σsolar + Σgrid import − Σgrid export − Σinverter draw ([EnergyMeters.houseMeters]). */
     private fun derivedTotal(byRole: Map<EnergyRole, List<Entity>>, all: Collection<Entity>, states: Map<String, EntityState>): Total {
-        if (byRole[EnergyRole.BATTERY] != null) return NO_TOTAL
-        val solar = byRole[EnergyRole.SOLAR].orEmpty()
-        val grid = byRole[EnergyRole.GRID].orEmpty()
-        val gridExport = byRole[EnergyRole.GRID_EXPORT].orEmpty()
-        if (solar.isEmpty() && grid.isEmpty()) return NO_TOTAL
-        val added = (solar + grid).map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
-        val exports = grid.mapNotNull { EnergyMeters.reverseFor(it, all) } + gridExport.map { EnergyMeters.meterFor(it, all) ?: return NO_TOTAL }
-        if (solar.isNotEmpty() && exports.isEmpty()) return NO_TOTAL
-        val draws = solar.mapNotNull { EnergyMeters.reverseFor(it, all) }
-        val plus = added.distinctBy { it.uniqueId }.map { kwh(it, states) }
-        val minus = (exports + draws).distinctBy { it.uniqueId }.map { kwh(it, states) }
+        val meters = EnergyMeters.houseMeters(byRole, all) ?: return NO_TOTAL
+        val plus = meters.plus.map { kwh(it, states) }
+        val minus = meters.minus.map { kwh(it, states) }
         val parts = plus + minus
         val kwh = if (parts.any { it.watts == null }) null else plus.sumOf { it.watts!! } - minus.sumOf { it.watts!! }
         return Total(true, kwh?.coerceAtLeast(0.0), worst(parts.map { it.status }))
