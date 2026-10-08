@@ -15,6 +15,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.continuous
@@ -23,6 +27,9 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.fill
@@ -94,20 +101,35 @@ fun HistoryLineChart(
             }
         },
     )
+    val axisLine = OikosTheme.colors.contentMuted.copy(alpha = 0.3f)
     val chart = rememberCartesianChart(
         rememberLineCartesianLayer(
             lineProvider = LineCartesianLayer.LineProvider.series(minLine, maxLine, meanLine),
         ),
         startAxis = VerticalAxis.rememberStart(
+            label = rememberAxisLabelComponent(color = OikosTheme.colors.contentMuted),
+            line = rememberAxisLineComponent(fill = fill(axisLine)),
+            tick = rememberAxisTickComponent(fill = fill(axisLine)),
+            guideline = rememberAxisGuidelineComponent(fill = fill(axisLine)),
             valueFormatter = CartesianValueFormatter { _, value, _ -> formatValue(value) },
         ),
         bottomAxis = HorizontalAxis.rememberBottom(
+            label = rememberAxisLabelComponent(color = OikosTheme.colors.contentMuted),
+            line = rememberAxisLineComponent(fill = fill(axisLine)),
+            tick = rememberAxisTickComponent(fill = fill(axisLine)),
+            guideline = rememberAxisGuidelineComponent(fill = fill(axisLine)),
             valueFormatter = CartesianValueFormatter { _, value, _ -> formatTime(first + value.toLong()) },
             itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = { spacing }),
         ),
         marker = marker,
     )
-    CartesianChartHost(chart = chart, modelProducer = producer, modifier = frame)
+    CartesianChartHost(
+        chart = chart,
+        modelProducer = producer,
+        modifier = frame,
+        scrollState = rememberVicoScrollState(scrollEnabled = false),
+        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
+    )
 }
 
 @Composable
@@ -135,6 +157,7 @@ fun DailyBarsChart(
     val spacing = remember(bars) {
         maxOf(1, ((bars.last().t - first) / step / AxisLabelCount).toInt())
     }
+    val axisLine = OikosTheme.colors.contentMuted.copy(alpha = 0.3f)
     val chart = rememberCartesianChart(
         rememberColumnCartesianLayer(
             columnProvider = ColumnCartesianLayer.ColumnProvider.series(
@@ -146,14 +169,28 @@ fun DailyBarsChart(
             ),
         ),
         startAxis = VerticalAxis.rememberStart(
+            label = rememberAxisLabelComponent(color = OikosTheme.colors.contentMuted),
+            line = rememberAxisLineComponent(fill = fill(axisLine)),
+            tick = rememberAxisTickComponent(fill = fill(axisLine)),
+            guideline = rememberAxisGuidelineComponent(fill = fill(axisLine)),
             valueFormatter = CartesianValueFormatter { _, value, _ -> formatValue(value) },
         ),
         bottomAxis = HorizontalAxis.rememberBottom(
+            label = rememberAxisLabelComponent(color = OikosTheme.colors.contentMuted),
+            line = rememberAxisLineComponent(fill = fill(axisLine)),
+            tick = rememberAxisTickComponent(fill = fill(axisLine)),
+            guideline = rememberAxisGuidelineComponent(fill = fill(axisLine)),
             valueFormatter = CartesianValueFormatter { _, value, _ -> formatDay(first + value.toLong()) },
             itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = { spacing }),
         ),
     )
-    CartesianChartHost(chart = chart, modelProducer = producer, modifier = frame)
+    CartesianChartHost(
+        chart = chart,
+        modelProducer = producer,
+        modifier = frame,
+        scrollState = rememberVicoScrollState(scrollEnabled = false),
+        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
+    )
 }
 
 @Composable
