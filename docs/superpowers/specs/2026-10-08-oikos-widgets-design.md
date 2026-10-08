@@ -64,7 +64,7 @@ New module **`:feature:widget`** (Glance `glance-appwidget` + `glance-material3`
 |---|---|---|
 | `OikosWidget`, `OikosWidgetReceiver` | widget | Glance UI. Reads `WidgetConfigStore` and `WidgetSnapshotStore` only; never connects. Action callbacks enqueue workers. |
 | `WidgetConfigActivity` | widget | The entity picker (§2.1); writes `WidgetConfigStore`, enqueues the periodic refresh, sets the result. |
-| `WidgetCodeActivity` | widget | Transparent activity hosting `CodeKeypadSheet` (format from the snapshot). OK enqueues `WidgetCommandWorker` with the code; the code lives only in the activity state and the work input, never on disk. |
+| `WidgetCodeActivity` | widget | Transparent activity hosting `CodeKeypadSheet` (format from the snapshot). OK enqueues `WidgetCommandWorker`. The code goes into the in-memory `CodeVault`, and the work input carries only a one-time token. The code is never on disk. |
 | `WidgetConfigStore` | widget | DataStore: `appWidgetId → WidgetConfig(uniqueIds: List<String>, armMode: AlarmMode?)`. |
 | `WidgetSnapshotStore` | widget | DataStore in `noBackupFilesDir`: `uniqueId → TileSnapshot(name, icon, kind, stateText, available, alarm/climate extras, codeArmRequired, codeDisarmRequired, codeFormat, historyAvailable, status: OK/PENDING/FAILED/REMOVED, pendingSince, updatedAt)` plus a global `footer: Fresh/Offline/AuthFailed/NotConfigured` with a timestamp. Display data only, no secrets. |
 | `TileMapper` | widget | Pure `EntityState + UiOverride → TileSnapshot` (state text, icon, kind extras) for every `Kind`. |
@@ -106,7 +106,7 @@ OikosWidget.provideGlance ─▶ reads WidgetConfigStore + WidgetSnapshotStore o
 - **Rejected credentials:** footer "Sign-in failed"; tapping the footer opens Settings.
 - **Worker killed mid-session:** the transport closes in `finally`; on the next render a `PENDING` older than 30 s is shown as `FAILED`.
 - **Profile reset:** clearing the profile also clears `WidgetSnapshotStore` (same hook as `EntityCache.clear()`) and updates the widgets to "Set up Oikos". `WidgetConfigStore` is kept; unknown ids then render "—".
-- **Privacy:** the snapshot and config hold no codes or credentials, and live in `noBackupFilesDir`. The alarm code exists only in `WidgetCodeActivity` state and the expedited work's input data (deleted when the work completes). The PIN never reaches the cache (`MqttDiscoverySource.redact`, unchanged).
+- **Privacy:** the snapshot and config hold no codes or credentials, and live in `noBackupFilesDir`. The alarm code exists only in `WidgetCodeActivity` state and in the process-memory `CodeVault`, which hands it out once. WorkManager keeps a finished job's input on disk for about a day, so that input holds only a one-time token. After a process death the code is gone: the tile shows "!" and nothing is sent without it. The PIN never reaches the cache (`MqttDiscoverySource.redact`, unchanged).
 
 ## 5. Testing
 

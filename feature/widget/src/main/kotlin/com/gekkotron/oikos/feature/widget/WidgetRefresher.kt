@@ -57,6 +57,12 @@ class WidgetRefresher(
         updater.updateAll()
     }
 
+    /** The command could not be sent at all (its code was lost): show "!" on the tile. */
+    suspend fun fail(id: String) {
+        snapshots.update { it.markFailed(id) }
+        updater.updateAll()
+    }
+
     private fun WidgetSnapshot.markFailed(id: String): WidgetSnapshot =
         tiles[id]?.let { copy(tiles = tiles + (id to it.copy(status = TileStatus.FAILED, pendingSince = null))) } ?: this
 

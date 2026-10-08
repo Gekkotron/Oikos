@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.widget.work
 
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -41,18 +42,12 @@ class WorkManagerWidgetScheduler(private val workManager: () -> WorkManager) : W
         workManager().enqueueUniqueWork(NOW, ExistingWorkPolicy.REPLACE, request)
     }
 
-    /** Expedited; the code (if any) lives only in the work input, which WorkManager prunes after completion. */
+    /** Expedited. The code (if any) stays in [CodeVault]; the work input, which WorkManager keeps on disk, holds a token. */
     override fun send(id: String, command: WidgetCommand, code: String?) {
         val request = OneTimeWorkRequestBuilder<WidgetCommandWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .addTag(TAG_COMMAND)
-            .setInputData(
-                workDataOf(
-                    WidgetCommandWorker.KEY_ID to id,
-                    WidgetCommandWorker.KEY_COMMAND to command.encode(),
-                    WidgetCommandWorker.KEY_CODE to code,
-                ),
-            )
+            .setInputData(commandInput(id, command, code))
             .build()
         workManager().enqueue(request)
     }
@@ -61,5 +56,11 @@ class WorkManagerWidgetScheduler(private val workManager: () -> WorkManager) : W
         const val PERIODIC = "oikos-widget-refresh"
         const val NOW = "oikos-widget-refresh-now"
         const val TAG_COMMAND = "oikos-widget-command"
+
+        fun commandInput(id: String, command: WidgetCommand, code: String?): Data = workDataOf(
+            WidgetCommandWorker.KEY_ID to id,
+            WidgetCommandWorker.KEY_COMMAND to command.encode(),
+            WidgetCommandWorker.KEY_CODE_TOKEN to code?.let(CodeVault::put),
+        )
     }
 }

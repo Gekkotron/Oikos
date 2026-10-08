@@ -23,7 +23,14 @@ class WidgetCommandWorker(context: Context, params: WorkerParameters, private va
     override suspend fun doWork(): Result {
         val id = inputData.getString(KEY_ID) ?: return Result.failure()
         val command = inputData.getString(KEY_COMMAND)?.let(WidgetCommand::decode) ?: return Result.failure()
-        refresher.send(id, command, inputData.getString(KEY_CODE))
+        val token = inputData.getString(KEY_CODE_TOKEN)
+        if (token == null) {
+            refresher.send(id, command, code = null)
+            return Result.success()
+        }
+        // Never send a coded command without its code: after a process death the vault is empty.
+        val code = CodeVault.take(token)
+        if (code == null) refresher.fail(id) else refresher.send(id, command, code)
         return Result.success()
     }
 
@@ -40,7 +47,7 @@ class WidgetCommandWorker(context: Context, params: WorkerParameters, private va
     companion object {
         const val KEY_ID = "id"
         const val KEY_COMMAND = "command"
-        const val KEY_CODE = "code"
+        const val KEY_CODE_TOKEN = "code_token"
         private const val NOTIFICATION_ID = 0x0D1C
 
         /** `AlertChannel.SYSTEM.id` (`:core:alerts`), created at app start; a literal keeps this module off `:core:alerts`. */
