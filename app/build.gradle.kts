@@ -74,6 +74,7 @@ dependencies {
     implementation(project(":core:transport"))
     implementation(project(":core:data"))
     implementation(project(":core:alerts"))
+    implementation(project(":core:history"))
     implementation(project(":core:push"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)
