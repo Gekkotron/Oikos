@@ -1,6 +1,8 @@
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.withType
 
@@ -17,4 +19,13 @@ internal fun Project.oikosAndroidTesting() {
     }
     // ui-test-manifest is debug-only, so release host tests cannot host Compose tests.
     tasks.withType<Test>().matching { it.name.contains("Release") }.configureEach { enabled = false }
+    // CI only shows the console: print a failing test's message, cause chain and stack, not just its type.
+    tasks.withType<Test>().configureEach {
+        testLogging {
+            events(TestLogEvent.FAILED)
+            exceptionFormat = TestExceptionFormat.FULL
+            showCauses = true
+            showStackTraces = true
+        }
+    }
 }

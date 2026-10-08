@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -48,8 +48,17 @@ class DemoAlertSeederTest {
     private val demoIds = DemoAlerts.all(now).map { it.id }.sorted()
 
     /** Room writes run on its own executor, in real time: poll on a real dispatcher, not under virtual time. */
-    private suspend fun awaitIds(expected: List<String>) = withContext(Dispatchers.Default) {
-        withTimeout(5_000) { while (ids() != expected) delay(20) }
+    private suspend fun awaitIds(expected: List<String>, step: String) = withContext(Dispatchers.Default) {
+        var seen: List<String> = emptyList()
+        val done = withTimeoutOrNull(5_000) {
+            while (true) {
+                seen = ids()
+                if (seen == expected) break
+                delay(20)
+            }
+        }
+        // A bare timeout says nothing in CI's console: name the step and what Room held.
+        if (done == null) throw AssertionError("$step: after 5 s Room held $seen, expected $expected")
     }
 
     private suspend fun settle() = withContext(Dispatchers.Default) { delay(300) }
@@ -60,7 +69,7 @@ class DemoAlertSeederTest {
         DemoAlertSeeder(states, repo, { now }, backgroundScope).start()
         assertTrue(ids().isEmpty())
         states.value = demo
-        awaitIds(demoIds)
+        awaitIds(demoIds, "first seed")
     }
 
     @Test
@@ -78,11 +87,11 @@ class DemoAlertSeederTest {
         val seeder = DemoAlertSeeder(states, repo, { now }, backgroundScope)
         seeder.start()
         seeder.start()
-        awaitIds(demoIds)
+        awaitIds(demoIds, "seed after two starts")
         repo.upsert(DemoAlerts.all(now)[0].copy(id = "stray"))
         states.value = ProfileState.None
         settle() // StateFlow conflates: let the seeder see the house go before the demo comes back
         states.value = demo
-        awaitIds(demoIds)
+        awaitIds(demoIds, "reseed after leaving and re-entering the demo")
     }
 }
