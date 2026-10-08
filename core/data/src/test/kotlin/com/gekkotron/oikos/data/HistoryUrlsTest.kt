@@ -26,3 +26,20 @@ class HistoryUrlsTest {
         assertNull(normalizeHistoryUrl("http://h/v1"))
     }
 }
+
+class EffectiveHistoryUrlTest {
+    @Test
+    fun `the url is derived from the broker host`() {
+        assertEquals("http://192.168.1.91:8090", ConnectionProfile.Direct(LocalBroker("192.168.1.91")).effectiveHistoryUrl())
+    }
+
+    @Test
+    fun `an override wins`() {
+        assertEquals("http://nas:9000", ConnectionProfile.Direct(LocalBroker("192.168.1.91"), historyUrl = "http://nas:9000").effectiveHistoryUrl())
+    }
+
+    @Test
+    fun `an IPv6 literal host is bracketed`() {
+        assertEquals("http://[fd00::1]:8090", ConnectionProfile.Direct(LocalBroker("fd00::1")).effectiveHistoryUrl())
+    }
+}

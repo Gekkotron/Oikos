@@ -44,8 +44,7 @@
     <string name="settings_push_register_again">Register again</string>
     <string name="settings_push_channels">Notification channels</string>
     <string name="settings_history">History service</string>
-    <string name="settings_history_none">Not set</string>
-    <string name="settings_history_hint">http://192.168.1.91:8090</string>
+    <string name="settings_history_auto">Automatic (%1$s)</string>
     <string name="settings_history_error">Use http(s)://host[:port], nothing after it</string>
     <string name="settings_history_save">Save</string>
     <string name="settings_history_edit">Edit</string>

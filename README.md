@@ -45,7 +45,7 @@ Build and test: `./gradlew check koverXmlReport`.
 - Home, Energy (live power flow) and Security screens.
 - Night Glass (dark) and Warm Minimal (light) themes.
 - Push notifications, with the device token registered over MQTT.
-- History: sensor and energy charts (24 h, 7 d, 30 d, kWh per day) read from the OikosHistory service. Set its URL in Settings → History service, or put `history.url` in the setup QR (`tools/setup-qr.py --history-url http://<host>:8090`). Away from home, add the history `host:port` to the gateway key's rules.
+- History: sensor and energy charts (24 h, 7 d, 30 d, kWh per day) read from the OikosHistory service. It is found automatically at `http://<broker host>:8090` (OikosHistory runs next to Mosquitto); Settings → History service (or `history.url` in the setup QR, `tools/setup-qr.py --history-url`) only overrides that. Away from home, add `<broker host>:8090` to the gateway key's rules once.
 
 ## License
 

@@ -166,8 +166,8 @@ fun SettingsScreen(
         )
     }
     if (historyDialog) {
-        val current = (state.connection as? ConnectionSummary.Direct)?.historyUrl
-        HistoryUrlDialog(current.orEmpty(), onSave = onSaveHistoryUrl, onDismiss = { historyDialog = false })
+        val direct = state.connection as? ConnectionSummary.Direct
+        HistoryUrlDialog(direct?.historyUrl.orEmpty(), direct?.historyDefault.orEmpty(), onSave = onSaveHistoryUrl, onDismiss = { historyDialog = false })
     }
     if (pushSheet) {
         PushSheet(state.push, now, onRegisterAgain, onOpenChannels, onDismiss = { pushSheet = false })
@@ -228,7 +228,7 @@ private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Uni
             summary.gatewayUrl?.let { InfoRow(stringResource(R.string.settings_gateway), it) }
             InfoRow(
                 stringResource(R.string.settings_history),
-                summary.historyUrl ?: stringResource(R.string.settings_history_none),
+                summary.historyUrl ?: stringResource(R.string.settings_history_auto, summary.historyDefault),
                 onClick = onEditHistory,
                 onClickLabel = stringResource(R.string.settings_history_edit),
             )
@@ -238,13 +238,13 @@ private fun ConnectionRows(summary: ConnectionSummary?, onEditHistory: () -> Uni
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HistoryUrlDialog(initial: String, onSave: (String) -> Boolean, onDismiss: () -> Unit) {
+private fun HistoryUrlDialog(initial: String, hint: String, onSave: (String) -> Boolean, onDismiss: () -> Unit) {
     var text by rememberSaveable { mutableStateOf(initial) }
     var failed by rememberSaveable { mutableStateOf(false) }
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(shape = AlertDialogDefaults.shape, color = AlertDialogDefaults.containerColor, tonalElevation = AlertDialogDefaults.TonalElevation) {
             HistoryUrlDialogContent(
-                text, failed,
+                text, failed, hint,
                 onTextChange = { text = it; failed = false },
                 onSave = { if (onSave(text)) onDismiss() else failed = true },
                 onCancel = onDismiss,
@@ -255,14 +255,14 @@ private fun HistoryUrlDialog(initial: String, onSave: (String) -> Boolean, onDis
 
 /** Stateless body of the history URL dialog, so it can be tested without a dialog window. */
 @Composable
-internal fun HistoryUrlDialogContent(text: String, failed: Boolean, onTextChange: (String) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
+internal fun HistoryUrlDialogContent(text: String, failed: Boolean, hint: String, onTextChange: (String) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
     val error = stringResource(R.string.settings_history_error)
     Column(Modifier.padding(24.dp)) {
         Text(stringResource(R.string.settings_history), style = OikosTheme.type.display)
         OutlinedTextField(
             value = text,
             onValueChange = onTextChange,
-            label = { Text(stringResource(R.string.settings_history_hint)) },
+            label = { Text(hint) },
             singleLine = true,
             isError = failed,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),

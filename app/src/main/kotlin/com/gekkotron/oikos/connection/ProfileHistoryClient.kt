@@ -2,6 +2,7 @@ package com.gekkotron.oikos.connection
 
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.ProfileState
+import com.gekkotron.oikos.data.effectiveHistoryUrl
 import com.gekkotron.oikos.history.DemoHistoryClient
 import com.gekkotron.oikos.history.EnergyScale
 import com.gekkotron.oikos.history.HistoryClient
@@ -17,17 +18,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/** The demo's fake history, or OikosHistory at the profile's URL (history spec §4.2, §4.5). */
+/** The demo's fake history, or OikosHistory at the profile's URL (the broker host's by default) (history spec §4.2, §4.5). */
 class ProfileHistoryClient(
     private val states: Flow<ProfileState>,
     get: suspend (String) -> HttpGetResult,
     scope: CoroutineScope,
 ) : HistoryClient {
     private val demo = DemoHistoryClient()
-    private val http = HttpHistoryClient(baseUrl = { (profile() as? ConnectionProfile.Direct)?.historyUrl }, get = get)
+    private val http = HttpHistoryClient(baseUrl = { (profile() as? ConnectionProfile.Direct)?.effectiveHistoryUrl() }, get = get)
 
     override val available: StateFlow<Boolean> = states
-        .map { (it as? ProfileState.Ready)?.profile.let { p -> p == ConnectionProfile.Demo || (p as? ConnectionProfile.Direct)?.historyUrl != null } }
+        .map { (it as? ProfileState.Ready)?.profile.let { p -> p == ConnectionProfile.Demo || p is ConnectionProfile.Direct } }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
     private suspend fun profile(): ConnectionProfile? = (states.first { it !is ProfileState.Loading } as? ProfileState.Ready)?.profile

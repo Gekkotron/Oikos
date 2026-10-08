@@ -10,3 +10,14 @@ fun isHistoryUrl(text: String): Boolean {
 }
 
 fun normalizeHistoryUrl(text: String): String? = text.trim().takeIf(::isHistoryUrl)?.removeSuffix("/")
+
+const val DEFAULT_HISTORY_PORT = 8090
+
+/** Where OikosHistory is found by default: it runs next to the broker, on [DEFAULT_HISTORY_PORT]. */
+fun defaultHistoryUrl(brokerHost: String): String {
+    val host = if (':' in brokerHost && !brokerHost.startsWith("[")) "[$brokerHost]" else brokerHost
+    return "http://$host:$DEFAULT_HISTORY_PORT"
+}
+
+/** The history service to ask: the [ConnectionProfile.Direct.historyUrl] override, else the one next to the broker. */
+fun ConnectionProfile.Direct.effectiveHistoryUrl(): String = historyUrl ?: defaultHistoryUrl(local.host)

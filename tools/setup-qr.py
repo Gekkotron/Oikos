@@ -5,7 +5,7 @@ Starts from an existing setup JSON (the `local` section, `prefix`, `push`) and a
 `gateway` section: {"url", "key", "broker_host"?}. Without --gateway-url the gateway section is left
 as it is, and --no-gateway removes it. The key is read from a file and never printed.
 
-The optional `history` section ({"url"}) is set with --history-url http://192.168.1.91:8090 and
+The optional `history` section ({"url"}, an override of http://<broker host>:8090) is set with --history-url http://192.168.1.91:8090 and
 removed with --no-history; without either it is left as it is.
 
     tools/setup-qr.py --gateway-url https://house.example.ts.net \\
@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--gateway-key-file")
     parser.add_argument("--broker-host", help="the broker as the gateway sees it (optional)")
     parser.add_argument("--no-gateway", action="store_true", help="remove the gateway section")
-    parser.add_argument("--history-url", help="OikosHistory service, e.g. http://192.168.1.91:8090")
+    parser.add_argument("--history-url", help="override the OikosHistory URL (default: http://<broker host>:8090), e.g. http://192.168.1.91:8090")
     parser.add_argument("--no-history", action="store_true", help="remove the history section")
     args = parser.parse_args()
 

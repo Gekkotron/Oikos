@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class ProfileHistoryClientTest {
     private val states = MutableStateFlow<ProfileState>(ProfileState.Loading)
@@ -24,24 +25,37 @@ class ProfileHistoryClientTest {
     )
 
     @Test
-    fun `available only with a history url or the demo`() = runTest {
+    fun `available for any direct profile and the demo, not without a profile`() = runTest {
         val c = client()
+        assertEquals(false, c.available.value)
         states.value = ProfileState.Ready(direct)
-        assertEquals(false, c.available.first { !it })
-        states.value = ProfileState.Ready(direct.copy(historyUrl = "http://192.168.1.91:8090"))
-        c.available.first { it }
-        states.value = ProfileState.Ready(ConnectionProfile.Demo)
-        c.available.first { it }
+        assertEquals(true, c.available.first { it })
         states.value = ProfileState.None
-        c.available.first { !it }
+        assertEquals(false, c.available.first { !it })
+        states.value = ProfileState.Ready(ConnectionProfile.Demo)
+        assertEquals(true, c.available.first { it })
+        states.value = ProfileState.None
+        assertEquals(false, c.available.first { !it })
+        states.value = ProfileState.Ready(direct.copy(historyUrl = "http://nas:9000"))
+        assertEquals(true, c.available.first { it })
     }
 
     @Test
-    fun `direct asks the service, the demo never does`() = runTest {
+    fun `direct without an override asks the service next to the broker`() = runTest {
         val c = client()
-        states.value = ProfileState.Ready(direct.copy(historyUrl = "http://192.168.1.91:8090"))
+        states.value = ProfileState.Ready(direct)
         assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.H24))
         assertEquals(1, urls.size)
+        assertTrue(urls.single().startsWith("http://192.168.1.91:8090/v1/"), urls.single())
+    }
+
+    @Test
+    fun `direct with an override asks the override, the demo never asks`() = runTest {
+        val c = client()
+        states.value = ProfileState.Ready(direct.copy(historyUrl = "http://nas:9000"))
+        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.H24))
+        assertEquals(1, urls.size)
+        assertTrue(urls.single().startsWith("http://nas:9000/v1/"), urls.single())
         states.value = ProfileState.Ready(ConnectionProfile.Demo)
         assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.D7))
         assertEquals(1, urls.size)

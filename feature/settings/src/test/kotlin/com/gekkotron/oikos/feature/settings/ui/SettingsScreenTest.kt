@@ -38,7 +38,7 @@ class SettingsScreenTest {
     private var rooms = 0
     private var licences = 0
 
-    private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null)
+    private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null, historyDefault = "http://192.168.1.91:8090")
 
     private fun show(state: SettingsUi = SettingsUi(connection = direct), route: Route? = Route.AUTO) = compose.setContent {
         OikosTheme(ThemeChoice.NIGHT_GLASS) {
@@ -197,12 +197,12 @@ class SettingsScreenTest {
         }
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("History service").performScrollTo()
-        compose.onNodeWithText("Not set").performClick()
+        compose.onNodeWithText("Automatic (http://192.168.1.91:8090)").performClick()
         settle()
     }
 
     @Test
-    fun `an unset history url shows Not set and tapping it opens the dialog, Cancel closes it`() {
+    fun `an automatic history url shows the derived address and tapping it opens the dialog, Cancel closes it`() {
         showHistory()
         compose.onNodeWithText("Save").assertExists()
         compose.onNodeWithText("Cancel").performClick()
@@ -233,7 +233,7 @@ class SettingsScreenTest {
         OikosTheme(ThemeChoice.NIGHT_GLASS) {
             var failed by remember { mutableStateOf(false) }
             HistoryUrlDialogContent(
-                "nope", failed, onTextChange = {},
+                "nope", failed, hint = "http://h:8090", onTextChange = {},
                 onSave = { if (accept) onDismiss() else failed = true },
                 onCancel = {},
             )
@@ -249,6 +249,18 @@ class SettingsScreenTest {
         compose.onNodeWithText("Use http(s)://host[:port], nothing after it").assertExists()
         compose.onNodeWithText("Save").assertExists()
         assertEquals(0, dismissed)
+    }
+
+    @Test
+    fun `the dialog hints at the derived address`() {
+        showContent(accept = true) {}
+        compose.onNodeWithText("http://h:8090").assertExists()
+    }
+
+    @Test
+    fun `an override is shown as is`() {
+        show(SettingsUi(connection = direct.copy(historyUrl = "http://nas:9000")))
+        compose.onNodeWithText("http://nas:9000").assertExists()
     }
 
     @Test
