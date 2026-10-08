@@ -21,6 +21,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.gekkotron.oikos.AppLink
 import com.gekkotron.oikos.AppViewModel
 import com.gekkotron.oikos.R
 import com.gekkotron.oikos.data.ConnectionProfile
@@ -86,11 +87,20 @@ data object NotificationsKey : NavKey
 internal enum class AlertLinkAction { NONE, OPEN, DROP, WAIT }
 
 /** Where a tapped notification may land: only on Home (Rooms and the notification step come first; onboarding has no house). */
-internal fun alertLinkAction(root: NavKey, pending: String?): AlertLinkAction = when {
+internal fun alertLinkAction(root: NavKey, pending: String?): AlertLinkAction = linkAction(root, pending?.let(AppLink::Alert))
+
+/** A widget link lands like a notification: only on Home (widgets spec §2.3). */
+internal fun linkAction(root: NavKey, pending: AppLink?): AlertLinkAction = when {
     pending == null -> AlertLinkAction.NONE
     root == HomeKey -> AlertLinkAction.OPEN
     root == OnboardingKey -> AlertLinkAction.DROP
     else -> AlertLinkAction.WAIT
+}
+
+internal fun linkDestination(link: AppLink): NavKey = when (link) {
+    is AppLink.Alert -> AlertDetailKey(link.id)
+    is AppLink.History -> HistoryKey(HistoryTarget.Entity(link.entityId).encode())
+    AppLink.Settings -> SettingsKey
 }
 
 /** The main tabs share the bar's bottom inset; every other screen has no bar, so it keeps the full insets. */
@@ -112,7 +122,7 @@ internal fun pop(stack: MutableList<NavKey>, key: NavKey) {
 fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val route by viewModel.route.collectAsStateWithLifecycle()
-    val pendingAlert by viewModel.pendingAlert.collectAsStateWithLifecycle()
+    val pendingLink by viewModel.pendingLink.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val root: NavKey = when (val p = profile) {
         ProfileState.Loading -> return // a few milliseconds at launch; the background is already drawn
@@ -133,14 +143,14 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     // Push alerts need the permission; the onboarding step only runs once, so a launch on Home still asks while it is missing.
     if (root == HomeKey && (profile as? ProfileState.Ready)?.profile is ConnectionProfile.Direct) AskForNotificationsOnLaunch()
     // Declared after resetToRoot's effect, so a cold start has its Home stack before the sheet is pushed on it.
-    LaunchedEffect(pendingAlert, root) {
-        val id = pendingAlert ?: return@LaunchedEffect
-        when (alertLinkAction(root, id)) {
+    LaunchedEffect(pendingLink, root) {
+        val link = pendingLink ?: return@LaunchedEffect
+        when (linkAction(root, link)) {
             AlertLinkAction.OPEN -> {
-                push(backStack, AlertDetailKey(id))
-                viewModel.alertOpened()
+                push(backStack, linkDestination(link))
+                viewModel.linkOpened()
             }
-            AlertLinkAction.DROP -> viewModel.alertOpened()
+            AlertLinkAction.DROP -> viewModel.linkOpened()
             AlertLinkAction.WAIT, AlertLinkAction.NONE -> Unit
         }
     }

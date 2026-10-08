@@ -53,17 +53,19 @@ class AppViewModel @Inject constructor(
     val route: StateFlow<Route?> =
         combine(profiles.state, profiles.route, ::routeChoice).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private val _pendingAlert = MutableStateFlow<String?>(null)
+    private val _pendingLink = MutableStateFlow<AppLink?>(null)
 
-    /** An `oikos://alert/<id>` tap waiting for the navigation host to show it (push alerts spec §7.3). */
-    val pendingAlert: StateFlow<String?> = _pendingAlert
+    /** A notification or widget tap waiting for the navigation host to show it (push alerts spec §7.3, widgets spec §2.3). */
+    val pendingLink: StateFlow<AppLink?> = _pendingLink
 
-    fun openAlert(id: String) {
-        _pendingAlert.value = id
+    fun openLink(link: AppLink) {
+        _pendingLink.value = link
     }
 
-    fun alertOpened() {
-        _pendingAlert.value = null
+    fun openAlert(id: String) = openLink(AppLink.Alert(id))
+
+    fun linkOpened() {
+        _pendingLink.value = null
     }
 
     /** The Rooms step was finished or skipped (a no-op when it was opened from Home). */

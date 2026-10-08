@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        DeepLinks.alertToOpen(intent)?.let(appViewModel::openAlert)
+        DeepLinks.linkToOpen(intent)?.let(appViewModel::openLink)
     }
 
     private companion object {
