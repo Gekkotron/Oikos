@@ -219,6 +219,28 @@ class HeadlessEntitiesTest {
         assertEquals(CatalogResult.Failed(Failure.NOT_CONFIGURED), harness(state = ProfileState.None).entities.catalog())
     }
 
+    @Test
+    fun a_button_press_is_confirmed_without_waiting_for_a_state() = runTest {
+        val h = harness(connect = { t ->
+            t.fake.retain("homeassistant/button/b1/config", """{"command_topic":"b/1/press","unique_id":"b1","name":"Bell"}""")
+            t.fake.setLink(LinkState.Connected(TransportMode.DIRECT))
+        })
+        val result = h.entities.send("b1", Command.Press)
+        assertTrue("$result", result is SendResult.Confirmed)
+        assertTrue("took ${testScheduler.currentTime} ms", testScheduler.currentTime < 8_000)
+        assertEquals("b/1/press", h.transports.single().fake.publishedStrings().single().first)
+    }
+
+    @Test
+    fun a_live_source_that_has_not_settled_is_not_complete() = runTest {
+        // Connected but no replay yet: a missing id must not be declared removed.
+        val live = com.gekkotron.oikos.source.MqttDiscoverySource(com.gekkotron.oikos.transport.testing.FakeMqttTransport(), backgroundScope)
+        val h = harness(live = live)
+        val result = h.entities.refresh(setOf(switchId)) as RefreshResult.Ok
+        assertEquals(false, result.complete)
+        assertTrue(h.transports.isEmpty())
+    }
+
     private object NoBindings : Bindings
 
     private fun entity(id: String) = Entity(id, null, "Kettle", Kind.SWITCH, null, null, null, Capabilities(), NoBindings)

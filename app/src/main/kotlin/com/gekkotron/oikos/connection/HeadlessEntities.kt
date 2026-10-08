@@ -12,6 +12,9 @@ import com.gekkotron.oikos.feature.widget.SendResult
 import com.gekkotron.oikos.feature.widget.WidgetEntities
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
+import com.gekkotron.oikos.model.EntityState
+import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.source.MqttDiscoverySource
 import com.gekkotron.oikos.transport.LinkState
@@ -71,7 +74,9 @@ class HeadlessEntities(
 
     override suspend fun refresh(ids: Set<String>): RefreshResult {
         live()?.let { source ->
-            return RefreshResult.Ok(source.entities.value, source.states().first(), complete = true, historyEnabled = historyEnabled(readyProfile()))
+            // Just connected (or still restoring the cache), the live source may not list the whole house yet.
+            val complete = (source as? MqttDiscoverySource)?.hasSettled?.value ?: true
+            return RefreshResult.Ok(source.entities.value, source.states().first(), complete, historyEnabled(readyProfile()))
         }
         val session = session(save = true) { source, history ->
             withTimeoutOrNull(waitBudget) {
@@ -91,7 +96,10 @@ class HeadlessEntities(
         val session = session(save = true) { source, history ->
             if (withTimeoutOrNull(waitBudget) { source.entities.first { id in it } } == null) return@session SendResult.NotConfirmed
             // Wait for the state topic's retained replay first: arriving after the send, it would "confirm" the old value.
-            withTimeoutOrNull(waitBudget) { source.states().first { it[id]?.let { s -> !s.stale && s.lastUpdate != null } == true } }
+            // A button has no state topic, so there is nothing to wait for.
+            if (source.entities.value[id]?.kind != Kind.BUTTON) {
+                withTimeoutOrNull(waitBudget) { source.states().first { it[id]?.let { s -> !s.stale && s.lastUpdate != null } == true } }
+            }
             sendOn(source, id, command, history)
         }
         return when (session) {
@@ -124,6 +132,13 @@ class HeadlessEntities(
         try {
             val sentAt = source.states().first()[id]?.lastUpdate
             if (source.send(id, command) is CommandResult.Rejected) return@coroutineScope SendResult.NotConfirmed
+            // Nothing pending right after an accepted send: no prediction to confirm (a button press) or an optimistic
+            // entity confirmed on the spot. The publish went out, so that is the confirmation.
+            val after = source.states().first()[id]
+            val entityNow = source.entities.value[id]
+            if (after?.pending != true && entityNow != null) {
+                return@coroutineScope SendResult.Confirmed(entityNow, after ?: EntityState(id, StateValue.Unknown), history)
+            }
             val done = withTimeoutOrNull(confirmBudget) {
                 combine(source.states(), failed) { states, f -> f to states[id] }.first { (f, state) -> f || state?.pending == false }
             }
