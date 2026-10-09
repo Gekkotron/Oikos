@@ -129,4 +129,13 @@ sealed interface HomeEvent {
     data class Rejected(val id: String, val reason: String) : HomeEvent
     data object SaveFailed : HomeEvent
     data object WaitingForConnection : HomeEvent
+
+    /** Members of one group send that were not confirmed, merged (room groups spec §5). */
+    data class GroupNotConfirmed(
+        val groupId: String,
+        val kind: Kind,
+        val failedIds: List<String>,
+        val failedNames: List<String>,
+        val command: Command,
+    ) : HomeEvent
 }

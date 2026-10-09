@@ -176,4 +176,13 @@
     <string name="action_group_open">Open all shutters</string>
     <string name="action_group_stop">Stop all shutters</string>
     <string name="action_group_close">Close all shutters</string>
+    <string name="home_group_not_confirmed_one">%1$s didn\'t respond</string>
+    <plurals name="home_group_not_confirmed_covers">
+        <item quantity="one">%1$d shutter didn\'t respond</item>
+        <item quantity="other">%1$d shutters didn\'t respond</item>
+    </plurals>
+    <plurals name="home_group_not_confirmed_lights">
+        <item quantity="one">%1$d light didn\'t respond</item>
+        <item quantity="other">%1$d lights didn\'t respond</item>
+    </plurals>
 </resources>

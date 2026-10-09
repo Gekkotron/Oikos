@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.presentation.HomeEvent
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Kind
 import kotlinx.coroutines.flow.MutableSharedFlow
 import org.junit.Rule
 import org.junit.Test
@@ -23,11 +24,16 @@ class HomeEventsEffectTest {
 
     private val events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 4)
     private val retried = mutableListOf<Pair<String, Command>>()
+    private val retriedGroups = mutableListOf<Triple<String, Command, List<String>>>()
 
     private fun show() = compose.setContent {
         OikosTheme {
             val host = remember { SnackbarHostState() }
-            HomeEventsEffect(events, host) { id, c -> retried += id to c }
+            HomeEventsEffect(
+                events, host,
+                onRetry = { id, c -> retried += id to c },
+                onRetryGroup = { g, c, ids -> retriedGroups += Triple(g, c, ids) },
+            )
             SnackbarHost(host)
         }
     }
@@ -49,5 +55,24 @@ class HomeEventsEffectTest {
         compose.waitForIdle()
         events.tryEmit(HomeEvent.Rejected("plug", "unavailable"))
         compose.onNodeWithText("Command refused: unavailable").assertExists()
+    }
+
+    @Test
+    fun `a merged group failure shows one snackbar and Retry resends to the failed members`() {
+        show()
+        compose.waitForIdle()
+        events.tryEmit(HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "c"), listOf("Bay", "Patio"), Command.Close))
+        compose.onNodeWithText("2 shutters didn't respond").assertExists()
+        compose.onNodeWithText("Retry").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(Triple<String, Command, List<String>>("group:living:cover", Command.Close, listOf("a", "c"))), retriedGroups)
+    }
+
+    @Test
+    fun `a single failed member is named`() {
+        show()
+        compose.waitForIdle()
+        events.tryEmit(HomeEvent.GroupNotConfirmed("group:living:light", Kind.LIGHT, listOf("x"), listOf("Ceiling"), Command.TurnOff))
+        compose.onNodeWithText("Ceiling didn't respond").assertExists()
     }
 }

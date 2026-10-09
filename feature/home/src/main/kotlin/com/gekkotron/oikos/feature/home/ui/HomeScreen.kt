@@ -87,7 +87,7 @@ fun HomeRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send)
+    HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send, onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids) })
     HomeScreen(
         state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
         onCustomize = viewModel::customize,
