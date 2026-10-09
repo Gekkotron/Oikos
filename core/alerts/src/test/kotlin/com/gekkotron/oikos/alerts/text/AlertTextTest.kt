@@ -37,9 +37,9 @@ class AlertTextTest {
     fun `french sentences agree with the noun`() {
         assertEquals("Voiture détectée", AlertText.body(frigate("label" to "car"), res))
         assertEquals("Camion détecté", AlertText.body(frigate("label" to "truck"), res))
-        assertEquals("Voiture dans Driveway", AlertText.body(frigate("label" to "car", "zone" to "Driveway"), res))
+        assertEquals("Voiture dans la zone Driveway", AlertText.body(frigate("label" to "car", "zone" to "Driveway"), res))
         assertEquals("Julien (personne)", AlertText.body(frigate("label" to "person", "who" to "Julien"), res))
-        assertEquals("Julien (personne) dans Driveway", AlertText.body(frigate("label" to "person", "who" to "Julien", "zone" to "Driveway"), res))
+        assertEquals("Julien (personne) dans la zone Driveway", AlertText.body(frigate("label" to "person", "who" to "Julien", "zone" to "Driveway"), res))
     }
 
     @Test

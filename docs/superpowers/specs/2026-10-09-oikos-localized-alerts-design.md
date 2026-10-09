@@ -4,7 +4,7 @@ Status: approved design, 2026-10-09. Extends the push alerts spec (`2026-10-07-o
 
 ## 1. Goal and scope
 
-**Goal.** Alerts read in the phone's (or the app's per-app) language. Today the Frigate bridge writes English text ("Car in Driveway") and the app shows it verbatim, so a French phone reads English. After this, a French phone reads "Voiture dans Driveway" and an English one "Car in Driveway", from the same alert.
+**Goal.** Alerts read in the phone's (or the app's per-app) language. Today the Frigate bridge writes English text ("Car in Driveway") and the app shows it verbatim, so a French phone reads English. After this, a French phone reads "Voiture dans la zone Driveway" and an English one "Car in Driveway", from the same alert.
 
 **User decisions**
 - A **generic** mechanism: the payload carries a sentence key plus arguments (`loc`); only Frigate keys are defined now, other sources can add keys later without new plumbing.
@@ -65,9 +65,9 @@ New optional field:
 | Args present | English | French |
 |---|---|---|
 | label | Car detected | Voiture détectée |
-| label + zone | Car in Driveway | Voiture dans Driveway |
+| label + zone | Car in Driveway | Voiture dans la zone Driveway |
 | label + who | Julien (person) | Julien (personne) |
-| label + who + zone | Julien (person) in Driveway | Julien (personne) dans Driveway |
+| label + who + zone | Julien (person) in Driveway | Julien (personne) dans la zone Driveway |
 
 Each label has **two strings**: the noun and its "detected" sentence, so French agreement (détecté/détectée) is in the translation, not in code. Inside parentheses the noun is lower-cased with the current locale.
 
@@ -95,4 +95,4 @@ Every step is backward compatible; the order only decides when French appears:
 - **Bridge (pytest):** `loc` for label only, with zone, with who, with both; no `loc` without a label; `title`/`body` unchanged.
 - **App unit:** parser (valid, malformed, missing key, non-string args); `AlertText` for every row of §5.3 in English and French (Robolectric `fr` qualifier) plus fallback for unknown key, unknown label and missing label; every label in §5.3 has both strings in both languages; Room v1 → v2 migration test from the exported schema.
 - **App UI:** `AlertRow` shows the French sentence under the `fr` locale.
-- **Device:** a car at the Driveway camera reads "Voiture dans Driveway" on a French phone; switching Oikos to English in Android settings shows "Car in Driveway" in the Alerts screen.
+- **Device:** a car at the Driveway camera reads "Voiture dans la zone Driveway" on a French phone; switching Oikos to English in Android settings shows "Car in Driveway" in the Alerts screen.

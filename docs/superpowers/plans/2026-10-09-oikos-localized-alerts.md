@@ -700,9 +700,9 @@ class AlertTextTest {
     fun `french sentences agree with the noun`() {
         assertEquals("Voiture détectée", AlertText.body(frigate("label" to "car"), res))
         assertEquals("Camion détecté", AlertText.body(frigate("label" to "truck"), res))
-        assertEquals("Voiture dans Driveway", AlertText.body(frigate("label" to "car", "zone" to "Driveway"), res))
+        assertEquals("Voiture dans la zone Driveway", AlertText.body(frigate("label" to "car", "zone" to "Driveway"), res))
         assertEquals("Julien (personne)", AlertText.body(frigate("label" to "person", "who" to "Julien"), res))
-        assertEquals("Julien (personne) dans Driveway", AlertText.body(frigate("label" to "person", "who" to "Julien", "zone" to "Driveway"), res))
+        assertEquals("Julien (personne) dans la zone Driveway", AlertText.body(frigate("label" to "person", "who" to "Julien", "zone" to "Driveway"), res))
     }
 
     @Test
@@ -857,7 +857,7 @@ class AlertRowLocaleTest {
             false, false, Instant.EPOCH, Instant.EPOCH, AlertLoc("frigate.object", mapOf("label" to "car", "zone" to "Driveway")),
         )
         compose.setContent { OikosTheme { AlertRow(alert, now = Instant.EPOCH, onClick = {}) } }
-        compose.onNodeWithText("Voiture dans Driveway").assertExists()
+        compose.onNodeWithText("Voiture dans la zone Driveway").assertExists()
         compose.onNodeWithText("Car in Driveway").assertDoesNotExist()
     }
 }

@@ -29,7 +29,7 @@ class AlertRowLocaleTest {
             false, false, Instant.EPOCH, Instant.EPOCH, AlertLoc("frigate.object", mapOf("label" to "car", "zone" to "Driveway")),
         )
         compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { AlertRow(alert, now = Instant.EPOCH, onClick = {}) } }
-        compose.onNodeWithText("Voiture dans Driveway").assertExists()
+        compose.onNodeWithText("Voiture dans la zone Driveway").assertExists()
         compose.onNodeWithText("Car in Driveway").assertDoesNotExist()
     }
 }

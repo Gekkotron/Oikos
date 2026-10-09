@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="alert_frigate_in">%1$s dans %2$s</string>
+    <string name="alert_frigate_in">%1$s dans la zone %2$s</string>
     <string name="alert_frigate_who">%1$s (%2$s)</string>
 
     <string name="alert_frigate_person">Personne</string>
