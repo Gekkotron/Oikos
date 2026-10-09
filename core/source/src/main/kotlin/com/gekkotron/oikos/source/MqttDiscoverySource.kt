@@ -30,6 +30,7 @@ import com.gekkotron.oikos.transport.MqttMessage
 import com.gekkotron.oikos.transport.MqttTransport
 import com.gekkotron.oikos.transport.PublishFailed
 import com.gekkotron.oikos.transport.isValidPublishTopic
+import com.gekkotron.oikos.voice.VoiceShortcut
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
@@ -67,6 +68,7 @@ class MqttDiscoverySource(
     private val lock = Any()
     private val discovered = linkedMapOf<String, List<DiscoveredEntity>>() // config topic -> entities
     private val overrides = mutableMapOf<String, UiOverride>()
+    private val voiceShortcuts = mutableMapOf<String, VoiceShortcut>()
     private var areasDocument = AreasDocument()
 
     // What the broker is known to hold (its retained messages, or a publish it accepted). A failed write
@@ -102,8 +104,10 @@ class MqttDiscoverySource(
     override val areas: StateFlow<List<Area>> = _areas.asStateFlow()
     override val commandFailures: SharedFlow<CommandFailure> = tracker.failures
     override val link: StateFlow<LinkState> = transport.link
+    private val _shortcuts = MutableStateFlow<Map<String, VoiceShortcut>>(emptyMap())
+    override val shortcuts: StateFlow<Map<String, VoiceShortcut>> = _shortcuts.asStateFlow()
 
-    private val baseFilters = setOf("$prefix/#", "$UI_PREFIX#")
+    private val baseFilters = setOf("$prefix/#", "$UI_PREFIX#", "$VOICE_PREFIX#")
     private val stateTopics = MutableStateFlow<Set<String>>(emptySet())
 
     private class Snapshot(val entities: Map<String, Entity>, val devices: Map<String, Device>, val areas: List<Area>)
@@ -213,7 +217,8 @@ class MqttDiscoverySource(
             when {
                 topic.startsWith("$prefix/") && topic.endsWith("/config") -> 0
                 topic.startsWith(UI_PREFIX) -> 1
-                else -> 2
+                topic.startsWith(VOICE_PREFIX) -> 2
+                else -> 3
             }
         }
         for ((topic, payload) in ordered) handle(MqttMessage(topic, payload.encodeToByteArray(), retained = true), restored = true)
@@ -224,6 +229,7 @@ class MqttDiscoverySource(
         val keep = buildSet {
             addAll(discovered.keys)
             overrides.keys.forEach { add(UI_PREFIX + it) }
+            voiceShortcuts.keys.forEach { add(VOICE_PREFIX + it) }
             if (areasDocument.areas.isNotEmpty()) add(AREAS_TOPIC)
             addAll(store.subscriptionTopics())
         }
@@ -269,9 +275,11 @@ class MqttDiscoverySource(
                         overrides.remove(it)
                         confirmedOverrides.remove(it)
                     }
+                    topic.startsWith(VOICE_PREFIX) -> voiceShortcuts.remove(topic.removePrefix(VOICE_PREFIX))
                     else -> discovered.remove(topic)
                 }
             }
+            _shortcuts.value = voiceShortcuts.toMap()
             restoredOnly.clear()
         }
         publishEntities()
@@ -301,6 +309,7 @@ class MqttDiscoverySource(
             when {
                 topic == AREAS_TOPIC -> onAreas(payload)
                 topic.startsWith(UI_PREFIX) -> onOverride(topic.removePrefix(UI_PREFIX), payload)
+                topic.startsWith(VOICE_PREFIX) -> onShortcut(topic.removePrefix(VOICE_PREFIX), payload)
                 else -> when (val r = DiscoveryParser.parse(prefix, topic, payload)) {
                     DiscoveryResult.NotDiscovery -> store.onMessage(topic, payload, restored)
                     DiscoveryResult.Removed -> replaceDiscovered(topic, null)
@@ -330,6 +339,39 @@ class MqttDiscoverySource(
             confirmedAreas = document
         }
         publishEntities()
+    }
+
+    private fun onShortcut(id: String, payload: String) {
+        synchronized(lock) {
+            if (payload.isEmpty()) {
+                voiceShortcuts.remove(id)
+            } else {
+                val shortcut = VoiceShortcutDocument.decode(payload)?.toShortcut(id = id)
+                if (shortcut != null) voiceShortcuts[id] = shortcut else report("$VOICE_PREFIX$id: invalid shortcut")
+            }
+            _shortcuts.value = voiceShortcuts.toMap()
+        }
+    }
+
+    override suspend fun saveShortcut(shortcut: VoiceShortcut) {
+        val topic = VOICE_PREFIX + shortcut.id
+        require(isValidPublishTopic(topic)) { "shortcut id '${shortcut.id}' is not a valid topic segment" }
+        val payload = VoiceShortcutDocument.encode(
+            VoiceShortcutDocument(
+                phrase = shortcut.phrase,
+                lang = shortcut.lang.name.lowercase(),
+                action = shortcut.intent.action.name,
+                entityIds = shortcut.intent.entityIds,
+                value = shortcut.intent.value,
+            ),
+        )
+        transport.publish(topic, payload.encodeToByteArray(), qos = 1, retain = true)
+    }
+
+    override suspend fun deleteShortcut(id: String) {
+        val topic = VOICE_PREFIX + id
+        require(isValidPublishTopic(topic)) { "shortcut id '$id' is not a valid topic segment" }
+        transport.publish(topic, ByteArray(0), qos = 1, retain = true)
     }
 
     private fun onOverride(uniqueId: String, payload: String) {
@@ -406,6 +448,7 @@ class MqttDiscoverySource(
     companion object {
         const val DEFAULT_PREFIX = "homeassistant"
         const val UI_PREFIX = "oikos/ui/"
+        const val VOICE_PREFIX = "oikos/voice/shortcut/"
         const val AREAS_ID = "_areas"
         const val AREAS_TOPIC = UI_PREFIX + AREAS_ID
         val SUBSCRIPTION_DEBOUNCE: Duration = 500.milliseconds
