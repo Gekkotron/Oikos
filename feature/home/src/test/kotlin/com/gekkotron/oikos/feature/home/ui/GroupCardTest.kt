@@ -23,7 +23,6 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.TransportMode
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,7 +85,6 @@ class GroupCardTest {
         assertEquals(listOf("group:living:light"), taps)
     }
 
-    @Ignore("Task 4")
     @Test
     fun `tapping the shutter group opens its sheet`() {
         show()

@@ -55,7 +55,15 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCustomize: () -> Unit, onDismiss: () -> Unit, onOpenHistory: (() -> Unit)? = null) {
+internal fun ControlSheet(
+    card: CardUi,
+    onSend: (String, Command) -> Unit,
+    onCustomize: () -> Unit,
+    onDismiss: () -> Unit,
+    onOpenHistory: (() -> Unit)? = null,
+    onSendGroup: (String, Command) -> Unit = { _, _ -> },
+    onOpenMember: (String) -> Unit = {},
+) {
     val send: (Command) -> Unit = { onSend(card.id, it) }
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -63,21 +71,29 @@ internal fun ControlSheet(card: CardUi, onSend: (String, Command) -> Unit, onCus
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(card.name, style = OikosTheme.type.display.copy(fontSize = 22.sp))
-            Text(cardValueText(card.value), style = OikosTheme.type.body)
-            when (card.kind) {
-                Kind.LIGHT -> LightControls(card, onSend)
-                Kind.COVER -> CoverControls(card, send)
-                Kind.CLIMATE -> ClimateControls(card, send)
-                Kind.NUMBER -> NumberControls(card, send)
-                Kind.SELECT -> SelectControls(card, send)
-                Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
-                else -> Unit
+            if (card.isGroup) {
+                Text(groupName(card), style = OikosTheme.type.display.copy(fontSize = 22.sp))
+                GroupControls(card, onSend, onSendGroup, onOpenMember)
+            } else {
+                Text(card.name, style = OikosTheme.type.display.copy(fontSize = 22.sp))
+                Text(cardValueText(card.value), style = OikosTheme.type.body)
+                when (card.kind) {
+                    Kind.LIGHT -> LightControls(card, onSend)
+                    Kind.COVER -> CoverControls(card, send)
+                    Kind.CLIMATE -> ClimateControls(card, send)
+                    Kind.NUMBER -> NumberControls(card, send)
+                    Kind.SELECT -> SelectControls(card, send)
+                    Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
+                    else -> Unit
+                }
             }
             if (card.hasHistory && onOpenHistory != null) {
-                TextButton(onClick = { onDismiss(); onOpenHistory() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_history)) }
+                // History first: on Home, dismissing a member's sheet reopens its group, which history must not sit under.
+                TextButton(onClick = { onOpenHistory(); onDismiss() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_history)) }
             }
-            TextButton(onClick = onCustomize, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sheet_customize)) }
+            TextButton(onClick = onCustomize, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(if (card.isGroup) R.string.sheet_customize_group else R.string.sheet_customize))
+            }
         }
     }
 }

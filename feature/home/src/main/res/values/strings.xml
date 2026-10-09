@@ -185,4 +185,14 @@
         <item quantity="one">%1$d light didn\'t respond</item>
         <item quantity="other">%1$d lights didn\'t respond</item>
     </plurals>
+    <plurals name="sheet_group_subtitle_covers">
+        <item quantity="one">%1$s · %2$d shutter</item>
+        <item quantity="other">%1$s · %2$d shutters</item>
+    </plurals>
+    <plurals name="sheet_group_subtitle_lights">
+        <item quantity="one">%1$s · %2$d light</item>
+        <item quantity="other">%1$s · %2$d lights</item>
+    </plurals>
+    <string name="sheet_all_to">All to</string>
+    <string name="sheet_customize_group">Customize group…</string>
 </resources>

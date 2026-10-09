@@ -39,6 +39,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -126,6 +127,8 @@ fun HomeScreen(
     val closeSearch = { searching = false; onSearch("") }
     BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The group whose sheet a member's sheet was opened from; dismissing the member returns to it (room groups spec §4).
+    var sheetParent by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
@@ -198,13 +201,18 @@ fun HomeScreen(
     }
     val sheetCard = sheetId?.let(state::card)
     if (sheetCard != null) {
-        ControlSheet(
-            sheetCard,
-            onSend = onSend,
-            onCustomize = { sheetId = null; customizeId = sheetCard.id },
-            onDismiss = { sheetId = null },
-            onOpenHistory = { onOpenHistory(sheetCard.id) },
-        )
+        // Keyed: a dismissed sheet's state stays hidden, so the group sheet a member returns to needs a fresh one.
+        key(sheetCard.id) {
+            ControlSheet(
+                sheetCard,
+                onSend = onSend,
+                onCustomize = { sheetId = null; sheetParent = null; customizeId = sheetCard.id },
+                onDismiss = { sheetId = sheetParent; sheetParent = null },
+                onOpenHistory = { sheetParent = null; sheetId = null; onOpenHistory(sheetCard.id) },
+                onSendGroup = onSendGroup,
+                onOpenMember = { member -> sheetParent = sheetCard.id; sheetId = member },
+            )
+        }
     }
     val customizeCard = customizeId?.let(state::card)
     // A group's Customize sheet arrives with room groups Task 5.
