@@ -123,4 +123,29 @@ class AlertParserTest {
         assertNull(AlertParser.parseHistory("not json", now))
         assertEquals(emptyList(), AlertParser.parseHistory("[]", now))
     }
+
+    private val locBase = mapOf("v" to "1", "id" to "a1", "channel" to "camera", "title" to "Driveway", "body" to "Car in Driveway")
+
+    @Test
+    fun `loc is parsed from its compact JSON`() {
+        val alert = AlertParser.fromData(locBase + ("loc" to """{"key":"frigate.object","args":{"label":"car","zone":"Driveway"}}"""))!!
+        assertEquals(AlertLoc("frigate.object", mapOf("label" to "car", "zone" to "Driveway")), alert.loc)
+    }
+
+    @Test
+    fun `a malformed loc is ignored and the alert kept`() {
+        for (raw in listOf("not json", "[]", """{"args":{}}""", """{"key":3}""", """{"key":"k","args":{"label":3}}""", """{"key":"k","args":[]}""")) {
+            val alert = AlertParser.fromData(locBase + ("loc" to raw))
+            assertEquals("Car in Driveway", alert?.body, raw)
+            assertNull(alert?.loc, raw)
+        }
+        assertNull(AlertParser.fromData(locBase)!!.loc)
+    }
+
+    @Test
+    fun `history entries keep loc`() {
+        val json = """[{"v":1,"id":"h1","channel":"camera","title":"Driveway","body":"Car","sent_at":1700000000,
+            "loc":{"key":"frigate.object","args":{"label":"car"}}}]"""
+        assertEquals(AlertLoc("frigate.object", mapOf("label" to "car")), AlertParser.parseHistory(json)!!.single().loc)
+    }
 }

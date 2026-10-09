@@ -32,6 +32,7 @@ object AlertParser {
             resolved = cancel,
             sentAt = data["sent_at"]?.toLongOrNull()?.let(Instant::ofEpochSecond) ?: receivedAt,
             receivedAt = receivedAt,
+            loc = parseLoc(data["loc"]),
         )
     }
 
@@ -56,6 +57,21 @@ object AlertParser {
             null
         } ?: return null
         return array.mapNotNull { (it as? JsonObject)?.let { entry -> fromHistory(entry, now) } }
+    }
+
+    /** `{"key": "...", "args": {"name": "value"}}` as text. Anything else means no hint, not a dropped alert. */
+    internal fun parseLoc(raw: String?): AlertLoc? {
+        if (raw.isNullOrBlank()) return null
+        val obj = try {
+            Json.parseToJsonElement(raw) as? JsonObject
+        } catch (e: IllegalArgumentException) {
+            null
+        } ?: return null
+        val key = (obj["key"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() } ?: return null
+        val rawArgs = obj["args"] ?: JsonObject(emptyMap())
+        val args = (rawArgs as? JsonObject)?.mapValues { (_, v) -> (v as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null }
+            ?: return null
+        return AlertLoc(key, args)
     }
 
     /** `[{id,label}]` as text. Bad JSON means no actions, not a dropped alert. */

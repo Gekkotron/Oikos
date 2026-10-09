@@ -32,6 +32,9 @@ enum class Severity(val id: String) {
 
 data class AlertAction(val id: String, val label: String)
 
+/** A sentence the app writes in its own language (localized alerts spec §2): a known [key] and its arguments. */
+data class AlertLoc(val key: String, val args: Map<String, String>)
+
 /**
  * One normalized alert (spec §4.1). [resolved] is also what a cancel parses to: no other path sets it.
  * [receivedAt] is when this phone got it; for a history entry it is [sentAt].
@@ -51,6 +54,8 @@ data class Alert(
     val resolved: Boolean,
     val sentAt: Instant,
     val receivedAt: Instant,
+    /** Localized-sentence hint; null for older producers, unknown shapes and every alert stored before Room v2. */
+    val loc: AlertLoc? = null,
 ) {
     /** A notification and the sheet show at most [MAX_ACTIONS] buttons (spec §2.2). */
     val shownActions: List<AlertAction> get() = actions.take(MAX_ACTIONS)

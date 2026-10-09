@@ -115,4 +115,10 @@ class AlertDaoTest {
         assertTrue(dao.insertIfMissing(entity("old", sentAt = 1_000)))
         assertNotNull(dao.byId("old").first())
     }
+
+    @Test
+    fun `loc survives a round trip through the database`() = runBlocking {
+        dao.insert(entity("a").copy(locJson = """{"key":"frigate.object","args":{"label":"car"}}"""))
+        assertEquals("""{"key":"frigate.object","args":{"label":"car"}}""", dao.byId("a").first()?.locJson)
+    }
 }
