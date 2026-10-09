@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Localized alerts spec §5.3: frigate.object. %1$s = object or person, %2$s = zone. -->
+    <string name="alert_frigate_in">%1$s in %2$s</string>
+    <string name="alert_frigate_who">%1$s (%2$s)</string>
+
+    <string name="alert_frigate_person">Person</string>
+    <string name="alert_frigate_person_detected">Person detected</string>
+    <string name="alert_frigate_car">Car</string>
+    <string name="alert_frigate_car_detected">Car detected</string>
+    <string name="alert_frigate_truck">Truck</string>
+    <string name="alert_frigate_truck_detected">Truck detected</string>
+    <string name="alert_frigate_bus">Bus</string>
+    <string name="alert_frigate_bus_detected">Bus detected</string>
+    <string name="alert_frigate_motorcycle">Motorcycle</string>
+    <string name="alert_frigate_motorcycle_detected">Motorcycle detected</string>
+    <string name="alert_frigate_bicycle">Bicycle</string>
+    <string name="alert_frigate_bicycle_detected">Bicycle detected</string>
+    <string name="alert_frigate_dog">Dog</string>
+    <string name="alert_frigate_dog_detected">Dog detected</string>
+    <string name="alert_frigate_cat">Cat</string>
+    <string name="alert_frigate_cat_detected">Cat detected</string>
+    <string name="alert_frigate_bird">Bird</string>
+    <string name="alert_frigate_bird_detected">Bird detected</string>
+    <string name="alert_frigate_horse">Horse</string>
+    <string name="alert_frigate_horse_detected">Horse detected</string>
+    <string name="alert_frigate_package">Package</string>
+    <string name="alert_frigate_package_detected">Package detected</string>
+    <string name="alert_frigate_face">Face</string>
+    <string name="alert_frigate_face_detected">Face detected</string>
+    <string name="alert_frigate_license_plate">License plate</string>
+    <string name="alert_frigate_license_plate_detected">License plate detected</string>
+    <string name="alert_frigate_amazon" translatable="false">Amazon</string>
+    <string name="alert_frigate_amazon_detected">Amazon detected</string>
+    <string name="alert_frigate_dhl" translatable="false">DHL</string>
+    <string name="alert_frigate_dhl_detected">DHL detected</string>
+    <string name="alert_frigate_dpd" translatable="false">DPD</string>
+    <string name="alert_frigate_dpd_detected">DPD detected</string>
+    <string name="alert_frigate_fedex" translatable="false">FedEx</string>
+    <string name="alert_frigate_fedex_detected">FedEx detected</string>
+    <string name="alert_frigate_gls" translatable="false">GLS</string>
+    <string name="alert_frigate_gls_detected">GLS detected</string>
+    <string name="alert_frigate_ups" translatable="false">UPS</string>
+    <string name="alert_frigate_ups_detected">UPS detected</string>
+    <string name="alert_frigate_usps" translatable="false">USPS</string>
+    <string name="alert_frigate_usps_detected">USPS detected</string>
+</resources>

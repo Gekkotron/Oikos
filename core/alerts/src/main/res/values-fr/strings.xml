@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alert_frigate_in">%1$s dans %2$s</string>
+    <string name="alert_frigate_who">%1$s (%2$s)</string>
+
+    <string name="alert_frigate_person">Personne</string>
+    <string name="alert_frigate_person_detected">Personne détectée</string>
+    <string name="alert_frigate_car">Voiture</string>
+    <string name="alert_frigate_car_detected">Voiture détectée</string>
+    <string name="alert_frigate_truck">Camion</string>
+    <string name="alert_frigate_truck_detected">Camion détecté</string>
+    <string name="alert_frigate_bus">Bus</string>
+    <string name="alert_frigate_bus_detected">Bus détecté</string>
+    <string name="alert_frigate_motorcycle">Moto</string>
+    <string name="alert_frigate_motorcycle_detected">Moto détectée</string>
+    <string name="alert_frigate_bicycle">Vélo</string>
+    <string name="alert_frigate_bicycle_detected">Vélo détecté</string>
+    <string name="alert_frigate_dog">Chien</string>
+    <string name="alert_frigate_dog_detected">Chien détecté</string>
+    <string name="alert_frigate_cat">Chat</string>
+    <string name="alert_frigate_cat_detected">Chat détecté</string>
+    <string name="alert_frigate_bird">Oiseau</string>
+    <string name="alert_frigate_bird_detected">Oiseau détecté</string>
+    <string name="alert_frigate_horse">Cheval</string>
+    <string name="alert_frigate_horse_detected">Cheval détecté</string>
+    <string name="alert_frigate_package">Colis</string>
+    <string name="alert_frigate_package_detected">Colis détecté</string>
+    <string name="alert_frigate_face">Visage</string>
+    <string name="alert_frigate_face_detected">Visage détecté</string>
+    <string name="alert_frigate_license_plate">Plaque d\'immatriculation</string>
+    <string name="alert_frigate_license_plate_detected">Plaque d\'immatriculation détectée</string>
+    <string name="alert_frigate_amazon_detected">Amazon détecté</string>
+    <string name="alert_frigate_dhl_detected">DHL détecté</string>
+    <string name="alert_frigate_dpd_detected">DPD détecté</string>
+    <string name="alert_frigate_fedex_detected">FedEx détecté</string>
+    <string name="alert_frigate_gls_detected">GLS détecté</string>
+    <string name="alert_frigate_ups_detected">UPS détecté</string>
+    <string name="alert_frigate_usps_detected">USPS détecté</string>
+</resources>
