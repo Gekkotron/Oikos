@@ -39,6 +39,7 @@ class DemoBrokerTest {
         "demo_bedroom_window", "demo_kitchen_smoke", "demo_garage_leak",
         "demo_alarm", "demo_alarm_intrusion", "demo_water_heater_target", "demo_vacuum_mode", "demo_vacuum_start",
         "demo_bedroom_strip", "demo_bedroom_strip_effect_speed", "demo_bedroom_strip_effect_intensity",
+        "demo_living_shutter_side", "demo_living_door_shutter", "demo_living_ceiling", "demo_living_spot",
     )
 
     private class Harness(val broker: DemoBroker, val source: MqttDiscoverySource, val diagnostics: List<Diagnostic>)

@@ -106,13 +106,13 @@ private fun GroupButton(glyph: String, label: String, tag: String, enabled: Bool
     ) { Text(glyph) }
 }
 
-/** One bar per member, filled to its position. Decorative: the summary text carries the meaning. */
+/** One bar per member, filled left to right to its position. Decorative: the summary text carries the meaning. */
 @Composable
 private fun MiniBars(positions: List<Int>) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(14.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         for (p in positions) {
             Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(OikosTheme.colors.cardBorder)) {
-                Box(Modifier.fillMaxWidth().fillMaxHeight(p / 100f).background(OikosTheme.colors.warning.copy(alpha = 0.85f)))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(p / 100f).background(OikosTheme.colors.warning.copy(alpha = 0.85f)))
             }
         }
     }

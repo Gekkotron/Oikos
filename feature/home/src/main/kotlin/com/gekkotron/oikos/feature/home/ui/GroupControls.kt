@@ -63,7 +63,7 @@ private fun CoverGroupControls(card: CardUi, onSendGroup: (String, Command) -> U
     if (card.capabilities.position) {
         val start = GroupMath.meanPosition(card)
         var value by remember(start) { mutableFloatStateOf(start.toFloat()) }
-        Row { Text(stringResource(R.string.sheet_all_to), Modifier.weight(1f)); Text("${value.roundToInt()} %") }
+        Row { Text(stringResource(R.string.sheet_all_to), Modifier.weight(1f)); Text(stringResource(R.string.value_percent, value.roundToInt())) }
         Slider(
             value = value,
             onValueChange = { value = it },
