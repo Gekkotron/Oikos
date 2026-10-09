@@ -119,6 +119,38 @@ class LightSheetTest {
     }
 
     @Test
+    fun `the white chip sends saturation 0 and is not selected on a coloured strip`() {
+        show()
+        compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
+        compose.onNodeWithText("White").performScrollTo().assertIsNotSelected().performClick()
+        val color = (sends.last().second as Command.TurnOn).color!!
+        assertEquals(0.0, color.saturation, "saturation ${color.saturation}")
+    }
+
+    @Test
+    fun `the white chip is selected when the current colour is near white`() {
+        val whiteStates = states + ("strip" to EntityState("strip", StateValue.Light(true, 120, "fire_1d", Hs(0.0, 0.0))))
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                HomeScreen(
+                    state = HomeUiBuilder.build(entities, whiteStates, emptyList(), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                    onSelect = {}, onTap = {}, onSend = { id, c -> sends += id to c },
+                    now = LocalTime.NOON,
+                )
+            }
+        }
+        compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
+        compose.onNodeWithText("White").performScrollTo().assertIsSelected()
+    }
+
+    @Test
+    fun `no white chip without a color mode`() {
+        show()
+        compose.onNodeWithTag("card-lamp").performTouchInput { longClick() }
+        compose.onNodeWithText("White").assertDoesNotExist()
+    }
+
+    @Test
     fun `a swipe that starts away from the marker scrolls the sheet instead of picking a color`() {
         show()
         compose.onNodeWithTag("card-strip").performTouchInput { longClick() }
