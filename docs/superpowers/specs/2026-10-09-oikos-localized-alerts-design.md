@@ -54,10 +54,10 @@ New optional field:
 - Room `AlertDatabase` v1 → v2: nullable `loc` TEXT column holding the JSON, via `@AutoMigration(from = 1, to = 2)` (schemas are exported). Existing rows get `null`.
 
 ### 5.2 Composing the text
-`AlertText.body(alert: Alert, strings: AlertStrings): String`, pure:
+`AlertText.body(alert: Alert, resources: Resources): String`:
 - known `loc.key` with its required args recognised → the localized sentence;
 - otherwise (no `loc`, unknown key, unknown label, missing `label`) → `alert.body`.
-- `AlertStrings` is a small interface over Android resources so the logic is unit-testable; the Android implementation reads `:core:alerts` string resources in the current configuration.
+- It reads `:core:alerts` string resources in the given configuration; tests run it under Robolectric with `en` and `fr` qualifiers (amended 2026-10-09: no separate `AlertStrings` interface).
 - The title is unchanged (the server's camera name).
 
 ### 5.3 `frigate.object`
@@ -88,7 +88,7 @@ Every step is backward compatible; the order only decides when French appears:
 - Unknown label spelling or case → fallback to `body`.
 - Unknown extra args are ignored.
 - `cancel` payloads carry no `loc`.
-- Long user names are capped by OikosPush (200 chars per arg value).
+- An arg value over 200 characters makes OikosPush drop the whole `loc` (the alert falls back to its English `body`); names are not truncated (amended 2026-10-09).
 
 ## 8. Testing
 - **OikosPush (pytest):** valid `loc` kept; each invalid shape dropped while the alert is still delivered; `loc` present in the FCM data map as compact JSON and in the history buffer; legacy payloads have none.
