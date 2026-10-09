@@ -19,8 +19,6 @@
     <string name="voice_no">No</string>
     <string name="voice_cancel">Cancel</string>
     <string name="voice_mic_cd">Say a command</string>
-    <string name="voice_widget_label">Voice</string>
-    <string name="voice_widget_description">Say a command to Oikos</string>
     <string name="voice_disarm">Disarm</string>
     <string name="voice_arm_away">Arm (away)</string>
     <string name="voice_arm_home">Arm (home)</string>

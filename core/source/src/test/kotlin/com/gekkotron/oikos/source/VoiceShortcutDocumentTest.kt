@@ -45,4 +45,13 @@ class VoiceShortcutDocumentTest {
         val doc = VoiceShortcutDocument(phrase = "x", lang = "fr", action = "BOGUS", entityIds = listOf("x"))
         assertNull(doc.toShortcut())
     }
+    @Test fun `toShortcut with no id hashes the normalized phrase`() {
+        val doc = VoiceShortcutDocument(phrase = "Il fait sombre dans le salon.", lang = "fr", action = "TURN_ON", entityIds = listOf("x"))
+        val sc = doc.toShortcut()!!
+        val expected = com.gekkotron.oikos.voice.VoiceShortcut.id(
+            com.gekkotron.oikos.voice.VoiceLang.FR,
+            com.gekkotron.oikos.voice.VoiceText.normalizeShortcut("Il fait sombre dans le salon.", com.gekkotron.oikos.voice.VoiceLang.FR),
+        )
+        assertEquals(expected, sc.id)
+    }
 }

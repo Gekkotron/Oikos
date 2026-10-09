@@ -5,6 +5,7 @@ import com.gekkotron.oikos.voice.VoiceAction
 import com.gekkotron.oikos.voice.VoiceIntent
 import com.gekkotron.oikos.voice.VoiceLang
 import com.gekkotron.oikos.voice.VoiceShortcut
+import com.gekkotron.oikos.voice.VoiceText
 import kotlinx.serialization.Serializable
 
 /** Retained JSON payload on `<prefix>/voice/shortcut/<id>` (voice spec §4). */
@@ -25,7 +26,7 @@ data class VoiceShortcutDocument(
         }
         val voiceAction = VoiceAction.entries.firstOrNull { it.name == action } ?: return null
         return VoiceShortcut(
-            id = id ?: VoiceShortcut.id(voiceLang, phrase),
+            id = id ?: VoiceShortcut.id(voiceLang, VoiceText.normalizeShortcut(phrase, voiceLang)),
             phrase = phrase,
             lang = voiceLang,
             intent = VoiceIntent(voiceAction, entityIds, value),
