@@ -41,6 +41,7 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
@@ -139,6 +140,8 @@ fun HistoryLineChart(
 @Composable
 fun DailyBarsChart(
     bars: List<ChartBar>,
+    /** Drawn as a line across the bars; null draws none. */
+    average: Double?,
     color: Color,
     formatValue: (Double) -> String,
     formatDay: (Long) -> String,
@@ -187,6 +190,7 @@ fun DailyBarsChart(
             valueFormatter = CartesianValueFormatter { _, value, _ -> formatDay(first + value.toLong()) },
             itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = { spacing }),
         ),
+        decorations = listOfNotNull(average?.let { rememberAverageLine(it) }),
     )
     key(bars) {
         CartesianChartHost(
@@ -197,6 +201,16 @@ fun DailyBarsChart(
             zoomState = rememberHistoryZoom(bars.last().t - first, step),
         )
     }
+}
+
+/** A solid rule at [average]: solid so it reads apart from the dashed guidelines. */
+@Composable
+private fun rememberAverageLine(average: Double): HorizontalLine {
+    val line = rememberLineComponent(
+        fill = fill(OikosTheme.colors.content.copy(alpha = 0.85f)),
+        thickness = 1.5.dp,
+    )
+    return remember(average, line) { HorizontalLine(y = { average }, line = line, labelComponent = null) }
 }
 
 @Composable

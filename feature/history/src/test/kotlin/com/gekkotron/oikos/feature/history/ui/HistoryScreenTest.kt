@@ -66,10 +66,11 @@ class HistoryScreenTest {
     }
 
     @Test
-    fun `the bars show their total`() {
+    fun `the bars show their total and daily average`() {
         val days = DailyTotals(listOf(DayTotal(1_760_000_000L, 5.0), DayTotal(1_760_086_400L, 7.5)))
         show(HistoryUi(range = HistoryRange.D7, energy = true, toggle = true, mode = ChartMode.DAILY, content = ChartContent.Bars(days, 12.5)))
         compose.onNodeWithText("12.5 kWh over 2 days").assertExists()
+        compose.onNodeWithText("Avg 6.3 kWh/day").assertExists()
     }
 
     @Test

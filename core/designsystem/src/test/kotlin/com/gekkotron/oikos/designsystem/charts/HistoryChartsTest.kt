@@ -21,7 +21,7 @@ class HistoryChartsTest {
         compose.setContent {
             OikosTheme {
                 HistoryLineChart(points, Color.Red, { "%.1f".format(it) }, { "$it" }, "line")
-                DailyBarsChart(listOf(ChartBar(1_696_000_000, 3.2), ChartBar(1_696_086_400, 4.1)), Color.Blue, { "$it" }, { "$it" }, "bars")
+                DailyBarsChart(listOf(ChartBar(1_696_000_000, 3.2), ChartBar(1_696_086_400, 4.1)), 3.65, Color.Blue, { "$it" }, { "$it" }, "bars")
             }
         }
         compose.onNodeWithContentDescription("line").assertExists()

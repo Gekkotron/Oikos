@@ -9,7 +9,10 @@ enum class ChartMode { POWER, DAILY }
 sealed interface ChartContent {
     data object Loading : ChartContent
     data class Line(val series: Series, val min: Double, val avg: Double, val max: Double) : ChartContent
-    data class Bars(val days: DailyTotals, val total: Double) : ChartContent
+    data class Bars(val days: DailyTotals, val total: Double) : ChartContent {
+        /** kWh per day over the days shown. */
+        val avg: Double get() = if (days.days.isEmpty()) 0.0 else total / days.days.size
+    }
     data object NoData : ChartContent
     data object NotRecorded : ChartContent
     data object NotAllowed : ChartContent

@@ -214,15 +214,20 @@ private fun BarsBody(state: HistoryUi, bars: ChartContent.Bars, zone: ZoneId, lo
     val chartBars = remember(bars) { bars.days.days.map { ChartBar(it.t, it.kwh) } }
     val title = state.title ?: stringResource(DsR.string.energy_house)
     val total = format(bars.total, 1, locale)
-    val description = stringResource(R.string.history_cd_bars, title, stringResource(rangeDescription(state.range)), total)
+    val avg = format(bars.avg, 1, locale)
+    val description = stringResource(R.string.history_cd_bars, title, stringResource(rangeDescription(state.range)), total, avg)
     DailyBarsChart(
         bars = chartBars,
+        average = bars.avg,
         color = OikosTheme.colors.solar,
         formatValue = { format(it, 1, locale) },
         formatDay = timeFormatter(HistoryRange.D30, zone, locale),
         contentDescription = description,
     )
-    Text(stringResource(R.string.history_total, total, bars.days.days.size), style = OikosTheme.type.body)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(stringResource(R.string.history_total, total, bars.days.days.size), style = OikosTheme.type.body)
+        Text(stringResource(R.string.history_avg_per_day, avg), style = OikosTheme.type.body)
+    }
 }
 
 private fun rangeLabel(range: HistoryRange) = when (range) {

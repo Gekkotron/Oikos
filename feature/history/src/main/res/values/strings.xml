@@ -10,13 +10,14 @@
     <string name="history_avg">Avg</string>
     <string name="history_max">Max</string>
     <string name="history_total">%1$s kWh over %2$d days</string>
+    <string name="history_avg_per_day">Avg %1$s kWh/day</string>
     <string name="history_no_data">No data in this period</string>
     <string name="history_not_recorded">No history recorded for this device</string>
     <string name="history_not_allowed">Add the history host to the gateway key</string>
     <string name="history_unavailable">History unavailable</string>
     <string name="history_retry">Retry</string>
     <string name="history_cd_line">%1$s, %2$s, min %3$s, max %4$s</string>
-    <string name="history_cd_bars">%1$s, kWh per day, %2$s, total %3$s kWh</string>
+    <string name="history_cd_bars">%1$s, kWh per day, %2$s, total %3$s kWh, average %4$s kWh per day</string>
     <string name="history_cd_range_24h">last 24 hours</string>
     <string name="history_cd_range_7d">last 7 days</string>
     <string name="history_cd_range_30d">last 30 days</string>
