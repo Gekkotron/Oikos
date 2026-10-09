@@ -85,7 +85,13 @@ class VoiceSession(
                 lang = catalog.lang,
                 intent = suggestion.intent,
             )
-            runCatching { onLearn(learned) }
+            try {
+                onLearn(learned)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // learning is best-effort; keep executing the chosen command
+            }
             handleIntent(suggestion.intent, VoiceSource.RULES)
         }
     }
