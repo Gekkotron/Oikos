@@ -6,6 +6,7 @@ import com.gekkotron.oikos.connection.EntitySourceSession
 import com.gekkotron.oikos.connection.HeadlessEntities
 import com.gekkotron.oikos.connection.TransportFactory
 import com.gekkotron.oikos.connection.WidgetMirror
+import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.data.ConnectionProfile
 import com.gekkotron.oikos.data.EntityCache
 import com.gekkotron.oikos.data.ProfileRepository
@@ -95,7 +96,8 @@ object WidgetModule {
         snapshots: WidgetSnapshotStore,
         scheduler: WidgetScheduler,
         refresher: WidgetRefresher,
-    ): WidgetComponent = WidgetComponent(entities, configs, snapshots, scheduler, refresher)
+        preferences: AppPreferences,
+    ): WidgetComponent = WidgetComponent(entities, configs, snapshots, scheduler, refresher, preferences.voiceEnabled.map { it ?: false })
 
     @Provides
     @Singleton

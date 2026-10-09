@@ -32,8 +32,7 @@ internal fun ColumnScope.ListeningView(partial: String) {
         label = "micAlpha",
     )
     val cd = stringResource(R.string.voice_mic_cd)
-    // TODO: swap for OikosGlyph.MIC when it ships.
-    StaticIcon(OikosGlyph.BULB, OikosTheme.colors.warning, Modifier.size(56.dp).alpha(pulse).semantics { contentDescription = cd })
+    StaticIcon(OikosGlyph.MIC, OikosTheme.colors.warning, Modifier.size(56.dp).alpha(pulse).semantics { contentDescription = cd })
     Text(
         partial.ifBlank { stringResource(R.string.voice_listening) },
         style = OikosTheme.type.display.copy(fontSize = 20.sp),

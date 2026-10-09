@@ -56,6 +56,7 @@ data class WidgetUiState(
     val lastFresh: Long?,
     val now: Long,
     val configured: Boolean,
+    val voiceEnabled: Boolean = false,
 )
 
 /** Turns what a tap means into a Glance [Action]; the widget supplies the Android side. */
@@ -69,6 +70,9 @@ interface WidgetActions {
     fun openApp(): Action
 
     fun openSettings(): Action
+
+    /** Opens the voice sheet; defaults to the app for hosts that have none. */
+    fun openVoice(): Action = openApp()
 }
 
 /** The single large tile when the widget is one row high (widgets spec §2.2). */
@@ -274,6 +278,15 @@ private fun Footer(state: WidgetUiState, actions: WidgetActions) {
     // The whole strip is the touch target (full width, padded top and bottom), not only the 14dp glyph.
     Row(GlanceModifier.fillMaxWidth().height(FOOTER).padding(horizontal = 6.dp).clickable(onClick), verticalAlignment = Alignment.CenterVertically) {
         Text(label, maxLines = 1, style = TextStyle(color = tone, fontSize = 10.sp), modifier = GlanceModifier.defaultWeight())
+        if (state.voiceEnabled) {
+            Image(
+                ImageProvider(R.drawable.ic_widget_mic),
+                contentDescription = context.getString(R.string.widget_voice),
+                colorFilter = ColorFilter.tint(Palette.icon),
+                modifier = GlanceModifier.size(20.dp).clickable(actions.openVoice()),
+            )
+            Spacer(GlanceModifier.width(14.dp))
+        }
         Image(
             ImageProvider(R.drawable.ic_widget_refresh),
             contentDescription = context.getString(R.string.widget_refresh),

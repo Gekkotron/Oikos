@@ -202,4 +202,5 @@
     <string name="customize_ungroup_all">Ungroup all</string>
     <string name="customize_grouped_cover">Group with the other shutters in this room</string>
     <string name="customize_grouped_light">Group with the other lights in this room</string>
+    <string name="home_voice_cd">Say a command</string>
 </resources>

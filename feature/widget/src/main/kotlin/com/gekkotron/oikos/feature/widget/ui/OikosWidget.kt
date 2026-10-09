@@ -38,6 +38,10 @@ object AppLinks {
     const val SETTINGS = "oikos://settings"
 }
 
+/** Addressed by class name so the widget module does not depend on `:feature:voice`. */
+internal fun voiceIntent(context: Context): Intent =
+    Intent().setClassName(context, "com.gekkotron.oikos.feature.voice.VoiceActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
 private val Context.widgetComponent: WidgetComponent get() = (applicationContext as WidgetComponentProvider).widgetComponent()
 
 /** "Oikos devices": draws from the config and snapshot stores only and never connects (widgets spec §3.2). */
@@ -49,10 +53,10 @@ class OikosWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val component = context.widgetComponent
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val data = combine(component.configs.configs, component.snapshots.snapshot) { configs, snapshot -> configs[appWidgetId] to snapshot }
+        val data = combine(component.configs.configs, component.snapshots.snapshot, component.voiceEnabled) { configs, snapshot, voice -> Triple(configs[appWidgetId], snapshot, voice) }
         provideContent {
-            val current by data.collectAsState(initial = null to WidgetSnapshot())
-            WidgetContent(uiState(current.first, current.second, System.currentTimeMillis()), Actions(context, appWidgetId))
+            val current by data.collectAsState(initial = Triple(null, WidgetSnapshot(), false))
+            WidgetContent(uiState(current.first, current.second, current.third, System.currentTimeMillis()), Actions(context, appWidgetId))
         }
     }
 
@@ -61,13 +65,14 @@ class OikosWidget : GlanceAppWidget() {
         context.widgetComponent.configs.remove(intArrayOf(GlanceAppWidgetManager(context).getAppWidgetId(glanceId)))
     }
 
-    private fun uiState(config: WidgetConfig?, snapshot: WidgetSnapshot, now: Long) = WidgetUiState(
+    private fun uiState(config: WidgetConfig?, snapshot: WidgetSnapshot, voiceEnabled: Boolean, now: Long) = WidgetUiState(
         tiles = config?.uniqueIds.orEmpty().map { snapshot.tiles[it] },
         armMode = config?.armMode,
         link = snapshot.link,
         lastFresh = snapshot.lastFresh,
         now = now,
         configured = !config?.uniqueIds.isNullOrEmpty(),
+        voiceEnabled = voiceEnabled,
     )
 
     private class Actions(private val context: Context, private val appWidgetId: Int) : WidgetActions {
@@ -92,6 +97,8 @@ class OikosWidget : GlanceAppWidget() {
         )
 
         override fun openSettings(): Action = actionStartActivity(view(AppLinks.SETTINGS))
+
+        override fun openVoice(): Action = actionStartActivity(voiceIntent(context))
 
         private fun view(uri: String) = Intent(Intent.ACTION_VIEW, uri.toUri()).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

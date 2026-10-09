@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.home.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.history.HistoryClient
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,7 +43,13 @@ class HomeViewModel @Inject constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val labels: LabelText = LabelText { null },
     private val history: HistoryClient = HistoryClient.None,
+    preferences: AppPreferences,
 ) : ViewModel() {
+    /** Whether the opt-in voice assistant is on; the mic button shows only then. */
+    val voiceEnabled: StateFlow<Boolean> = preferences.voiceEnabled
+        .map { it ?: false }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     // conflate() collapses a burst of state messages to one rebuild per collection turn instead of one
     // per message, and flowOn moves the combine (and HomeUiBuilder.build) off Main; the final value is
     // never dropped.

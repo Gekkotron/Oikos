@@ -58,6 +58,8 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.designsystem.OikosDimens
@@ -88,6 +90,7 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val voiceEnabled by viewModel.voiceEnabled.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send, onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids) })
     HomeScreen(
@@ -101,6 +104,7 @@ fun HomeRoute(
         onOpenHistory = onOpenHistory,
         onSendGroup = { id, c -> viewModel.sendGroup(id, c) },
         onCustomizeGroup = viewModel::customizeGroup,
+        voiceEnabled = voiceEnabled,
     )
 }
 
@@ -121,6 +125,7 @@ fun HomeScreen(
     onOpenHistory: (String) -> Unit = {},
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
     onCustomizeGroup: (String, String, List<String>) -> Unit = { _, _, _ -> },
+    voiceEnabled: Boolean = false,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -154,7 +159,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
                 verticalArrangement = Arrangement.spacedBy(OikosDimens.gridGap),
             ) {
-                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings) }
+                item(key = "header", span = { GridItemSpan(maxLineSpan) }) { HomeHeader(state, now, onPillClick = { linkSheet = true }, onHeroLongClick = { state.hero?.let { customizeId = it.id } }, onSearchClick = { searching = true }, onSettingsClick = onOpenSettings, voiceEnabled = voiceEnabled) }
                 item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
                     if (searching) SearchField(state.query, onSearch, onClose = closeSearch) else HomeChips(state, onSelect)
                 }
@@ -242,8 +247,10 @@ fun HomeScreen(
     }
 }
 
+private const val VOICE_ACTIVITY = "com.gekkotron.oikos.feature.voice.VoiceActivity"
+
 @Composable
-private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}) {
+private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Unit = {}, onHeroLongClick: () -> Unit = {}, onSearchClick: () -> Unit = {}, onSettingsClick: () -> Unit = {}, voiceEnabled: Boolean = false) {
     val haptics = LocalHapticFeedback.current
     val customizeLabel = stringResource(R.string.action_customize)
     val staleText = stringResource(R.string.card_stale)
@@ -277,6 +284,14 @@ private fun HomeHeader(state: HomeUiState, now: LocalTime, onPillClick: () -> Un
         Row(verticalAlignment = Alignment.CenterVertically) {
             LinkPill(state.link, onClick = onPillClick)
             Spacer(Modifier.weight(1f))
+            if (voiceEnabled) {
+                val ctx = LocalContext.current
+                val voiceLabel = stringResource(R.string.home_voice_cd)
+                // Addressed by class name so :feature:home does not depend on :feature:voice.
+                IconButton(onClick = { ctx.startActivity(Intent().setClassName(ctx, VOICE_ACTIVITY)) }) {
+                    StaticIcon(OikosGlyph.MIC, modifier = Modifier.size(24.dp).semantics { contentDescription = voiceLabel })
+                }
+            }
             IconButton(onClick = onSearchClick) {
                 StaticIcon(OikosGlyph.SEARCH, modifier = Modifier.size(24.dp).semantics { contentDescription = searchLabel })
             }
