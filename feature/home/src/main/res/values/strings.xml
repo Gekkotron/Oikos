@@ -32,6 +32,7 @@
     <string name="sheet_effect">Effect</string>
     <string name="sheet_color">Color</string>
     <string name="sheet_color_state">Hue %1$d°, saturation %2$d %%</string>
+    <string name="sheet_color_white">White</string>
     <string name="sheet_brightness">Brightness</string>
     <string name="sheet_open">Open</string>
     <string name="sheet_stop">Stop</string>

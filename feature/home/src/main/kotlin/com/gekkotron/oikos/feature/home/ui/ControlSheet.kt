@@ -48,6 +48,7 @@ import com.gekkotron.oikos.feature.home.presentation.EffectNames
 import com.gekkotron.oikos.feature.home.presentation.hasColor
 import com.gekkotron.oikos.feature.home.presentation.StepMath
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Hs
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import kotlin.math.roundToInt
@@ -123,6 +124,11 @@ private fun LightControls(card: CardUi, onSend: (String, Command) -> Unit) {
     if (card.capabilities.hasColor) {
         Text(stringResource(R.string.sheet_color))
         HueWheel(light?.color, onPick = { send(Command.TurnOn(color = it)) })
+        FilterChip(
+            selected = (light?.color?.saturation ?: 1.0) < 0.02,
+            onClick = { send(Command.TurnOn(color = Hs(0.0, 0.0))) },
+            label = { Text(stringResource(R.string.sheet_color_white)) },
+        )
     }
 }
 
