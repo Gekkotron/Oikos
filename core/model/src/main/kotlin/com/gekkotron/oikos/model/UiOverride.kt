@@ -30,6 +30,8 @@ data class UiOverride(
     val securityAction: Boolean = false,
     /** Ask before turning this action on or pressing it; only read when [securityAction]. */
     val securityAsk: Boolean = true,
+    /** Keeps this cover or light out of its room's group card (room groups spec §6). */
+    val ungrouped: Boolean = false,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

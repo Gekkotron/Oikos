@@ -164,4 +164,16 @@
     <string name="search_no_match">Aucun appareil ne correspond à « %1$s »</string>
     <string name="customize_show_on_security">Afficher dans Sécurité</string>
     <string name="customize_ask_before">Demander avant d\'allumer</string>
+    <string name="group_default_covers">Volets</string>
+    <string name="group_default_lights">Lumières</string>
+    <string name="group_badge">×%1$d</string>
+    <string name="value_group_open_closed">Ouverts : %1$d · Fermés : %2$d</string>
+    <string name="value_group_all_open">Tous ouverts</string>
+    <string name="value_group_all_closed">Tous fermés</string>
+    <string name="value_group_lights_on">%1$d sur %2$d allumées</string>
+    <string name="value_group_all_on">Toutes allumées</string>
+    <string name="value_group_all_off">Toutes éteintes</string>
+    <string name="action_group_open">Ouvrir tous les volets</string>
+    <string name="action_group_stop">Arrêter tous les volets</string>
+    <string name="action_group_close">Fermer tous les volets</string>
 </resources>

@@ -47,6 +47,7 @@ object HomeUiBuilder {
         val hidden = standalone.filter { it.ui.hidden }
         val hero = visible.filter { it.ui.cardStyle == HERO_WEATHER }.minByOrNull { it.uniqueId }
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }
+        val groupable = RoomGroups.groupableIds(grid)
 
         val used = grid.mapTo(mutableSetOf()) { it.area }
         val chips = buildList {
@@ -64,7 +65,7 @@ object HomeUiBuilder {
             effective == RoomFilter.Hidden -> hidden
             else -> grid.filter { matches(it, effective) }
         }
-        val cards = shown
+        val sorted = shown
             .sortedWith(
                 compareBy<Entity>(
                     { it.ui.order ?: Int.MAX_VALUE },
@@ -73,7 +74,10 @@ object HomeUiBuilder {
                     { it.uniqueId },
                 ),
             )
-            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled) }
+            .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled, it.uniqueId in groupable) }
+        // Room groups spec §2.1: groups only in All and a room, never in Favourites, Hidden or search.
+        val folds = query.isBlank() && (effective == RoomFilter.All || effective is RoomFilter.Area)
+        val cards = if (folds) RoomGroups.fold(sorted, areas) else sorted
 
         return HomeUiState(
             loading = entities.isEmpty(),
@@ -153,6 +157,7 @@ object HomeUiBuilder {
         locale: Locale,
         companions: List<CardUi>,
         historyEnabled: Boolean,
+        groupable: Boolean = false,
     ): CardUi {
         val hasHistory = historyEnabled && HistoryRefs.of(entity) != null
         val value = state?.value ?: StateValue.Unknown
@@ -178,6 +183,7 @@ object HomeUiBuilder {
             ui = entity.ui,
             hidden = entity.ui.hidden,
             companions = companions,
+            groupable = groupable,
         )
     }
 

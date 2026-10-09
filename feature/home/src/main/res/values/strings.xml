@@ -164,4 +164,16 @@
     <string name="search_no_match">No device matches “%1$s”</string>
     <string name="customize_show_on_security">Show on Security</string>
     <string name="customize_ask_before">Ask before turning on</string>
+    <string name="group_default_covers">Shutters</string>
+    <string name="group_default_lights">Lights</string>
+    <string name="group_badge">×%1$d</string>
+    <string name="value_group_open_closed">%1$d open · %2$d closed</string>
+    <string name="value_group_all_open">All open</string>
+    <string name="value_group_all_closed">All closed</string>
+    <string name="value_group_lights_on">%1$d of %2$d on</string>
+    <string name="value_group_all_on">All on</string>
+    <string name="value_group_all_off">All off</string>
+    <string name="action_group_open">Open all shutters</string>
+    <string name="action_group_stop">Stop all shutters</string>
+    <string name="action_group_close">Close all shutters</string>
 </resources>
