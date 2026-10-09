@@ -53,6 +53,25 @@ class WidgetContentTest {
     }
 
     @Test
+    fun single_tile_shows_value_and_name_without_footer() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(180.dp, 60.dp))
+        provideComposable { WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true))), noop) }
+        onNode(hasText("Kettle")).assertExists()
+        onNode(hasText("On")).assertExists()
+        onNode(hasText("Updated")).assertDoesNotExist()
+    }
+
+    @Test
+    fun cover_buttons_show_on_a_wide_single_tile() = runGlanceAppWidgetUnitTest {
+        setContext(context)
+        setAppWidgetSize(DpSize(250.dp, 60.dp))
+        provideComposable { WidgetContent(state(tile("b", "Blind", Kind.COVER, TileValue.Cover(CoverState.OPEN, 60))), noop) }
+        onNode(hasText("Stop")).assertExists()
+        onNode(hasText("Close")).assertExists()
+    }
+
+    @Test
     fun large_size_shows_all_tiles_and_footer() = runGlanceAppWidgetUnitTest {
         setContext(context)
         setAppWidgetSize(DpSize(250.dp, 250.dp))
@@ -122,5 +141,30 @@ class WidgetContentTest {
         setAppWidgetSize(DpSize(250.dp, 250.dp))
         provideComposable { WidgetContent(state(tile("a", "Kettle", Kind.SWITCH, TileValue.OnOff(true)), link = LinkStatus.AUTH_FAILED), noop) }
         onNode(hasText("Sign-in failed")).assertExists()
+    }
+}
+
+@RunWith(AndroidJUnit4::class)
+class TileIsOnTest {
+    private val now = 10_000_000L
+    private fun tile(kind: Kind, value: TileValue, f: (TileSnapshot) -> TileSnapshot = { it }) =
+        f(TileSnapshot("a", "A", kind, TileIcon.SWITCH, value, updatedAt = now))
+
+    @Test
+    fun live_on_values_take_the_accent() {
+        assert(tile(Kind.LIGHT, TileValue.Light(true, 40)).isOn(now))
+        assert(tile(Kind.SWITCH, TileValue.OnOff(true)).isOn(now))
+        assert(tile(Kind.COVER, TileValue.Cover(CoverState.OPEN, 100)).isOn(now))
+        assert(tile(Kind.ALARM_PANEL, TileValue.Alarm(com.gekkotron.oikos.model.AlarmState.ARMED_AWAY)).isOn(now))
+    }
+
+    @Test
+    fun off_stale_unavailable_and_sensors_stay_neutral() {
+        assert(!tile(Kind.LIGHT, TileValue.Light(false, null)).isOn(now))
+        assert(!tile(Kind.COVER, TileValue.Cover(CoverState.CLOSED, 0)).isOn(now))
+        assert(!tile(Kind.ALARM_PANEL, TileValue.Alarm(com.gekkotron.oikos.model.AlarmState.DISARMED)).isOn(now))
+        assert(!tile(Kind.BINARY_SENSOR, TileValue.OnOff(true)).isOn(now))
+        assert(!tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(updatedAt = now - TileSnapshot.STALE_MS - 1) }.isOn(now))
+        assert(!tile(Kind.SWITCH, TileValue.OnOff(true)) { it.copy(available = false) }.isOn(now))
     }
 }
