@@ -49,7 +49,8 @@ class VoiceSession(
     private var pendingIntent: VoiceIntent? = null
     private var pendingSource: VoiceSource = VoiceSource.RULES
     private var pendingCode: String? = null
-    private var lastTranscript: String? = null
+    var lastTranscript: String? = null
+        private set
 
     fun start() {
         speech.start(object : SpeechCapture.Callbacks {

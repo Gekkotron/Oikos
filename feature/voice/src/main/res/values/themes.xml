@@ -1,0 +1,4 @@
+<resources>
+    <!-- The voice sheet floats over the previous app: no window background, no title. -->
+    <style name="Theme.OikosVoice.Translucent" parent="@android:style/Theme.Translucent.NoTitleBar" />
+</resources>

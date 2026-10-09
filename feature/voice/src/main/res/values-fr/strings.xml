@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_sheet_title">Vocal</string>
+    <string name="voice_listening">Écoute…</string>
+    <string name="voice_not_understood">Tu voulais dire… ?</string>
+    <string name="voice_other">Autre…</string>
+    <string name="voice_ignore">Ignorer</string>
+    <string name="voice_wrong">✗ Faux</string>
+    <string name="voice_mqtt_down">Pas de connexion à la maison</string>
+    <string name="voice_silence">Je n\'ai rien entendu</string>
+    <string name="voice_speech_error">Reconnaissance vocale indisponible</string>
+    <string name="voice_permission_denied">Permission micro requise</string>
+    <string name="voice_unknown_error">Une erreur est survenue</string>
+    <string name="voice_confirm_disarm">Désarmer l\'alarme ?</string>
+    <string name="voice_confirm_arm_away">Armer l\'alarme (absent) ?</string>
+    <string name="voice_confirm_arm_home">Armer l\'alarme (présent) ?</string>
+    <string name="voice_confirm_siren">Déclencher la sirène ?</string>
+    <string name="voice_yes">Oui</string>
+    <string name="voice_no">Non</string>
+    <string name="voice_cancel">Annuler</string>
+    <string name="voice_mic_cd">Dis une commande</string>
+    <string name="voice_widget_label">Vocal</string>
+    <string name="voice_widget_description">Dis une commande à Oikos</string>
+    <string name="voice_disarm">Désarmer</string>
+    <string name="voice_arm_away">Armer (absent)</string>
+    <string name="voice_arm_home">Armer (présent)</string>
+</resources>

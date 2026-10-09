@@ -4,5 +4,13 @@
             <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
-    <application />
+    <application>
+        <activity
+            android:name=".VoiceActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/Theme.OikosVoice.Translucent" />
+    </application>
 </manifest>
