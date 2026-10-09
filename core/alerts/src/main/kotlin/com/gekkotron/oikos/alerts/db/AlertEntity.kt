@@ -21,6 +21,8 @@ data class AlertEntity(
     val resolved: Boolean,
     val sentAt: Long,
     val receivedAt: Long,
+    /** [com.gekkotron.oikos.alerts.AlertLoc] as JSON; added in version 2 (localized alerts spec §5.1). */
+    val locJson: String? = null,
 )
 
 /** Small key/value rows, for the "Clear all" marker. */

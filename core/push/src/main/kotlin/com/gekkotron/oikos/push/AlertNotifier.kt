@@ -11,6 +11,7 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.gekkotron.oikos.alerts.Alert
+import com.gekkotron.oikos.alerts.text.AlertText
 import com.gekkotron.oikos.alerts.AlertAction
 import com.gekkotron.oikos.alerts.media.AlertImageCache
 import com.gekkotron.oikos.alerts.media.MediaSource
@@ -99,11 +100,13 @@ class AlertNotifier(
     }
 
     internal fun build(alert: Alert, picture: Bitmap?): Notification {
+        // In the app's language when the alert carries a known loc hint (localized alerts spec §5.4).
+        val body = AlertText.body(alert, context.resources)
         val builder = NotificationCompat.Builder(context, alert.channel.id)
             .setSmallIcon(R.drawable.ic_stat_oikos)
             .setColor(AlertChannels.accent(alert.channel))
             .setContentTitle(alert.title)
-            .setContentText(alert.body)
+            .setContentText(body)
             .setWhen(alert.sentAt.toEpochMilli())
             .setShowWhen(true)
             .setAutoCancel(true)
@@ -111,9 +114,9 @@ class AlertNotifier(
             .setContentIntent(openIntent(alert.id))
         if (picture != null) {
             builder.setLargeIcon(picture)
-                .setStyle(NotificationCompat.BigPictureStyle().bigPicture(picture).bigLargeIcon(null as Bitmap?).setSummaryText(alert.body))
+                .setStyle(NotificationCompat.BigPictureStyle().bigPicture(picture).bigLargeIcon(null as Bitmap?).setSummaryText(body))
         } else {
-            builder.setStyle(NotificationCompat.BigTextStyle().bigText(alert.body))
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(body))
         }
         alert.shownActions.forEach { builder.addAction(0, it.label, replyIntent(alert.id, it)) }
         return builder.build()

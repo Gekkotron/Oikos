@@ -3,6 +3,7 @@ package com.gekkotron.oikos.alerts.demo
 import com.gekkotron.oikos.alerts.Alert
 import com.gekkotron.oikos.alerts.AlertAction
 import com.gekkotron.oikos.alerts.AlertChannel
+import com.gekkotron.oikos.alerts.AlertLoc
 import com.gekkotron.oikos.alerts.Severity
 import java.time.Duration
 import java.time.Instant
@@ -15,7 +16,7 @@ object DemoAlerts {
 
     fun all(now: Instant): List<Alert> = listOf(
         demo("demo-security", AlertChannel.SECURITY, Severity.WARNING, "Front door opened", "The entrance door opened while the alarm was armed.", Duration.ofMinutes(2), now, image = FRONT_DOOR_IMAGE),
-        demo("demo-camera", AlertChannel.CAMERA, Severity.INFO, "Person in the garden", "A person was detected near the back fence.", Duration.ofMinutes(18), now, image = GARDEN_IMAGE),
+        demo("demo-camera", AlertChannel.CAMERA, Severity.INFO, "Person in the garden", "A person was detected near the back fence.", Duration.ofMinutes(18), now, image = GARDEN_IMAGE, loc = AlertLoc("frigate.object", mapOf("label" to "person", "zone" to "Garden"))),
         demo("demo-alarm", AlertChannel.ALARM, Severity.CRITICAL, "Alarm triggered", "The garage door was forced. The alarm has been disarmed since.", Duration.ofHours(1), now, image = GARAGE_IMAGE, resolved = true, actions = listOf(AlertAction("silence", "Silence the siren"), AlertAction("disarm", "Disarm"))),
         demo("demo-energy", AlertChannel.ENERGY, Severity.INFO, "Solar peak", "Production reached 3.2 kW, the best of the week.", Duration.ofHours(3), now),
         demo("demo-climate", AlertChannel.CLIMATE, Severity.WARNING, "The living room is warm", "The temperature is 26.4 °C.", Duration.ofHours(26), now),
@@ -33,8 +34,9 @@ object DemoAlerts {
         image: String? = null,
         resolved: Boolean = false,
         actions: List<AlertAction> = emptyList(),
+        loc: AlertLoc? = null,
     ): Alert {
         val sent = now.minus(ago)
-        return Alert(id, channel, severity, title, body, image, null, null, actions, "demo", false, resolved, sent, sent)
+        return Alert(id, channel, severity, title, body, image, null, null, actions, "demo", false, resolved, sent, sent, loc)
     }
 }
