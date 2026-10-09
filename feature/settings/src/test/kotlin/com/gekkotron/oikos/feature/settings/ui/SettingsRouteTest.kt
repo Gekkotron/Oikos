@@ -56,6 +56,8 @@ class SettingsRouteTest {
             ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
             AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
             push,
+            com.gekkotron.oikos.feature.settings.FakeEntitySource(),
+            com.gekkotron.oikos.feature.voice.SpeechAvailability.Status.Ready,
         )
         lateinit var registry: LifecycleRegistry
         val owner = object : LifecycleOwner {
@@ -88,6 +90,8 @@ class SettingsRouteTest {
             ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, scope),
             AppPreferences.create(tmp.root.resolve("prefs.json"), scope),
             push,
+            com.gekkotron.oikos.feature.settings.FakeEntitySource(),
+            com.gekkotron.oikos.feature.voice.SpeechAvailability.Status.Ready,
         )
         lateinit var registry: LifecycleRegistry
         val owner = object : LifecycleOwner {

@@ -21,10 +21,11 @@ class FakeEntitySource : EntitySource {
     override val entities = MutableStateFlow<Map<String, Entity>>(emptyMap())
     override val devices = MutableStateFlow<Map<String, Device>>(emptyMap())
     override val areas = MutableStateFlow<List<Area>>(emptyList())
-    override val shortcuts: kotlinx.coroutines.flow.StateFlow<Map<String, com.gekkotron.oikos.voice.VoiceShortcut>> =
-        kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
+    override val shortcuts = MutableStateFlow<Map<String, com.gekkotron.oikos.voice.VoiceShortcut>>(emptyMap())
     override suspend fun saveShortcut(shortcut: com.gekkotron.oikos.voice.VoiceShortcut) {}
-    override suspend fun deleteShortcut(id: String) {}
+    override suspend fun deleteShortcut(id: String) {
+        shortcuts.value = shortcuts.value - id
+    }
     override val commandFailures = MutableSharedFlow<CommandFailure>()
     val published = mutableListOf<List<Area>>()
     var failWrites = false

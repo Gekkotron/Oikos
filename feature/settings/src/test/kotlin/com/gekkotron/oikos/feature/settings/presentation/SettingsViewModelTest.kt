@@ -6,7 +6,9 @@ import com.gekkotron.oikos.data.FrigateConfig
 import com.gekkotron.oikos.data.ProfileRepository
 import com.gekkotron.oikos.data.SecretStore
 import com.gekkotron.oikos.data.ThemePreference
+import com.gekkotron.oikos.feature.settings.FakeEntitySource
 import com.gekkotron.oikos.feature.settings.FakePushStatusSource
+import com.gekkotron.oikos.feature.voice.SpeechAvailability
 import com.gekkotron.oikos.push.PushStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,7 +51,7 @@ class SettingsViewModelTest {
     fun `state follows the theme and the profile`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), backgroundScope)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, backgroundScope)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource())
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
         assertEquals(ConnectionSummary.Demo, vm.state.first { it.connection != null }.connection)
@@ -61,7 +63,7 @@ class SettingsViewModelTest {
     fun `a cleared profile leaves no connection summary`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), backgroundScope)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, backgroundScope)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource())
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
         vm.state.first { it.connection != null }
@@ -74,7 +76,7 @@ class SettingsViewModelTest {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs2.json"), backgroundScope)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile2.json"), PassThrough, backgroundScope)
         val push = FakePushStatusSource(PushStatus.Waiting)
-        val vm = SettingsViewModel(profiles, prefs, push)
+        val vm = SettingsViewModel(profiles, prefs, push, FakeEntitySource(), SpeechAvailability.Status.Ready)
         backgroundScope.launch { vm.state.collect {} }
         assertEquals(PushStatus.Waiting, vm.state.value.push)
         push.status.value = PushStatus.NotificationsOff
@@ -86,7 +88,7 @@ class SettingsViewModelTest {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs3.json"), backgroundScope)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile3.json"), PassThrough, backgroundScope)
         val push = FakePushStatusSource()
-        val vm = SettingsViewModel(profiles, prefs, push)
+        val vm = SettingsViewModel(profiles, prefs, push, FakeEntitySource(), SpeechAvailability.Status.Ready)
         vm.registerAgain()
         vm.refreshPush()
         assertEquals(1, push.registerAgains)
@@ -101,7 +103,7 @@ class SettingsViewModelTest {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs4.json"), backgroundScope)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile4.json"), PassThrough, backgroundScope)
         profiles.save(ConnectionProfile.Direct(LocalBroker("h")))
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource())
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         assertTrue(vm.setHistoryUrl(" http://192.168.1.91:8090/ "))
         profiles.awaitHistoryUrl("http://192.168.1.91:8090")
         assertFalse(vm.setHistoryUrl("192.168.1.91"))
@@ -117,7 +119,7 @@ class SettingsViewModelTest {
     fun `setFrigate saves, keeps the password for the same user only, and a blank url clears`() = runTest(dispatcher) {
         val prefs = AppPreferences.create(tmp.root.resolve("prefs-f.json"), backgroundScope)
         val profiles = ProfileRepository.create(tmp.root.resolve("profile-f.json"), PassThrough, backgroundScope)
-        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource())
+        val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
         profiles.state.first { it is ProfileState.Ready }
 
