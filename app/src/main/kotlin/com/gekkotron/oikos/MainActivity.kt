@@ -24,11 +24,16 @@ class MainActivity : ComponentActivity() {
     /** The same instance `hiltViewModel()` hands to the composition below: both use this activity's store. */
     private val appViewModel: AppViewModel by viewModels()
 
+    override fun onStart() {
+        super.onStart()
+        // Every return to the app, throttled by UpdateCheckGate (release only; a no-op in debug).
+        TesterUpdates.check(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (savedInstanceState == null) {
-            TesterUpdates.check(this)
             // A rotation re-delivers the same intent: only a fresh launch is a tap on a notification.
             handleIntent(intent)
         }
