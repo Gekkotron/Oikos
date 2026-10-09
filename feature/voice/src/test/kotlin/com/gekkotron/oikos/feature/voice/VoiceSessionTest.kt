@@ -10,6 +10,7 @@ import com.gekkotron.oikos.voice.VoiceCatalogBuilder
 import com.gekkotron.oikos.voice.VoiceIntent
 import com.gekkotron.oikos.voice.VoiceLang
 import com.gekkotron.oikos.voice.VoiceShortcut
+import com.gekkotron.oikos.voice.VoiceSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -113,5 +114,42 @@ class VoiceSessionTest {
             assertIs<VoiceSessionState.Done>(awaitItem())
         }
         assertEquals("quelque chose salon", requireNotNull(saved).phrase)
+    }
+
+    @Test fun `an unknown runner failure ends in Error without crashing`() = runTest {
+        val runner = object : CommandRunner {
+            override suspend fun run(intent: VoiceIntent, catalog: VoiceCatalog, code: String?, source: VoiceSource): ExecutionResult {
+                throw RuntimeException("boom")
+            }
+        }
+        val session = VoiceSession(catalog(), emptyList(), FakeSpeechCapture().also { it.scheduleFinal("ouvre les volets du salon") }, runner, backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1) // Executing
+            val err = assertIs<VoiceSessionState.Error>(awaitItem())
+            assertEquals(ErrorKind.UNKNOWN, err.kind)
+        }
+    }
+
+    @Test fun `onLearn failure does not block the chosen command from running`() = runTest {
+        val runner = FakeRunner(resultByEntity = mapOf("volet_salon_1" to CommandResult.Accepted, "volet_salon_2" to CommandResult.Accepted))
+        val session = VoiceSession(
+            catalog = catalog(),
+            shortcuts = emptyList(),
+            speech = FakeSpeechCapture().also { it.scheduleFinal("quelque chose salon") },
+            runner = runner,
+            scope = backgroundScope,
+            onLearn = { throw RuntimeException("save failed") },
+        )
+        session.state.test {
+            skipItems(1)
+            session.start()
+            val not = assertIs<VoiceSessionState.NotUnderstood>(awaitItem())
+            val choice = not.suggestions.first { it.intent.action == VoiceAction.OPEN }
+            session.pickSuggestion(choice, learnPhrase = "quelque chose salon")
+            skipItems(1) // Executing
+            assertIs<VoiceSessionState.Done>(awaitItem())
+        }
     }
 }

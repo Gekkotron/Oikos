@@ -26,7 +26,7 @@ sealed interface VoiceSessionState {
     data class Error(val kind: ErrorKind) : VoiceSessionState
 }
 
-enum class ErrorKind { MQTT_DOWN, SPEECH, PERMISSION, SILENCE }
+enum class ErrorKind { MQTT_DOWN, SPEECH, PERMISSION, SILENCE, UNKNOWN }
 
 data class ExecutionResult(
     val intent: VoiceIntent,
@@ -79,14 +79,13 @@ class VoiceSession(
         pendingIntent = suggestion.intent
         pendingSource = VoiceSource.RULES
         scope.launch {
-            onLearn(
-                VoiceShortcut(
-                    id = id(catalog.lang, VoiceText.normalizeShortcut(learnPhrase, catalog.lang)),
-                    phrase = learnPhrase,
-                    lang = catalog.lang,
-                    intent = suggestion.intent,
-                )
+            val learned = VoiceShortcut(
+                id = id(catalog.lang, VoiceText.normalizeShortcut(learnPhrase, catalog.lang)),
+                phrase = learnPhrase,
+                lang = catalog.lang,
+                intent = suggestion.intent,
             )
+            runCatching { onLearn(learned) }
             handleIntent(suggestion.intent, VoiceSource.RULES)
         }
     }
@@ -118,8 +117,13 @@ class VoiceSession(
         scope.launch {
             val result = try {
                 runner.run(intent, catalog, code, source)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: MqttDownException) {
                 _state.value = VoiceSessionState.Error(ErrorKind.MQTT_DOWN)
+                return@launch
+            } catch (e: Exception) {
+                _state.value = VoiceSessionState.Error(ErrorKind.UNKNOWN)
                 return@launch
             }
             _state.value = VoiceSessionState.Done(result)
