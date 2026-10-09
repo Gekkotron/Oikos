@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Default-network changes for the route selector; no SSID, so no location permission. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:name=".OikosApplication"
