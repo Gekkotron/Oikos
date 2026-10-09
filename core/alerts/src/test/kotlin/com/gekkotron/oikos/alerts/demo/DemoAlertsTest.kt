@@ -41,4 +41,10 @@ class DemoAlertsTest {
     fun `the same moment gives the same alerts`() {
         assertEquals(DemoAlerts.all(now), DemoAlerts.all(now))
     }
+
+    @Test
+    fun `the demo camera alert carries a frigate loc so the demo shows localized text`() {
+        val camera = DemoAlerts.all(java.time.Instant.parse("2026-10-09T12:00:00Z")).single { it.id == "demo-camera" }
+        kotlin.test.assertEquals(com.gekkotron.oikos.alerts.AlertLoc("frigate.object", mapOf("label" to "person", "zone" to "Garden")), camera.loc)
+    }
 }

@@ -175,7 +175,8 @@ private fun Found(
     val alert = state.alert
     if (alert.imageUrl != null || alert.videoUrl != null) MediaBlock(alert, video, onPlay, playerContent)
     Text(alert.title, style = OikosTheme.type.display.copy(fontSize = 22.sp))
-    if (alert.body.isNotBlank()) Text(alert.body, style = OikosTheme.type.body)
+    val body = alertBody(alert)
+    if (body.isNotBlank()) Text(body, style = OikosTheme.type.body)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         InfoChip(stringResource(AlertChannels.nameRes(alert.channel)))
         if (alert.resolved) InfoChip(stringResource(R.string.alerts_resolved))

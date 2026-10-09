@@ -47,8 +47,9 @@ fun AlertRow(alert: Alert, now: Instant, onClick: () -> Unit, modifier: Modifier
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(alert.title, style = OikosTheme.type.cardName, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (alert.body.isNotBlank()) {
-                    Text(alert.body, style = OikosTheme.type.label, color = c.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val body = alertBody(alert)
+                if (body.isNotBlank()) {
+                    Text(body, style = OikosTheme.type.label, color = c.contentMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 val time = AlertTimes.relative(context, alert.sentAt, now)
                 Text(

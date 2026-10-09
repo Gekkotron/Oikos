@@ -220,4 +220,10 @@ class AlertNotifierTest {
         assertTrue(other.await())
         assertNotNull(posted("other"))
     }
+
+    @Test
+    fun `the notification text is written in the app's language`(): Unit = runTest {
+        assertTrue(notifier().post(testAlert(loc = com.gekkotron.oikos.alerts.AlertLoc("frigate.object", mapOf("label" to "car")))))
+        assertEquals("Car detected", posted("frigate-1")!!.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+    }
 }
