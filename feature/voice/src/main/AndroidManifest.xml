@@ -11,6 +11,7 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:taskAffinity=""
+            android:configChanges="orientation|screenSize|smallestScreenSize|keyboardHidden|layoutDirection|fontScale|uiMode"
             android:theme="@style/Theme.OikosVoice.Translucent" />
     </application>
 </manifest>

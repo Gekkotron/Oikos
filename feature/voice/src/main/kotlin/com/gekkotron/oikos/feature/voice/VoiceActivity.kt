@@ -10,11 +10,13 @@ import androidx.activity.viewModels
 import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.voice.ui.VoiceSheet
 import com.gekkotron.oikos.voice.VoiceLang
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class VoiceActivity : ComponentActivity() {
@@ -26,27 +28,29 @@ class VoiceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (viewModel.preferences.voiceEnabled.value != true) {
-            finish()
-            return
-        }
-        setContent {
-            OikosTheme {
-                Surface(color = Color.Transparent) {
-                    VoiceSheet(
-                        state = viewModel.state,
-                        onPick = viewModel::pickSuggestion,
-                        onConfirm = viewModel::confirm,
-                        onCode = viewModel::provideCode,
-                        onCancel = { finish() },
-                    )
+        lifecycleScope.launch {
+            if (!awaitVoiceEnabled(viewModel.preferences.voiceEnabled)) {
+                finish()
+                return@launch
+            }
+            setContent {
+                OikosTheme {
+                    Surface(color = Color.Transparent) {
+                        VoiceSheet(
+                            state = viewModel.state,
+                            onPick = viewModel::pickSuggestion,
+                            onConfirm = viewModel::confirm,
+                            onCode = viewModel::provideCode,
+                            onCancel = { finish() },
+                        )
+                    }
                 }
             }
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            startVoice()
-        } else {
-            permission.launch(Manifest.permission.RECORD_AUDIO)
+            if (ContextCompat.checkSelfPermission(this@VoiceActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                startVoice()
+            } else {
+                permission.launch(Manifest.permission.RECORD_AUDIO)
+            }
         }
     }
 

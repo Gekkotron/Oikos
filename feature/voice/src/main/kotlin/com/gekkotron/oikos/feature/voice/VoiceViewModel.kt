@@ -14,6 +14,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -69,3 +71,6 @@ class VoiceViewModel @Inject constructor(
 
     override fun onCleared() { cancel() }
 }
+
+/** Suspends until DataStore has emitted the real preference (the flow is seeded with null). */
+suspend fun awaitVoiceEnabled(flow: StateFlow<Boolean?>): Boolean = flow.filterNotNull().first()
