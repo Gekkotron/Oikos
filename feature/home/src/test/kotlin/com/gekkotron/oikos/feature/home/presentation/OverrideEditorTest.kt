@@ -56,4 +56,39 @@ class OverrideEditorTest {
         })
         assertFalse(strict.save("a#b", UiOverride()))
     }
+
+    @Test
+    fun `setGroupName declares an implicit room and keeps the others`() = runTest {
+        val source = FakeEntitySource().apply {
+            areas.value = listOf(Area("kitchen", "Kitchen"), Area("salon", "Salon"), Area(UNASSIGNED_AREA, UNASSIGNED_AREA))
+        }
+        assertTrue(OverrideEditor(source).setGroupName("salon", "cover", "Baie"))
+        assertEquals(
+            listOf(Area("kitchen", "Kitchen"), Area("salon", "Salon", groupNames = mapOf("cover" to "Baie"))),
+            source.areaWrites.single(),
+        )
+    }
+
+    @Test
+    fun `a blank group name removes the custom name`() = runTest {
+        val source = FakeEntitySource().apply { areas.value = listOf(Area("salon", "Salon", groupNames = mapOf("cover" to "Baie", "light" to "Spots"))) }
+        assertTrue(OverrideEditor(source).setGroupName("salon", "cover", "  "))
+        assertEquals(mapOf("light" to "Spots"), source.areaWrites.single().single().groupNames)
+    }
+
+    @Test
+    fun `ungroup flags each device and keeps the rest of its override`() = runTest {
+        val source = FakeEntitySource().apply {
+            entities.value = mapOf("a" to testEntity("a", Kind.COVER, area = "salon", ui = UiOverride(favorite = true)))
+        }
+        assertTrue(OverrideEditor(source).ungroup(listOf("a")))
+        assertEquals(UiOverride(favorite = true, ungrouped = true), source.overrides["a"])
+    }
+
+    @Test
+    fun `setGroupName on an unknown room fails without writing`() = runTest {
+        val source = FakeEntitySource()
+        assertFalse(OverrideEditor(source).setGroupName("nowhere", "cover", "X"))
+        assertTrue(source.areaWrites.isEmpty())
+    }
 }

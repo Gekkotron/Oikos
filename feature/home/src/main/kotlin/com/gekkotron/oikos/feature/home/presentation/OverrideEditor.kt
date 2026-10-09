@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.home.presentation
 
 import com.gekkotron.oikos.model.Area
+import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
 import kotlinx.coroutines.CancellationException
@@ -39,6 +40,26 @@ class OverrideEditor(private val source: EntitySource) {
         val used = newRooms.filter { it.id == override.area }
         if (used.isNotEmpty() && !addRooms(used)) return false
         return save(id, override)
+    }
+
+    /** Room groups spec §6: a custom group name on the room; blank removes it. Publishes the whole areas document. */
+    suspend fun setGroupName(areaId: String, kindKey: String, name: String?): Boolean {
+        val areas = source.areas.value
+        val target = areas.firstOrNull { it.id == areaId && it.id != UNASSIGNED_AREA } ?: return false
+        val clean = name?.trim()?.takeIf { it.isNotEmpty() }
+        val names = if (clean == null) target.groupNames - kindKey else target.groupNames + (kindKey to clean)
+        if (names == target.groupNames) return true
+        return attempt { source.setAreas(areas.filter { it.id != UNASSIGNED_AREA }.map { if (it.id == areaId) it.copy(groupNames = names) else it }) }
+    }
+
+    /** Takes each device out of its room's group, keeping the rest of its override. */
+    suspend fun ungroup(ids: Collection<String>): Boolean {
+        for (id in ids) {
+            val entity = source.entities.value[id] ?: continue
+            if (entity.ui.ungrouped) continue
+            if (!save(id, entity.ui.copy(ungrouped = true))) return false
+        }
+        return true
     }
 
     private suspend fun attempt(write: suspend () -> Unit): Boolean = try {

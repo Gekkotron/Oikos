@@ -70,10 +70,11 @@ internal fun CustomizeSheet(
     var cardStyle by rememberSaveable(card.id) { mutableStateOf(start.cardStyle) }
     var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
     var energyInvert by rememberSaveable(card.id) { mutableStateOf(start.energyInvert) }
+    var grouped by rememberSaveable(card.id) { mutableStateOf(start.grouped) }
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -101,6 +102,9 @@ internal fun CustomizeSheet(
                 },
             )
             SwitchRow(stringResource(R.string.customize_favorite), favorite) { favorite = it }
+            if (card.groupable) {
+                SwitchRow(stringResource(if (card.kind == Kind.COVER) R.string.customize_grouped_cover else R.string.customize_grouped_light), grouped) { grouped = it }
+            }
             // Energy or Security already shows it, so Home leaves it out unless pinned back.
             val onSecurity = Placement.onSecurity(card.kind, card.deviceClass, UiOverride(securityHidden = securityHidden, securityAction = securityAction))
             val elsewhere = energyRole != null || onSecurity

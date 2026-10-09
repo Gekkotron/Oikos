@@ -304,4 +304,15 @@ class HomeViewModelTest {
         vm.sendGroup("group:living:cover", Command.Open)
         assertEquals(listOf<HomeEvent>(HomeEvent.Rejected("group:living:cover", "read-only")), events)
     }
+
+    @Test
+    fun `customizing a group renames it and ungroups the unticked members`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.customizeGroup("group:living:cover", "Baie", removed = listOf("c"))
+        assertEquals(mapOf("cover" to "Baie"), src.areas.value.single().groupNames)
+        assertTrue(src.overrides.getValue("c").ungrouped)
+        assertEquals(listOf("a", "b"), vm.state.value.cards.single { it.isGroup }.members.map { it.id })
+    }
 }

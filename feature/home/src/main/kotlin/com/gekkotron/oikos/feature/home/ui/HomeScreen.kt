@@ -100,7 +100,7 @@ fun HomeRoute(
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
         onSendGroup = { id, c -> viewModel.sendGroup(id, c) },
-        onCustomizeGroup = { _, _, _ -> },
+        onCustomizeGroup = viewModel::customizeGroup,
     )
 }
 
@@ -215,14 +215,21 @@ fun HomeScreen(
         }
     }
     val customizeCard = customizeId?.let(state::card)
-    // A group's Customize sheet arrives with room groups Task 5.
-    if (customizeCard != null && !customizeCard.isGroup) {
-        CustomizeSheet(
-            customizeCard,
-            state.rooms,
-            onSave = { newRooms, override -> onCustomize(customizeCard.id, newRooms, override) },
-            onDismiss = { customizeId = null },
-        )
+    if (customizeCard != null) {
+        if (customizeCard.isGroup) {
+            GroupCustomizeSheet(
+                customizeCard,
+                onSave = { name, removed -> onCustomizeGroup(customizeCard.id, name, removed) },
+                onDismiss = { customizeId = null },
+            )
+        } else {
+            CustomizeSheet(
+                customizeCard,
+                state.rooms,
+                onSave = { newRooms, override -> onCustomize(customizeCard.id, newRooms, override) },
+                onDismiss = { customizeId = null },
+            )
+        }
     }
     if (linkSheet) {
         LinkSheet(

@@ -96,6 +96,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { if (!editor.customize(id, newRooms, override)) _events.send(HomeEvent.SaveFailed) }
     }
 
+    /** Room groups spec §6: rename, then take [removed] members out. A failed write is a [HomeEvent.SaveFailed]. */
+    fun customizeGroup(groupId: String, name: String, removed: List<String>) {
+        viewModelScope.launch {
+            val group = state.value.card(groupId)?.takeIf { it.isGroup } ?: return@launch
+            val renamed = name.trim() == group.name.trim() || editor.setGroupName(group.areaId, RoomGroups.kindKey(group.kind), name)
+            if (!renamed || !editor.ungroup(removed)) _events.send(HomeEvent.SaveFailed)
+        }
+    }
+
     /** Home search; blank ends it. */
     fun search(query: String) {
         savedState[KEY_QUERY] = query
