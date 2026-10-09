@@ -47,7 +47,9 @@ internal sealed interface IconSpec {
 internal val IconSpec.openContact: Boolean get() = this is IconSpec.Swing && open == true
 
 internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
-    Kind.COVER -> shutter(card.value as? CardValue.Cover, card.available)
+    Kind.COVER -> (card.value as? CardValue.CoverGroup)?.let { g ->
+        IconSpec.Shutter(g.positions.average().toFloat() / 100f, g.moving.takeIf { card.available })
+    } ?: shutter(card.value as? CardValue.Cover, card.available)
     Kind.BINARY_SENSOR -> swingShape(card.deviceClass)
         ?.let { IconSpec.Swing(it, if (card.available) (card.value as? CardValue.Contact)?.on else null) }
         ?: IconSpec.Static(binaryGlyph(card.deviceClass), on = false)

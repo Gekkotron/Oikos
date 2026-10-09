@@ -72,6 +72,7 @@ import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.presentation.TapAction
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.Route
 import java.time.LocalTime
@@ -97,6 +98,8 @@ fun HomeRoute(
         windowInsets = windowInsets,
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
+        onSendGroup = { id, c -> viewModel.sendGroup(id, c) },
+        onCustomizeGroup = { _, _, _ -> },
     )
 }
 
@@ -115,6 +118,8 @@ fun HomeScreen(
     onRouteChange: (Route) -> Unit = {},
     onSearch: (String) -> Unit = {},
     onOpenHistory: (String) -> Unit = {},
+    onSendGroup: (String, Command) -> Unit = { _, _ -> },
+    onCustomizeGroup: (String, String, List<String>) -> Unit = { _, _, _ -> },
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
@@ -161,17 +166,24 @@ fun HomeScreen(
                     }
                 }
                 items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
-                    EntityCard(
-                        card = card,
-                        onClick = {
-                            when (card.tap) {
-                                TapAction.OPEN_SHEET -> sheetId = card.id
-                                TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
-                                else -> onTap(card)
-                            }
-                        },
-                        onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id },
-                    )
+                    val onClick = {
+                        when (card.tap) {
+                            TapAction.OPEN_SHEET -> sheetId = card.id
+                            TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
+                            else -> onTap(card)
+                        }
+                    }
+                    if (card.isGroup) {
+                        // Shutter group: tap opens the sheet, long-press customizes. Light group: tap toggles, long-press opens the sheet.
+                        GroupCard(
+                            card,
+                            onClick = onClick,
+                            onLongClick = { if (card.kind == Kind.COVER) customizeId = card.id else sheetId = card.id },
+                            onSendGroup = onSendGroup,
+                        )
+                    } else {
+                        EntityCard(card = card, onClick = onClick, onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id })
+                    }
                 }
             }
             // Edge-to-edge: keep scrolled cards from colliding with the clock and status icons.
@@ -195,7 +207,8 @@ fun HomeScreen(
         )
     }
     val customizeCard = customizeId?.let(state::card)
-    if (customizeCard != null) {
+    // A group's Customize sheet arrives with room groups Task 5.
+    if (customizeCard != null && !customizeCard.isGroup) {
         CustomizeSheet(
             customizeCard,
             state.rooms,
