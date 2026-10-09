@@ -23,6 +23,8 @@ data class OverrideDraft(
     val homePinned: Boolean = false,
     val securityAction: Boolean = false,
     val securityAsk: Boolean = true,
+    /** Off = this cover or light leaves its room's group (room groups spec §6). */
+    val grouped: Boolean = true,
 ) {
     val orderValid: Boolean
         get() = order.isBlank() || order.trim().let { t -> t.all(Char::isDigit) && t.toIntOrNull()?.let { it in 0..MAX_ORDER } == true }
@@ -49,6 +51,7 @@ data class OverrideDraft(
             homePinned = homePinned,
             securityAction = securityAction,
             securityAsk = securityAsk,
+            ungrouped = !grouped,
         )
     }
 
@@ -68,6 +71,7 @@ data class OverrideDraft(
             homePinned = card.ui.homePinned,
             securityAction = card.ui.securityAction,
             securityAsk = card.ui.securityAsk,
+            grouped = !card.ui.ungrouped,
         )
     }
 }

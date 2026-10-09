@@ -231,4 +231,18 @@ class CustomizeSheetTest {
         show(card(testEntity("lamp", Kind.LIGHT)))
         compose.onNodeWithText("Show on Security").assertDoesNotExist()
     }
+
+    @Test
+    fun `a groupable cover shows the group switch and saving it off sets ungrouped`() {
+        show(card(testEntity("bay", Kind.COVER, "Bay", area = "living")).copy(groupable = true))
+        compose.onNodeWithText("Group with the other shutters in this room").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertTrue(saved.single().ungrouped)
+    }
+
+    @Test
+    fun `a cover alone in its room has no group switch`() {
+        show(card(testEntity("bay", Kind.COVER, "Bay", area = "living")))
+        compose.onNodeWithText("Group with the other shutters in this room").assertDoesNotExist()
+    }
 }

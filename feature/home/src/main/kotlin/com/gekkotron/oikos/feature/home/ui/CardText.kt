@@ -4,8 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.gekkotron.oikos.designsystem.alarm.alarmLabel
 import com.gekkotron.oikos.feature.home.R
+import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.model.CoverState
+import com.gekkotron.oikos.model.Kind
 
 private val OPENING_CLASSES = setOf("door", "window", "garage_door", "opening")
 private val MOTION_CLASSES = setOf("motion", "occupancy", "presence")
@@ -23,6 +25,18 @@ internal fun cardValueText(value: CardValue): String = when (value) {
             .joinToString(" · ")
             .ifEmpty { stringResource(R.string.value_none) }
     is CardValue.Alarm -> stringResource(alarmLabel(value.state))
+    is CardValue.CoverGroup -> when {
+        value.moving == CoverState.OPENING -> stringResource(R.string.value_cover_opening)
+        value.moving == CoverState.CLOSING -> stringResource(R.string.value_cover_closing)
+        value.open == value.total -> stringResource(R.string.value_group_all_open)
+        value.open == 0 -> stringResource(R.string.value_group_all_closed)
+        else -> stringResource(R.string.value_group_open_closed, value.open, value.total - value.open)
+    }
+    is CardValue.LightGroup -> when (value.onCount) {
+        value.total -> stringResource(R.string.value_group_all_on)
+        0 -> stringResource(R.string.value_group_all_off)
+        else -> stringResource(R.string.value_group_lights_on, value.onCount, value.total)
+    }
     is CardValue.Contact -> stringResource(
         when (value.deviceClass) {
             in OPENING_CLASSES -> if (value.on) R.string.value_contact_open else R.string.value_contact_closed
@@ -30,6 +44,12 @@ internal fun cardValueText(value: CardValue): String = when (value) {
             else -> if (value.on) R.string.value_on else R.string.value_off
         },
     )
+}
+
+/** A group's custom name, else "Shutters" / "Lights" (room groups spec §3). */
+@Composable
+internal fun groupName(card: CardUi): String = card.name.ifBlank {
+    stringResource(if (card.kind == Kind.COVER) R.string.group_default_covers else R.string.group_default_lights)
 }
 
 @Composable

@@ -59,6 +59,12 @@ sealed interface CardValue {
     data class Climate(val current: String?, val target: String?, val mode: String?) : CardValue
     data class Alarm(val state: AlarmState) : CardValue
     data class Contact(val deviceClass: String?, val on: Boolean) : CardValue
+
+    /** Room groups spec §3.1. [positions] has one 0..100 entry per member; a member without position counts 100 when open, 0 when closed. */
+    data class CoverGroup(val open: Int, val total: Int, val moving: CoverState?, val positions: List<Int>) : CardValue
+
+    /** Room groups spec §3.2. */
+    data class LightGroup(val onCount: Int, val total: Int) : CardValue
 }
 
 data class CardUi(
@@ -89,7 +95,13 @@ data class CardUi(
     val hidden: Boolean,
     /** A light's folded device controls (speed, palette…), shown in its sheet instead of as cards. */
     val companions: List<CardUi> = emptyList(),
-)
+    /** A room group's member cards in sort order (room groups spec §3); empty for a single card. */
+    val members: List<CardUi> = emptyList(),
+    /** A cover or light whose room has another one: its Customize shows the "Group with…" switch. */
+    val groupable: Boolean = false,
+) {
+    val isGroup: Boolean get() = members.isNotEmpty()
+}
 
 data class HomeUiState(
     val loading: Boolean = true,
@@ -104,8 +116,12 @@ data class HomeUiState(
     /** The Home search text; blank when not searching. */
     val query: String = "",
 ) {
-    fun card(id: String): CardUi? =
-        (cards + listOfNotNull(hero)).firstNotNullOfOrNull { c -> c.takeIf { it.id == id } ?: c.companions.firstOrNull { it.id == id } }
+    fun card(id: String): CardUi? {
+        fun search(cards: List<CardUi>): CardUi? = cards.firstNotNullOfOrNull { c ->
+            c.takeIf { it.id == id } ?: search(c.companions) ?: search(c.members)
+        }
+        return search(cards + listOfNotNull(hero))
+    }
 }
 
 sealed interface HomeEvent {
@@ -113,4 +129,13 @@ sealed interface HomeEvent {
     data class Rejected(val id: String, val reason: String) : HomeEvent
     data object SaveFailed : HomeEvent
     data object WaitingForConnection : HomeEvent
+
+    /** Members of one group send that were not confirmed, merged (room groups spec §5). */
+    data class GroupNotConfirmed(
+        val groupId: String,
+        val kind: Kind,
+        val failedIds: List<String>,
+        val failedNames: List<String>,
+        val command: Command,
+    ) : HomeEvent
 }

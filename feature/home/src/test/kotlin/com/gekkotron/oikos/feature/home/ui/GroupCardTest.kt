@@ -1,0 +1,94 @@
+package com.gekkotron.oikos.feature.home.ui
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.ThemeChoice
+import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
+import com.gekkotron.oikos.feature.home.presentation.RoomFilter
+import com.gekkotron.oikos.feature.home.testEntity
+import com.gekkotron.oikos.model.Area
+import com.gekkotron.oikos.model.Capabilities
+import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.CoverState
+import com.gekkotron.oikos.model.EntityState
+import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.TransportMode
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import java.time.LocalTime
+import java.util.Locale
+import kotlin.test.assertEquals
+
+@RunWith(AndroidJUnit4::class)
+@Config(qualifiers = "w411dp-h914dp")
+class GroupCardTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private val entities = listOf(
+        testEntity("bay", Kind.COVER, "Bay window", area = "living", capabilities = Capabilities(position = true)),
+        testEntity("side", Kind.COVER, "Side window", area = "living", capabilities = Capabilities(position = true)),
+        testEntity("patio", Kind.COVER, "Patio door", area = "living"),
+        testEntity("l1", Kind.LIGHT, "Ceiling", area = "living"),
+        testEntity("l2", Kind.LIGHT, "Floor lamp", area = "living"),
+    ).associateBy { it.uniqueId }
+    private val states = mapOf(
+        "bay" to EntityState("bay", StateValue.Cover(CoverState.OPEN, 100)),
+        "side" to EntityState("side", StateValue.Cover(CoverState.OPEN, 80)),
+        "patio" to EntityState("patio", StateValue.Cover(CoverState.CLOSED, null)),
+        "l1" to EntityState("l1", StateValue.Light(true, 200)),
+    )
+    private val sends = mutableListOf<Pair<String, Command>>()
+    private val groupSends = mutableListOf<Pair<String, Command>>()
+    private val taps = mutableListOf<String>()
+
+    private fun show() = compose.setContent {
+        OikosTheme(ThemeChoice.NIGHT_GLASS) {
+            HomeScreen(
+                state = HomeUiBuilder.build(entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connected(TransportMode.DEMO), Locale.US),
+                onSelect = {},
+                onTap = { taps += it.id },
+                onSend = { id, c -> sends += id to c },
+                onSendGroup = { id, c -> groupSends += id to c },
+                now = LocalTime.NOON,
+            )
+        }
+    }
+
+    @Test
+    fun `the shutter group card shows its summary and sends from its inline buttons`() {
+        show()
+        compose.onNodeWithText("Shutters").assertIsDisplayed()
+        compose.onNodeWithText("2 open · 1 closed").assertIsDisplayed()
+        compose.onNodeWithText("×3").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close all shutters").performClick()
+        assertEquals(listOf("group:living:cover" to Command.Close as Command), groupSends)
+    }
+
+    @Test
+    fun `the light group card toggles on tap`() {
+        show()
+        compose.onNodeWithText("1 of 2 on").assertIsDisplayed()
+        compose.onNodeWithTag("card-group:living:light").performClick()
+        assertEquals(listOf("group:living:light"), taps)
+    }
+
+    @Test
+    fun `tapping the shutter group opens its sheet`() {
+        show()
+        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithText("Bay window").assertIsDisplayed()
+    }
+}

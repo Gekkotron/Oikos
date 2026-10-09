@@ -112,4 +112,12 @@ class OverrideDraftTest {
         assertEquals(UiOverride(securityAction = true, securityAsk = false), draft.applyTo(sw))
         assertEquals(UiOverride(), draft.copy(securityAction = false, securityAsk = true).applyTo(sw))
     }
+
+    @Test
+    fun `turning grouping off sets ungrouped`() {
+        val card = card(testEntity("shutter", Kind.COVER, "Shutter", area = "kitchen"))
+        val draft = OverrideDraft.from(card)
+        assertTrue(draft.grouped)
+        assertTrue(draft.copy(grouped = false).applyTo(card).ungrouped)
+    }
 }

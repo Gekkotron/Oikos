@@ -65,7 +65,7 @@ class MainActivityTest {
     private fun openDemo() {
         compose.waitUntilAtLeastOneExists(hasText("Try the demo"), timeoutMillis = 10_000)
         compose.onNodeWithText("Try the demo").performClick()
-        compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Air conditioner", substring = true), timeoutMillis = 10_000)
     }
 
     private fun openSettings() {
@@ -158,7 +158,7 @@ class MainActivityTest {
         connectToBroker(kettle)
         finishRooms("Skip")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
-        compose.onAllNodes(hasContentDescription("Floor lamp", substring = true)).assertCountEquals(0)
+        compose.onAllNodes(hasContentDescription("Air conditioner", substring = true)).assertCountEquals(0)
     }
 
     @Test
@@ -216,7 +216,7 @@ class MainActivityTest {
         compose.onNodeWithText("Warm Minimal").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Warm Minimal") and isSelected(), timeoutMillis = 10_000) // the store write is async
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Air conditioner", substring = true), timeoutMillis = 10_000)
     }
 
     @Test
@@ -228,6 +228,6 @@ class MainActivityTest {
         runCatching { gear.performClick() }
         compose.waitUntilAtLeastOneExists(hasText("Theme"), timeoutMillis = 10_000)
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        compose.waitUntilAtLeastOneExists(hasContentDescription("Floor lamp", substring = true), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Air conditioner", substring = true), timeoutMillis = 10_000)
     }
 }

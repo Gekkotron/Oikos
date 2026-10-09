@@ -19,6 +19,10 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import com.gekkotron.oikos.model.Capabilities
+import com.gekkotron.oikos.model.CoverState
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -194,5 +198,144 @@ class HomeViewModelTest {
         backgroundScope.launch { recreated.state.collect {} }
         assertEquals("shut", recreated.state.value.query)
         assertEquals(listOf("shutter"), recreated.state.value.cards.map { it.id })
+    }
+
+    private fun groupSource() = FakeEntitySource().apply {
+        entities.value = mapOf(
+            "a" to testEntity("a", Kind.COVER, "Bay", area = "living", capabilities = Capabilities(position = true)),
+            "b" to testEntity("b", Kind.COVER, "Side", area = "living", capabilities = Capabilities(position = true)),
+            "c" to testEntity("c", Kind.COVER, "Patio", area = "living"),
+        )
+        areas.value = listOf(Area("living", "Living room"))
+    }
+
+    @Test
+    fun `a group send reaches every available member`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.sendGroup("group:living:cover", Command.Close)
+        assertEquals(setOf("a" to Command.Close, "b" to Command.Close, "c" to Command.Close), src.sent.toSet())
+    }
+
+    @Test
+    fun `unavailable members are skipped`() = runTest(dispatcher) {
+        val src = groupSource().apply { stateMap.value = mapOf("c" to EntityState("c", StateValue.Cover(CoverState.OPEN, null), available = false)) }
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.sendGroup("group:living:cover", Command.Open)
+        assertEquals(setOf("a", "b"), src.sent.map { it.first }.toSet())
+    }
+
+    @Test
+    fun `a stale member blocks the whole group send`() = runTest(dispatcher) {
+        val src = groupSource().apply { stateMap.value = mapOf("a" to EntityState("a", StateValue.Cover(CoverState.OPEN, 100), stale = true)) }
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val event = async { vm.events.first() }
+        vm.sendGroup("group:living:cover", Command.Open)
+        assertEquals(HomeEvent.WaitingForConnection, event.await())
+        assertTrue(src.sent.isEmpty())
+    }
+
+    @Test
+    fun `only resends to the listed members`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.sendGroup("group:living:cover", Command.Open, only = listOf("b"))
+        assertEquals(listOf<Pair<String, Command>>("b" to Command.Open), src.sent)
+    }
+
+    @Test
+    fun `failures of one group send merge into one event`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.sendGroup("group:living:cover", Command.Close)
+        src.commandFailures.emit(CommandFailure("a", Command.Close, "timeout"))
+        src.commandFailures.emit(CommandFailure("c", Command.Close, "timeout"))
+        advanceTimeBy(1_100)
+        assertEquals(
+            listOf<HomeEvent>(HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "c"), listOf("Bay", "Patio"), Command.Close)),
+            events,
+        )
+    }
+
+    @Test
+    fun `a failure for a member sent on its own stays a single NotConfirmed`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.sendGroup("group:living:cover", Command.Close)
+        vm.send("a", Command.Open)
+        src.commandFailures.emit(CommandFailure("a", Command.Open, "timeout"))
+        advanceTimeBy(1_100)
+        assertEquals(listOf<HomeEvent>(HomeEvent.NotConfirmed("a", Command.Open)), events)
+    }
+
+    @Test
+    fun `tapping a light group toggles every light`() = runTest(dispatcher) {
+        val src = FakeEntitySource().apply {
+            entities.value = mapOf(
+                "x" to testEntity("x", Kind.LIGHT, area = "living"),
+                "y" to testEntity("y", Kind.LIGHT, area = "living"),
+            )
+            areas.value = listOf(Area("living", "Living room"))
+            stateMap.value = mapOf("x" to EntityState("x", StateValue.Light(true, 255)))
+        }
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.tap(vm.state.value.cards.single())
+        assertEquals(setOf("x" to Command.TurnOff, "y" to Command.TurnOff), src.sent.toSet())
+    }
+
+    @Test
+    fun `a rejected group send reports once`() = runTest(dispatcher) {
+        val src = groupSource().apply { result = CommandResult.Rejected("read-only") }
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.sendGroup("group:living:cover", Command.Open)
+        assertEquals(listOf<HomeEvent>(HomeEvent.Rejected("group:living:cover", "read-only")), events)
+    }
+
+    @Test
+    fun `customizing a group renames it and ungroups the unticked members`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        vm.customizeGroup("group:living:cover", "Baie", removed = listOf("c"))
+        assertEquals(mapOf("cover" to "Baie"), src.areas.value.single().groupNames)
+        assertTrue(src.overrides.getValue("c").ungrouped)
+        assertEquals(listOf("a", "b"), vm.state.value.cards.single { it.isGroup }.members.map { it.id })
+    }
+
+    @Test
+    fun `failures of two different group sends never merge, so Retry repeats the right command`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.sendGroup("group:living:cover", Command.Open)
+        vm.sendGroup("group:living:cover", Command.SetPosition(30))
+        src.commandFailures.emit(CommandFailure("c", Command.Open, "timeout"))
+        advanceTimeBy(300)
+        src.commandFailures.emit(CommandFailure("a", Command.SetPosition(30), "timeout"))
+        src.commandFailures.emit(CommandFailure("b", Command.SetPosition(30), "timeout"))
+        advanceTimeBy(1_100)
+        assertEquals(
+            setOf<HomeEvent>(
+                HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("c"), listOf("Patio"), Command.Open),
+                HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "b"), listOf("Bay", "Side"), Command.SetPosition(30)),
+            ),
+            events.toSet(),
+        )
     }
 }

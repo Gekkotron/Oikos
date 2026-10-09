@@ -4,6 +4,7 @@ import com.gekkotron.oikos.designsystem.icons.OikosGlyph
 import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.testEntity
+import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
@@ -87,5 +88,27 @@ class IconSpecTest {
     fun `an unavailable shutter keeps its last position but stops moving`() {
         assertEquals(IconSpec.Shutter(0.4f, null), spec(Kind.COVER, StateValue.Cover(CoverState.CLOSING, 40), available = false))
         assertEquals(IconSpec.Shutter(null, null), spec(Kind.COVER, StateValue.Cover(CoverState.OPENING), available = false))
+    }
+
+    @Test
+    fun `a cover group's shutter icon follows the mean position and motion`() {
+        val entities = listOf(
+            testEntity("bay", Kind.COVER, area = "living"),
+            testEntity("side", Kind.COVER, area = "living"),
+            testEntity("patio", Kind.COVER, area = "living"),
+        ).associateBy { it.uniqueId }
+        val states = mapOf(
+            "bay" to EntityState("bay", StateValue.Cover(CoverState.OPEN, 100)),
+            "side" to EntityState("side", StateValue.Cover(CoverState.OPEN, 80)),
+            "patio" to EntityState("patio", StateValue.Cover(CoverState.CLOSED, null)),
+        )
+        val group = HomeUiBuilder.build(entities, states, listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connecting, Locale.US)
+            .cards.single { it.isGroup }
+        assertEquals(IconSpec.Shutter(0.6f, null), iconSpec(group))
+        val moving = HomeUiBuilder.build(
+            entities, states + ("side" to EntityState("side", StateValue.Cover(CoverState.CLOSING, 50))),
+            listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connecting, Locale.US,
+        ).cards.single { it.isGroup }
+        assertEquals(IconSpec.Shutter(0.5f, CoverState.CLOSING), iconSpec(moving))
     }
 }

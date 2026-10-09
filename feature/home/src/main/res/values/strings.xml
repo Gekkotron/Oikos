@@ -164,4 +164,42 @@
     <string name="search_no_match">No device matches “%1$s”</string>
     <string name="customize_show_on_security">Show on Security</string>
     <string name="customize_ask_before">Ask before turning on</string>
+    <string name="group_default_covers">Shutters</string>
+    <string name="group_default_lights">Lights</string>
+    <string name="group_badge">×%1$d</string>
+    <string name="value_group_open_closed">%1$d open · %2$d closed</string>
+    <string name="value_group_all_open">All open</string>
+    <string name="value_group_all_closed">All closed</string>
+    <string name="value_group_lights_on">%1$d of %2$d on</string>
+    <string name="value_group_all_on">All on</string>
+    <string name="value_group_all_off">All off</string>
+    <string name="action_group_open">Open all shutters</string>
+    <string name="action_group_stop">Stop all shutters</string>
+    <string name="action_group_close">Close all shutters</string>
+    <string name="home_group_not_confirmed_one">%1$s didn\'t respond</string>
+    <plurals name="home_group_not_confirmed_covers">
+        <item quantity="one">%1$d shutter didn\'t respond</item>
+        <item quantity="other">%1$d shutters didn\'t respond</item>
+    </plurals>
+    <plurals name="home_group_not_confirmed_lights">
+        <item quantity="one">%1$d light didn\'t respond</item>
+        <item quantity="other">%1$d lights didn\'t respond</item>
+    </plurals>
+    <plurals name="sheet_group_subtitle_covers">
+        <item quantity="one">%1$s · %2$d shutter</item>
+        <item quantity="other">%1$s · %2$d shutters</item>
+    </plurals>
+    <plurals name="sheet_group_subtitle_lights">
+        <item quantity="one">%1$s · %2$d light</item>
+        <item quantity="other">%1$s · %2$d lights</item>
+    </plurals>
+    <string name="sheet_all_to">All to</string>
+    <string name="sheet_customize_group">Customize group…</string>
+    <string name="customize_group_title">Customize group</string>
+    <string name="customize_group_name">Group name</string>
+    <string name="customize_group_name_hint">Leave empty for the default name</string>
+    <string name="customize_group_members">Devices in this group</string>
+    <string name="customize_ungroup_all">Ungroup all</string>
+    <string name="customize_grouped_cover">Group with the other shutters in this room</string>
+    <string name="customize_grouped_light">Group with the other lights in this room</string>
 </resources>

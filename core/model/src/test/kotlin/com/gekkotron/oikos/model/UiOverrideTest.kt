@@ -138,4 +138,10 @@ class UiOverrideTest {
         assertEquals("""{"securityAction":true,"securityAsk":false}""", json)
         assertEquals(true, UiOverrides.decode("{}")?.securityAsk)
     }
+
+    @Test
+    fun `ungrouped round-trips and defaults to false`() {
+        assertEquals(UiOverride(ungrouped = true), UiOverrides.decode(UiOverrides.encode(UiOverride(ungrouped = true))))
+        assertFalse(UiOverrides.decode("""{"name":"X"}""")!!.ungrouped)
+    }
 }

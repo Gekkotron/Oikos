@@ -164,4 +164,42 @@
     <string name="search_no_match">Aucun appareil ne correspond à « %1$s »</string>
     <string name="customize_show_on_security">Afficher dans Sécurité</string>
     <string name="customize_ask_before">Demander avant d\'allumer</string>
+    <string name="group_default_covers">Volets</string>
+    <string name="group_default_lights">Lumières</string>
+    <string name="group_badge">×%1$d</string>
+    <string name="value_group_open_closed">Ouverts : %1$d · Fermés : %2$d</string>
+    <string name="value_group_all_open">Tous ouverts</string>
+    <string name="value_group_all_closed">Tous fermés</string>
+    <string name="value_group_lights_on">%1$d sur %2$d allumées</string>
+    <string name="value_group_all_on">Toutes allumées</string>
+    <string name="value_group_all_off">Toutes éteintes</string>
+    <string name="action_group_open">Ouvrir tous les volets</string>
+    <string name="action_group_stop">Arrêter tous les volets</string>
+    <string name="action_group_close">Fermer tous les volets</string>
+    <string name="home_group_not_confirmed_one">%1$s n\'a pas répondu</string>
+    <plurals name="home_group_not_confirmed_covers">
+        <item quantity="one">%1$d volet n\'a pas répondu</item>
+        <item quantity="other">%1$d volets n\'ont pas répondu</item>
+    </plurals>
+    <plurals name="home_group_not_confirmed_lights">
+        <item quantity="one">%1$d lumière n\'a pas répondu</item>
+        <item quantity="other">%1$d lumières n\'ont pas répondu</item>
+    </plurals>
+    <plurals name="sheet_group_subtitle_covers">
+        <item quantity="one">%1$s · %2$d volet</item>
+        <item quantity="other">%1$s · %2$d volets</item>
+    </plurals>
+    <plurals name="sheet_group_subtitle_lights">
+        <item quantity="one">%1$s · %2$d lumière</item>
+        <item quantity="other">%1$s · %2$d lumières</item>
+    </plurals>
+    <string name="sheet_all_to">Tous à</string>
+    <string name="sheet_customize_group">Personnaliser le groupe…</string>
+    <string name="customize_group_title">Personnaliser le groupe</string>
+    <string name="customize_group_name">Nom du groupe</string>
+    <string name="customize_group_name_hint">Vide = nom par défaut</string>
+    <string name="customize_group_members">Appareils du groupe</string>
+    <string name="customize_ungroup_all">Tout dégrouper</string>
+    <string name="customize_grouped_cover">Grouper avec les autres volets de la pièce</string>
+    <string name="customize_grouped_light">Grouper avec les autres lumières de la pièce</string>
 </resources>

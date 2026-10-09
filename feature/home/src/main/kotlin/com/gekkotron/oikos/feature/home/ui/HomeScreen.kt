@@ -39,6 +39,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -72,6 +73,7 @@ import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.presentation.TapAction
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.Route
 import java.time.LocalTime
@@ -87,7 +89,7 @@ fun HomeRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send)
+    HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send, onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids) })
     HomeScreen(
         state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
         onCustomize = viewModel::customize,
@@ -97,6 +99,8 @@ fun HomeRoute(
         windowInsets = windowInsets,
         onSearch = viewModel::search,
         onOpenHistory = onOpenHistory,
+        onSendGroup = { id, c -> viewModel.sendGroup(id, c) },
+        onCustomizeGroup = viewModel::customizeGroup,
     )
 }
 
@@ -115,12 +119,16 @@ fun HomeScreen(
     onRouteChange: (Route) -> Unit = {},
     onSearch: (String) -> Unit = {},
     onOpenHistory: (String) -> Unit = {},
+    onSendGroup: (String, Command) -> Unit = { _, _ -> },
+    onCustomizeGroup: (String, String, List<String>) -> Unit = { _, _, _ -> },
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var searching by rememberSaveable { mutableStateOf(state.query.isNotBlank()) }
     val closeSearch = { searching = false; onSearch("") }
     BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The group whose sheet a member's sheet was opened from; dismissing the member returns to it (room groups spec §4).
+    var sheetParent by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
@@ -161,17 +169,24 @@ fun HomeScreen(
                     }
                 }
                 items(state.cards, key = { it.id }, span = { GridItemSpan(if (it.wide) minOf(2, maxLineSpan) else 1) }) { card ->
-                    EntityCard(
-                        card = card,
-                        onClick = {
-                            when (card.tap) {
-                                TapAction.OPEN_SHEET -> sheetId = card.id
-                                TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
-                                else -> onTap(card)
-                            }
-                        },
-                        onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id },
-                    )
+                    val onClick = {
+                        when (card.tap) {
+                            TapAction.OPEN_SHEET -> sheetId = card.id
+                            TapAction.OPEN_HISTORY -> onOpenHistory(card.id)
+                            else -> onTap(card)
+                        }
+                    }
+                    if (card.isGroup) {
+                        // Shutter group: tap opens the sheet, long-press customizes. Light group: tap toggles, long-press opens the sheet.
+                        GroupCard(
+                            card,
+                            onClick = onClick,
+                            onLongClick = { if (card.kind == Kind.COVER) customizeId = card.id else sheetId = card.id },
+                            onSendGroup = onSendGroup,
+                        )
+                    } else {
+                        EntityCard(card = card, onClick = onClick, onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id })
+                    }
                 }
             }
             // Edge-to-edge: keep scrolled cards from colliding with the clock and status icons.
@@ -186,22 +201,35 @@ fun HomeScreen(
     }
     val sheetCard = sheetId?.let(state::card)
     if (sheetCard != null) {
-        ControlSheet(
-            sheetCard,
-            onSend = onSend,
-            onCustomize = { sheetId = null; customizeId = sheetCard.id },
-            onDismiss = { sheetId = null },
-            onOpenHistory = { onOpenHistory(sheetCard.id) },
-        )
+        // Keyed: a dismissed sheet's state stays hidden, so the group sheet a member returns to needs a fresh one.
+        key(sheetCard.id) {
+            ControlSheet(
+                sheetCard,
+                onSend = onSend,
+                onCustomize = { sheetId = null; sheetParent = null; customizeId = sheetCard.id },
+                onDismiss = { sheetId = sheetParent; sheetParent = null },
+                onOpenHistory = { sheetParent = null; sheetId = null; onOpenHistory(sheetCard.id) },
+                onSendGroup = onSendGroup,
+                onOpenMember = { member -> sheetParent = sheetCard.id; sheetId = member },
+            )
+        }
     }
     val customizeCard = customizeId?.let(state::card)
     if (customizeCard != null) {
-        CustomizeSheet(
-            customizeCard,
-            state.rooms,
-            onSave = { newRooms, override -> onCustomize(customizeCard.id, newRooms, override) },
-            onDismiss = { customizeId = null },
-        )
+        if (customizeCard.isGroup) {
+            GroupCustomizeSheet(
+                customizeCard,
+                onSave = { name, removed -> onCustomizeGroup(customizeCard.id, name, removed) },
+                onDismiss = { customizeId = null },
+            )
+        } else {
+            CustomizeSheet(
+                customizeCard,
+                state.rooms,
+                onSave = { newRooms, override -> onCustomize(customizeCard.id, newRooms, override) },
+                onDismiss = { customizeId = null },
+            )
+        }
     }
     if (linkSheet) {
         LinkSheet(

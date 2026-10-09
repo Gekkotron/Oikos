@@ -36,6 +36,10 @@ class DemoHouse(private val random: Random = Random(7)) {
         switch("demo_garage_plug", "Garage plug", "Garage", "demo/garage/plug", on = false, available = false)
         switch("demo_siren", "Siren", "Hallway", "demo/hallway/siren", on = false, available = true)
         cover("demo_living_shutter", "Shutter", "Living room", "demo/living/shutter")
+        cover("demo_living_shutter_side", "Side shutter", "Living room", "demo/living/shutter_side")
+        cover("demo_living_door_shutter", "Patio shutter", "Living room", "demo/living/door_shutter", position = false)
+        rgbLight("demo_living_ceiling", "Ceiling", "Living room", "demo/living/ceiling")
+        plainLight("demo_living_spot", "Spot", "Living room", "demo/living/spot")
         climate("demo_living_ac", "Air conditioner", "Living room", "demo/living/ac")
         sensor("demo_bedroom_temperature", "Bedroom", "Temperature", "Bedroom", "demo/bedroom/climate", "temperature", "temperature", "°C")
         sensor("demo_bedroom_humidity", "Bedroom", "Humidity", "Bedroom", "demo/bedroom/climate", "humidity", "humidity", "%")
@@ -183,6 +187,38 @@ class DemoHouse(private val random: Random = Random(7)) {
         echo("$topic/set", topic) { p -> runCatching { Json.parseToJsonElement(p).jsonObject }.getOrNull() }
     }
 
+    /** A colour bulb: JSON light with brightness and xy colour, off at start. */
+    private fun rgbLight(id: String, device: String, area: String, topic: String) {
+        config("light", id, device, null, area) {
+            put("schema", "json")
+            put("brightness", true)
+            put("brightness_scale", 255)
+            putJsonArray("supported_color_modes") { add("xy") }
+            put("state_topic", topic)
+            put("command_topic", "$topic/set")
+        }
+        doc(
+            topic,
+            buildJsonObject {
+                put("state", "OFF")
+                put("brightness", 200)
+                put("color", buildJsonObject { put("x", 0.45); put("y", 0.41) })
+            },
+        )
+        echo("$topic/set", topic) { p -> runCatching { Json.parseToJsonElement(p).jsonObject }.getOrNull() }
+    }
+
+    /** An on/off-only light. */
+    private fun plainLight(id: String, device: String, area: String, topic: String) {
+        config("light", id, device, null, area) {
+            put("schema", "json")
+            put("state_topic", topic)
+            put("command_topic", "$topic/set")
+        }
+        doc(topic, obj("state" to "OFF"))
+        echo("$topic/set", topic) { p -> runCatching { Json.parseToJsonElement(p).jsonObject }.getOrNull() }
+    }
+
     /** An addressable strip: a JSON light with effects and xy colour, plus speed and intensity numbers on the same device. */
     private fun ledStrip(id: String, device: String, area: String, topic: String) {
         val effects = listOf("solid", "breathe", "rainbow", "candle")
@@ -233,27 +269,32 @@ class DemoHouse(private val random: Random = Random(7)) {
         echo("$topic/set", topic) { p -> if (p == "ON" || p == "OFF") obj("state" to p) else null }
     }
 
-    private fun cover(id: String, device: String, area: String, topic: String) {
+    /** [position] false: a shutter that only reports open or closed (room groups demo, spec §9). */
+    private fun cover(id: String, device: String, area: String, topic: String, position: Boolean = true) {
         config("cover", id, device, null, area) {
             put("device_class", "shutter")
             put("state_topic", topic)
             put("value_template", "{{ value_json.state }}")
-            put("position_topic", topic)
-            put("position_template", "{{ value_json.position }}")
+            if (position) {
+                put("position_topic", topic)
+                put("position_template", "{{ value_json.position }}")
+                put("set_position_topic", "$topic/position/set")
+            }
             put("command_topic", "$topic/set")
-            put("set_position_topic", "$topic/position/set")
         }
-        doc(topic, obj("state" to "open", "position" to 60))
+        doc(topic, if (position) obj("state" to "open", "position" to 60) else obj("state" to "closed"))
         echo("$topic/set", topic) { p ->
             when (p) {
-                "OPEN" -> obj("state" to "open", "position" to 100)
-                "CLOSE" -> obj("state" to "closed", "position" to 0)
+                "OPEN" -> if (position) obj("state" to "open", "position" to 100) else obj("state" to "open")
+                "CLOSE" -> if (position) obj("state" to "closed", "position" to 0) else obj("state" to "closed")
                 "STOP" -> obj("state" to "stopped")
                 else -> null
             }
         }
-        echo("$topic/position/set", topic) { p ->
-            p.toIntOrNull()?.coerceIn(0, 100)?.let { obj("state" to if (it == 0) "closed" else "open", "position" to it) }
+        if (position) {
+            echo("$topic/position/set", topic) { p ->
+                p.toIntOrNull()?.coerceIn(0, 100)?.let { obj("state" to if (it == 0) "closed" else "open", "position" to it) }
+            }
         }
     }
 

@@ -22,6 +22,10 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.gekkotron.oikos.model.Kind
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.async
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Qualifier
@@ -59,9 +63,31 @@ class HomeViewModel @Inject constructor(
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
     val events: Flow<HomeEvent> = _events.receiveAsFlow()
 
+    /** Member id → the group send it last took part in; a member's own send removes it. */
+    private val groupSends = mutableMapOf<String, GroupSend>()
+    /** Keyed by group and command: failures of two different sends never share a snackbar or a Retry. */
+    private val failedInGroup = mutableMapOf<Pair<String, Command>, MutableList<String>>()
+
+    private data class GroupSend(val groupId: String, val kind: Kind, val command: Command, val names: Map<String, String>)
+
     init {
         viewModelScope.launch {
-            source.commandFailures.collect { _events.send(HomeEvent.NotConfirmed(it.uniqueId, it.command)) }
+            source.commandFailures.collect { failure ->
+                val send = groupSends[failure.uniqueId]?.takeIf { it.command == failure.command }
+                if (send == null) return@collect _events.send(HomeEvent.NotConfirmed(failure.uniqueId, failure.command))
+                groupSends.remove(failure.uniqueId)
+                val key = send.groupId to send.command
+                val bucket = failedInGroup.getOrPut(key) { mutableListOf() }
+                bucket += failure.uniqueId
+                // The first failure opens a 1 s window; the rest of the same send joins it.
+                if (bucket.size == 1) {
+                    launch {
+                        delay(GROUP_FAILURE_WINDOW_MS)
+                        val ids = failedInGroup.remove(key).orEmpty()
+                        _events.send(HomeEvent.GroupNotConfirmed(send.groupId, send.kind, ids, ids.map { send.names[it] ?: it }, send.command))
+                    }
+                }
+            }
         }
     }
 
@@ -70,6 +96,15 @@ class HomeViewModel @Inject constructor(
     /** Saves the override sheet through [OverrideEditor.customize]; a failure is a [HomeEvent.SaveFailed]. */
     fun customize(id: String, newRooms: List<Area>, override: UiOverride) {
         viewModelScope.launch { if (!editor.customize(id, newRooms, override)) _events.send(HomeEvent.SaveFailed) }
+    }
+
+    /** Room groups spec §6: rename, then take [removed] members out. A failed write is a [HomeEvent.SaveFailed]. */
+    fun customizeGroup(groupId: String, name: String, removed: List<String>) {
+        viewModelScope.launch {
+            val group = state.value.card(groupId)?.takeIf { it.isGroup } ?: return@launch
+            val renamed = name.trim() == group.name.trim() || editor.setGroupName(group.areaId, RoomGroups.kindKey(group.kind), name)
+            if (!renamed || !editor.ungroup(removed)) _events.send(HomeEvent.SaveFailed)
+        }
     }
 
     /** Home search; blank ends it. */
@@ -83,8 +118,13 @@ class HomeViewModel @Inject constructor(
 
     fun tap(card: CardUi) {
         when (card.tap) {
-            // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
-            TapAction.TOGGLE -> send(card.id, if (card.on) Command.TurnOff else Command.TurnOn())
+            TapAction.TOGGLE ->
+                if (card.isGroup) {
+                    sendGroup(card.id, GroupCommands.toggle(card))
+                } else {
+                    // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
+                    send(card.id, if (card.on) Command.TurnOff else Command.TurnOn())
+                }
             TapAction.PRESS -> send(card.id, Command.Press)
             TapAction.OPEN_SHEET, TapAction.OPEN_HISTORY, TapAction.NONE -> Unit
         }
@@ -92,6 +132,7 @@ class HomeViewModel @Inject constructor(
 
     fun send(id: String, command: Command) {
         viewModelScope.launch {
+            groupSends.remove(id)
             // A cached value may be outdated: never act on it (entity cache spec §3.6).
             if (state.value.card(id)?.stale == true) return@launch _events.send(HomeEvent.WaitingForConnection)
             val result = source.send(id, command)
@@ -99,7 +140,23 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Room groups spec §5: one command to every capable, available member, in parallel. [only] narrows it (Retry). */
+    fun sendGroup(groupId: String, command: Command, only: List<String>? = null) {
+        viewModelScope.launch {
+            val group = state.value.card(groupId)?.takeIf { it.isGroup } ?: return@launch
+            if (group.members.any { it.stale }) return@launch _events.send(HomeEvent.WaitingForConnection)
+            val ids = GroupCommands.targets(group, command).filter { only == null || it in only }
+            val names = group.members.associate { it.id to it.name }
+            ids.forEach { groupSends[it] = GroupSend(groupId, group.kind, command, names) }
+            val results = ids.map { id -> async { source.send(id, command) } }.awaitAll()
+            results.firstOrNull { it is CommandResult.Rejected }?.let {
+                _events.send(HomeEvent.Rejected(groupId, (it as CommandResult.Rejected).reason))
+            }
+        }
+    }
+
     private companion object {
+        const val GROUP_FAILURE_WINDOW_MS = 1_000L
         const val KEY_FILTER = "home.filter"
         const val KEY_QUERY = "home.query"
     }
