@@ -38,7 +38,8 @@ import com.gekkotron.oikos.feature.home.presentation.CardUi
 @Composable
 internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, List<String>) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable(card.id) { mutableStateOf(card.name) }
-    var kept by rememberSaveable(card.id) { mutableStateOf(card.members.map { it.id }) }
+    // The unticked ids, not the kept ones: a member that joins while the sheet is open must not be ungrouped by Save.
+    var removed by rememberSaveable(card.id) { mutableStateOf(emptyList<String>()) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
@@ -56,10 +57,10 @@ internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, List<String>) ->
             )
             Text(stringResource(R.string.customize_group_members), style = OikosTheme.type.label)
             for (member in card.members) {
-                val checked = member.id in kept
+                val checked = member.id !in removed
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch)
-                        .toggleable(checked, role = Role.Checkbox) { kept = if (it) kept + member.id else kept - member.id },
+                        .toggleable(checked, role = Role.Checkbox) { removed = if (it) removed - member.id else removed + member.id },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(checked = checked, onCheckedChange = null)
@@ -67,7 +68,7 @@ internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, List<String>) ->
                 }
             }
             Button(
-                onClick = { onSave(name, card.members.map { it.id } - kept.toSet()); onDismiss() },
+                onClick = { onSave(name, card.members.map { it.id }.filter { it in removed }); onDismiss() },
                 modifier = Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch),
             ) { Text(stringResource(R.string.customize_save)) }
             TextButton(onClick = { onSave(card.name, card.members.map { it.id }); onDismiss() }, modifier = Modifier.fillMaxWidth()) {

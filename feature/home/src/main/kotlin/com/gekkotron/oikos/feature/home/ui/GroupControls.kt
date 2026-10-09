@@ -79,7 +79,12 @@ private fun CoverGroupControls(card: CardUi, onSendGroup: (String, Command) -> U
 private fun LightGroupControls(card: CardUi, onSendGroup: (String, Command) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.sheet_power), Modifier.weight(1f))
-        Switch(checked = card.on, onCheckedChange = { onSendGroup(card.id, GroupCommands.toggle(card)) }, modifier = Modifier.testTag("group-power-${card.id}"))
+        val power = stringResource(R.string.sheet_power)
+        Switch(
+            checked = card.on,
+            onCheckedChange = { onSendGroup(card.id, GroupCommands.toggle(card)) },
+            modifier = Modifier.testTag("group-power-${card.id}").semantics { contentDescription = power },
+        )
     }
     if (card.capabilities.brightness) {
         val start = GroupMath.meanBrightness(card)
@@ -125,6 +130,8 @@ private fun MemberRow(member: CardUi, onSend: (String, Command) -> Unit, onOpenM
                 checked = member.on,
                 enabled = member.available,
                 onCheckedChange = { onSend(member.id, if (it) Command.TurnOn() else Command.TurnOff) },
+                // Its own focus stop beside the row: TalkBack must say which light it switches.
+                modifier = Modifier.semantics { contentDescription = member.name },
             )
         }
     }

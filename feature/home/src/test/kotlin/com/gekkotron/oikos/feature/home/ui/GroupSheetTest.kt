@@ -28,6 +28,8 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.TransportMode
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.isToggleable
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -109,5 +111,14 @@ class GroupSheetTest {
         compose.onNodeWithText("Living room · 2 lights").assertIsDisplayed()
         compose.onNodeWithTag("group-power-group:living:light").performClick()
         assertEquals("group:living:light" to Command.TurnOff as Command, groupSends.last())
+    }
+
+    @Test
+    fun `every light switch in the group sheet is named for TalkBack`() {
+        show()
+        compose.onNodeWithTag("card-group:living:light").performTouchInput { longClick() }
+        compose.onNode(hasContentDescription("Ceiling") and isToggleable()).assertExists()
+        compose.onNode(hasContentDescription("Floor lamp") and isToggleable()).assertExists()
+        compose.onNode(hasContentDescription("Power") and isToggleable()).assertExists()
     }
 }

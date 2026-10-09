@@ -315,4 +315,27 @@ class HomeViewModelTest {
         assertTrue(src.overrides.getValue("c").ungrouped)
         assertEquals(listOf("a", "b"), vm.state.value.cards.single { it.isGroup }.members.map { it.id })
     }
+
+    @Test
+    fun `failures of two different group sends never merge, so Retry repeats the right command`() = runTest(dispatcher) {
+        val src = groupSource()
+        val vm = HomeViewModel(src, SavedStateHandle(), dispatcher)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<HomeEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        vm.sendGroup("group:living:cover", Command.Open)
+        vm.sendGroup("group:living:cover", Command.SetPosition(30))
+        src.commandFailures.emit(CommandFailure("c", Command.Open, "timeout"))
+        advanceTimeBy(300)
+        src.commandFailures.emit(CommandFailure("a", Command.SetPosition(30), "timeout"))
+        src.commandFailures.emit(CommandFailure("b", Command.SetPosition(30), "timeout"))
+        advanceTimeBy(1_100)
+        assertEquals(
+            setOf<HomeEvent>(
+                HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("c"), listOf("Patio"), Command.Open),
+                HomeEvent.GroupNotConfirmed("group:living:cover", Kind.COVER, listOf("a", "b"), listOf("Bay", "Side"), Command.SetPosition(30)),
+            ),
+            events.toSet(),
+        )
+    }
 }

@@ -65,7 +65,8 @@ class HomeViewModel @Inject constructor(
 
     /** Member id → the group send it last took part in; a member's own send removes it. */
     private val groupSends = mutableMapOf<String, GroupSend>()
-    private val failedInGroup = mutableMapOf<String, MutableList<String>>()
+    /** Keyed by group and command: failures of two different sends never share a snackbar or a Retry. */
+    private val failedInGroup = mutableMapOf<Pair<String, Command>, MutableList<String>>()
 
     private data class GroupSend(val groupId: String, val kind: Kind, val command: Command, val names: Map<String, String>)
 
@@ -75,13 +76,14 @@ class HomeViewModel @Inject constructor(
                 val send = groupSends[failure.uniqueId]?.takeIf { it.command == failure.command }
                 if (send == null) return@collect _events.send(HomeEvent.NotConfirmed(failure.uniqueId, failure.command))
                 groupSends.remove(failure.uniqueId)
-                val bucket = failedInGroup.getOrPut(send.groupId) { mutableListOf() }
+                val key = send.groupId to send.command
+                val bucket = failedInGroup.getOrPut(key) { mutableListOf() }
                 bucket += failure.uniqueId
                 // The first failure opens a 1 s window; the rest of the same send joins it.
                 if (bucket.size == 1) {
                     launch {
                         delay(GROUP_FAILURE_WINDOW_MS)
-                        val ids = failedInGroup.remove(send.groupId).orEmpty()
+                        val ids = failedInGroup.remove(key).orEmpty()
                         _events.send(HomeEvent.GroupNotConfirmed(send.groupId, send.kind, ids, ids.map { send.names[it] ?: it }, send.command))
                     }
                 }

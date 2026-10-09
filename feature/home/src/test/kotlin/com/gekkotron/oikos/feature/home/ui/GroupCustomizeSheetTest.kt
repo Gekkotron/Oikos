@@ -15,6 +15,9 @@ import com.gekkotron.oikos.feature.home.testEntity
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.transport.LinkState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,5 +60,17 @@ class GroupCustomizeSheetTest {
         show()
         compose.onNodeWithText("Ungroup all").performScrollTo().performClick()
         assertEquals("" to listOf("bay", "patio", "side"), saved) // members are in card sort order (by name)
+    }
+
+    @Test
+    fun `a member that joins while the sheet is open is not ungrouped by Save`() {
+        var card by mutableStateOf(group)
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { GroupCustomizeSheet(card, onSave = { n, r -> saved = n to r }, onDismiss = {}) } }
+        compose.onNodeWithText("Patio door").performScrollTo().performClick()
+        val newcomer = group.members.first().copy(id = "garden", name = "Garden window")
+        card = group.copy(members = group.members + newcomer)
+        compose.waitForIdle()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals("" to listOf("patio"), saved)
     }
 }
