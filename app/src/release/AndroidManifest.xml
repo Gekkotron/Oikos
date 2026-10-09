@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!--
+            App Distribution's install step is an AppCompatActivity the SDK declares without a theme, so it
+            inherited Theme.Oikos (not AppCompat) and crashed every in-app update at install.
+        -->
+        <activity
+            android:name="com.google.firebase.appdistribution.impl.InstallActivity"
+            android:theme="@style/Theme.Oikos.TesterInstall"
+            tools:node="merge" />
+    </application>
+</manifest>
