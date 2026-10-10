@@ -98,7 +98,18 @@ private fun eval(e: Expression, vars: Map<String, Any?>): Any? = when (e) {
     }
     is Expression.Access -> access(eval(e.target, vars), e.key)
     is Expression.Filtered -> applyFilter(e.name, eval(e.target, vars), e.args)
-    is Expression.And -> truthy(eval(e.left, vars)) && truthy(eval(e.right, vars))
+    is Expression.And -> eval(e.left, vars).let { if (truthy(it)) eval(e.right, vars) else it }
+    is Expression.Or -> eval(e.left, vars).let { if (truthy(it)) it else eval(e.right, vars) }
+    is Expression.Not -> !truthy(eval(e.operand, vars))
+    is Expression.IfElse ->
+        if (truthy(eval(e.condition, vars))) eval(e.then, vars) else if (e.otherwise == null) Undefined else eval(e.otherwise, vars)
+    is Expression.Test -> eval(e.target, vars).let { v ->
+        when (e.name) {
+            "none" -> v == null
+            "defined" -> v !== Undefined
+            else -> v === Undefined
+        } != e.negated
+    }
     is Expression.Eq -> equalsValue(eval(e.left, vars), eval(e.right, vars))
     is Expression.In -> containsKey(e.key, eval(e.target, vars))
 }

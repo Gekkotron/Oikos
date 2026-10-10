@@ -16,6 +16,14 @@ internal sealed interface Expression {
     data class Access(val target: Expression, val key: Any) : Expression
     data class Filtered(val target: Expression, val name: String, val args: List<Any?>) : Expression
     data class And(val left: Expression, val right: Expression) : Expression
+    data class Or(val left: Expression, val right: Expression) : Expression
+    data class Not(val operand: Expression) : Expression
+
+    /** `then if condition else otherwise`; a missing else is undefined. */
+    data class IfElse(val then: Expression, val condition: Expression, val otherwise: Expression?) : Expression
+
+    /** `target is [not] none|defined|undefined`. */
+    data class Test(val target: Expression, val name: String, val negated: Boolean) : Expression
     data class Eq(val left: Expression, val right: Expression) : Expression
     data class In(val key: String, val target: Expression) : Expression
 }
@@ -37,6 +45,7 @@ internal sealed interface Token {
 }
 
 internal object TemplateParser {
+    val TESTS = setOf("none", "defined", "undefined")
     val FILTERS = setOf("int", "float", "round", "lower", "upper", "default", "string", "truncate")
 
     fun parse(template: String): List<Segment> {
@@ -61,11 +70,11 @@ internal object TemplateParser {
             } else {
                 val tokens = tokenize(body)
                 when ((tokens.firstOrNull() as? Token.Ident)?.name) {
-                    "if" -> open.addLast(OpenIf(ExpressionParser(tokens.drop(1)).parseCondition()))
+                    "if" -> open.addLast(OpenIf(ExpressionParser(tokens.drop(1)).parseAll()))
                     "elif" -> {
                         val o = open.lastOrNull() ?: throw UnsupportedTemplate("'elif' outside 'if'")
                         if (o.inElse) throw UnsupportedTemplate("'elif' after 'else'")
-                        o.branches += OpenIf.Branch(ExpressionParser(tokens.drop(1)).parseCondition())
+                        o.branches += OpenIf.Branch(ExpressionParser(tokens.drop(1)).parseAll())
                     }
                     "else" -> {
                         val o = open.lastOrNull() ?: throw UnsupportedTemplate("'else' outside 'if'")
@@ -156,8 +165,8 @@ internal object TemplateParser {
                     out += Token.Sym(c)
                     i++
                 }
-                c == '=' && i + 1 < src.length && src[i + 1] == '=' -> {
-                    out += Token.Op("==")
+                (c == '=' || c == '!') && i + 1 < src.length && src[i + 1] == '=' -> {
+                    out += Token.Op("$c=")
                     i += 2
                 }
                 else -> throw UnsupportedTemplate("unsupported syntax '$c'")
@@ -177,30 +186,52 @@ private class ExpressionParser(private val tokens: List<Token>) {
         if ((next() as? Token.Sym)?.c != c) throw UnsupportedTemplate("expected '$c'")
     }
 
+    /** Full expression grammar: inline if-else < or < and < not < comparison < filter < postfix. */
     fun parseAll(): Expression {
         if (tokens.isEmpty()) throw UnsupportedTemplate("empty expression")
-        val expr = parseFiltered()
-        peek()?.let { throw UnsupportedTemplate("unsupported expression near $it") }
-        return expr
-    }
-
-    /** `{% if %}` / `{% elif %}` conditions: `and` of `==`/`in` comparisons or plain truthy expressions. */
-    fun parseCondition(): Expression {
-        if (tokens.isEmpty()) throw UnsupportedTemplate("empty expression")
-        val expr = parseAnd()
+        val expr = parseInlineIf()
         peek()?.let { throw UnsupportedTemplate("unsupported expression near $it") }
         return expr
     }
 
     private fun isIdent(name: String) = (peek() as? Token.Ident)?.name == name
 
-    private fun parseAnd(): Expression {
-        var expr = parseComparison()
-        while (isIdent("and")) {
+    private fun parseInlineIf(): Expression {
+        val then = parseOr()
+        if (!isIdent("if")) return then
+        next()
+        val condition = parseOr()
+        val otherwise = if (isIdent("else")) {
             next()
-            expr = Expression.And(expr, parseComparison())
+            parseInlineIf()
+        } else {
+            null
+        }
+        return Expression.IfElse(then, condition, otherwise)
+    }
+
+    private fun parseOr(): Expression {
+        var expr = parseAnd()
+        while (isIdent("or")) {
+            next()
+            expr = Expression.Or(expr, parseAnd())
         }
         return expr
+    }
+
+    private fun parseAnd(): Expression {
+        var expr = parseNot()
+        while (isIdent("and")) {
+            next()
+            expr = Expression.And(expr, parseNot())
+        }
+        return expr
+    }
+
+    private fun parseNot(): Expression {
+        if (!isIdent("not")) return parseComparison()
+        next()
+        return Expression.Not(parseNot())
     }
 
     private fun parseComparison(): Expression {
@@ -210,12 +241,23 @@ private class ExpressionParser(private val tokens: List<Token>) {
                 next()
                 Expression.Eq(left, parseFiltered())
             }
+            (peek() as? Token.Op)?.op == "!=" -> {
+                next()
+                Expression.Not(Expression.Eq(left, parseFiltered()))
+            }
             isIdent("in") -> {
                 next()
                 if (left !is Expression.Literal || left.value !is String) {
                     throw UnsupportedTemplate("'in' requires a string literal on its left")
                 }
                 Expression.In(left.value, parseFiltered())
+            }
+            isIdent("is") -> {
+                next()
+                val negated = isIdent("not").also { if (it) next() }
+                val name = (next() as? Token.Ident)?.name
+                if (name !in TemplateParser.TESTS) throw UnsupportedTemplate("test '$name' is not supported")
+                Expression.Test(left, name!!, negated)
             }
             else -> left
         }
@@ -248,7 +290,11 @@ private class ExpressionParser(private val tokens: List<Token>) {
         is Token.Ident -> keywordLiteral(t.name)?.let { Expression.Literal(it.value) } ?: Expression.Variable(t.name)
         is Token.Num -> Expression.Literal(t.value)
         is Token.Str -> Expression.Literal(t.value)
-        is Token.Sym -> throw UnsupportedTemplate("unexpected '${t.c}'")
+        is Token.Sym -> if (t.c == '(') {
+            parseInlineIf().also { expectSym(')') }
+        } else {
+            throw UnsupportedTemplate("unexpected '${t.c}'")
+        }
         is Token.Op -> throw UnsupportedTemplate("unexpected '${t.op}'")
     }
 

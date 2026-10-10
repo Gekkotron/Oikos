@@ -148,18 +148,11 @@ class TemplatesTest {
             "{% if value_json.a %}x{% else %}y{% elif value_json.b %}z{% endif %}",
             "{% for x in value_json %}x{% endfor %}",
             "{%- if value_json.a %}x{% endif %}",
-            "{% if value_json.a or value_json.b %}x{% endif %}",
-            "{% if not value_json.a %}x{% endif %}",
-            "{% if value_json.a != 1 %}x{% endif %}",
             "{% if value_json.a < 1 %}x{% endif %}",
             "{# comment #}",
-            "{{ value_json.x == 1 }}",
-            "{{ value_json.a and value_json.b }}",
-            "{{ 'a' in value_json }}",
             "{{ now() }}",
             "{{ value | tojson }}",
             "{{ value",
-            "{{ 'a' if value else 'b' }}",
             "{{ value_json.x + 1 }}",
             "{{ }}",
         ).forEach { t -> assertIs<TemplateResult.Unsupported>(Templates.renderValue(t, "1"), t) }
@@ -207,6 +200,76 @@ class TemplatesTest {
         assertEquals("ab", v(t, """{"a":true,"b":true}"""))
         assertEquals("a", v(t, """{"a":true,"b":false}"""))
         assertEquals("none", v(t, """{"a":false,"b":true}"""))
+    }
+
+    @Test
+    fun `inline if-else`() {
+        val t = "{{ 'ON' if value_json.state == 1 else 'OFF' }}"
+        assertEquals("ON", v(t, """{"state":1}"""))
+        assertEquals("OFF", v(t, """{"state":0}"""))
+        assertEquals("OFF", v(t, """{}"""))
+        assertEquals("ON", v("{{ 'ON' if value_json.muted else 'OFF' }}", """{"muted":true}"""))
+        assertEquals("OFF", v("{{ 'ON' if value_json.muted else 'OFF' }}", """{"muted":null}"""))
+        assertEquals("Y", v("{{ 'Y' if value_json.a }}", """{"a":1}"""))
+        assertEquals(null, v("{{ 'Y' if value_json.a }}", """{"a":0}"""))
+        assertEquals("b", v("{{ 'a' if value_json.x == 1 else 'b' if value_json.x == 2 else 'c' }}", """{"x":2}"""))
+        assertEquals("up", v("{{ ('up' if value_json.x else 'down') | lower }}", """{"x":1}"""))
+        assertEquals("ON", v("{{ 'on' | upper if value_json.x else 'OFF' }}", """{"x":1}"""))
+    }
+
+    @Test
+    fun `or and not return operands like Python`() {
+        assertEquals("", v("{{ value_json.m or '' }}", """{"m":null}"""))
+        assertEquals("", v("{{ value_json.m or '' }}", """{}"""))
+        assertEquals("FOLLOW", v("{{ value_json.m or '' }}", """{"m":"FOLLOW"}"""))
+        assertEquals(2L, v("{{ value_json.a or value_json.b }}", """{"a":0,"b":2}"""))
+        assertEquals(0L, v("{{ value_json.a and value_json.b }}", """{"a":0,"b":2}"""))
+        assertEquals(2L, v("{{ value_json.a and value_json.b }}", """{"a":1,"b":2}"""))
+        assertEquals(true, v("{{ not value_json.a }}", """{"a":0}"""))
+        assertEquals("y", v("{{ 'y' if not value_json.a and value_json.b or value_json.c else 'n' }}", """{"a":0,"b":1}"""))
+        assertEquals("n", v("{{ 'y' if not (value_json.a or value_json.b) else 'n' }}", """{"a":0,"b":1}"""))
+    }
+
+    @Test
+    fun `not equal`() {
+        assertEquals(true, v("{{ value_json.s != 'x' }}", """{"s":"y"}"""))
+        assertEquals(false, v("{{ value_json.s != 'x' }}", """{"s":"x"}"""))
+        assertEquals(true, v("{{ value_json.s != 'x' }}", """{}"""))
+        assertEquals("a", v("{% if value_json.s != 'x' %}a{% else %}b{% endif %}", """{"s":"y"}"""))
+    }
+
+    @Test
+    fun `is none and is defined tests`() {
+        val p = """{"n":null,"v":1}"""
+        assertEquals(true, v("{{ value_json.n is none }}", p))
+        assertEquals(false, v("{{ value_json.v is none }}", p))
+        assertEquals(false, v("{{ value_json.missing is none }}", p))
+        assertEquals(false, v("{{ value_json.n is not none }}", p))
+        assertEquals(true, v("{{ value_json.missing is not none }}", p))
+        assertEquals(true, v("{{ value_json.n is defined }}", p))
+        assertEquals(false, v("{{ value_json.missing is defined }}", p))
+        assertEquals(true, v("{{ value_json.missing is not defined }}", p))
+        assertEquals(true, v("{{ value_json.missing is undefined }}", p))
+        assertEquals(false, v("{{ value_json.v is undefined }}", p))
+        assertIs<TemplateResult.Unsupported>(Templates.renderValue("{{ value is odd }}", "1"))
+    }
+
+    @Test
+    fun `if statements take the full expression grammar`() {
+        val t = "{% if value_json.volume is not none %}{{ value_json.volume }}{% endif %}"
+        assertEquals("25", v(t, """{"volume":25}"""))
+        assertEquals("", v(t, """{"volume":null}"""))
+        assertEquals("", v(t, """{}"""))
+        val u = "{% if value_json.a or not value_json.b %}x{% else %}y{% endif %}"
+        assertEquals("x", v(u, """{"a":0,"b":0}"""))
+        assertEquals("y", v(u, """{"a":0,"b":1}"""))
+    }
+
+    @Test
+    fun `malformed new constructs are unsupported`() {
+        assertIs<TemplateResult.Unsupported>(Templates.renderValue("{{ (value }}", "1"))
+        assertIs<TemplateResult.Unsupported>(Templates.renderValue("{{ 'a' if }}", "1"))
+        assertIs<TemplateResult.Unsupported>(Templates.renderValue("{{ !value }}", "1"))
     }
 
     @Test
