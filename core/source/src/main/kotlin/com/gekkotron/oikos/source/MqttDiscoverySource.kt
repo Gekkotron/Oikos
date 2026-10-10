@@ -10,6 +10,7 @@ import com.gekkotron.oikos.model.Diagnostic
 import com.gekkotron.oikos.model.DiagnosticSink
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.OikosJson
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
@@ -142,7 +143,7 @@ class MqttDiscoverySource(
         val bindings = entity.bindings as? MqttBindings ?: return CommandResult.Rejected("not an MQTT entity")
         val state = store.states.value[uniqueId]
         if (state != null && !state.available) return CommandResult.Rejected("unavailable")
-        val mapper = KindMappers.forKind(entity.kind)
+        val mapper = KindMappers.forEntity(entity)
         val previous = state?.value ?: StateValue.Unknown
         val publish = when (val encoded = mapper.encode(bindings, command, previous)) {
             is Encoded.NotSupported -> return CommandResult.Rejected(encoded.reason)
@@ -364,7 +365,8 @@ class MqttDiscoverySource(
                 .groupBy { it.lowercase(Locale.ROOT) }.mapValues { (_, spellings) -> spellings.min() }
             val entities = raws.associate { (d, ui, raw) ->
                 val area = canonical[raw.lowercase(Locale.ROOT)]?.takeIf { raw !in declaredIds } ?: raw
-                d.entity.uniqueId to d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
+                val named = d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
+                d.entity.uniqueId to if (d.entity.kind == Kind.SWITCH && ui.asLight) named.copy(kind = Kind.LIGHT) else named
             }
             // Recomputed from scratch every time, so it stays correct regardless of the order the cover
             // and its "Moving" sensor arrive in, and clears when either is removed.

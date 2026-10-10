@@ -71,10 +71,11 @@ internal fun CustomizeSheet(
     var energyRole by rememberSaveable(card.id) { mutableStateOf(start.energyRole) }
     var energyInvert by rememberSaveable(card.id) { mutableStateOf(start.energyInvert) }
     var grouped by rememberSaveable(card.id) { mutableStateOf(start.grouped) }
+    var asLight by rememberSaveable(card.id) { mutableStateOf(start.asLight) }
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped, asLight = asLight)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -102,6 +103,7 @@ internal fun CustomizeSheet(
                 },
             )
             SwitchRow(stringResource(R.string.customize_favorite), favorite) { favorite = it }
+            if (card.protocolKind == Kind.SWITCH) SwitchRow(stringResource(R.string.customize_as_light), asLight) { asLight = it }
             if (card.groupable) {
                 SwitchRow(stringResource(if (card.kind == Kind.COVER) R.string.customize_grouped_cover else R.string.customize_grouped_light), grouped) { grouped = it }
             }

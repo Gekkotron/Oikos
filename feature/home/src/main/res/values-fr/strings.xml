@@ -201,5 +201,6 @@
     <string name="customize_group_members">Appareils du groupe</string>
     <string name="customize_ungroup_all">Tout dégrouper</string>
     <string name="customize_grouped_cover">Grouper avec les autres volets de la pièce</string>
+    <string name="customize_as_light">Afficher comme une lumière</string>
     <string name="customize_grouped_light">Grouper avec les autres lumières de la pièce</string>
 </resources>

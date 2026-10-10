@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.state.kinds
 
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.state.mqtt.MqttBindings
@@ -41,6 +42,10 @@ interface KindMapper {
 }
 
 object KindMappers {
+    /** The mapper for an entity's wire protocol; a switch shown as a light keeps switch payloads. */
+    fun forEntity(e: Entity): KindMapper =
+        if (e.protocolKind == Kind.SWITCH && e.kind == Kind.LIGHT) SwitchAsLightMapper else forKind(e.protocolKind)
+
     fun forKind(kind: Kind): KindMapper = when (kind) {
         Kind.LIGHT -> LightMapper
         Kind.SWITCH -> SwitchMapper

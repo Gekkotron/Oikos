@@ -194,4 +194,15 @@ class StateStoreTest {
         assertEquals(StateValue.Numeric(48.0), value("h"))
         assertTrue(stale("h"))
     }
+
+    @Test
+    fun `switching an entity to a light swaps its mapper without changing bindings`() {
+        store.setEntities(listOf(lamp))
+        store.onMessage("s", "ON")
+        assertEquals(StateValue.OnOff(true), value("l"))
+        store.setEntities(listOf(lamp.copy(kind = Kind.LIGHT)))
+        assertEquals(StateValue.Light(true), value("l"))
+        store.setEntities(listOf(lamp))
+        assertEquals(StateValue.OnOff(true), value("l"))
+    }
 }

@@ -71,6 +71,8 @@ data class CardUi(
     val id: String,
     val name: String,
     val kind: Kind,
+    /** The kind as discovered; differs from [kind] when a switch is shown as a light. */
+    val protocolKind: Kind = kind,
     val deviceClass: String?,
     /** Null means Unassigned (localized by the UI). */
     val areaName: String?,

@@ -201,5 +201,6 @@
     <string name="customize_group_members">Devices in this group</string>
     <string name="customize_ungroup_all">Ungroup all</string>
     <string name="customize_grouped_cover">Group with the other shutters in this room</string>
+    <string name="customize_as_light">Show as a light</string>
     <string name="customize_grouped_light">Group with the other lights in this room</string>
 </resources>
