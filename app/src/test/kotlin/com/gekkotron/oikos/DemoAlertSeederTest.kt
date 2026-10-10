@@ -15,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,13 @@ class DemoAlertSeederTest {
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), AlertDatabase::class.java).allowMainThreadQueries().build()
         repo = AlertRepository(db.alerts()) { now }
+        // Warm Room's read, write and reset paths: on a cold Robolectric sandbox the first access spends
+        // seconds instrumenting classes (CI dump: arch_disk_io in SandboxClassLoader), which ate the wait below.
+        runBlocking {
+            repo.upsert(DemoAlerts.all(now)[0])
+            repo.reset()
+            ids()
+        }
     }
 
     /**
@@ -63,7 +71,7 @@ class DemoAlertSeederTest {
     /** Room writes run on its own executor, in real time: poll on a real dispatcher, not under virtual time. */
     private suspend fun awaitIds(expected: List<String>, step: String) = withContext(Dispatchers.Default) {
         var seen: List<String> = emptyList()
-        val done = withTimeoutOrNull(5_000) {
+        val done = withTimeoutOrNull(WAIT_MS) {
             while (true) {
                 seen = ids()
                 if (seen == expected) break
@@ -73,7 +81,7 @@ class DemoAlertSeederTest {
         // A bare timeout says nothing in CI's console: name the step and what Room held.
         if (done == null) {
             val errors = seederErrors.joinToString { it.stackTraceToString().lines().take(6).joinToString(" | ") }
-            throw AssertionError("$step: after 5 s Room held $seen, expected $expected; seeder errors: [$errors]; threads:\n${busyThreads()}")
+            throw AssertionError("$step: after ${WAIT_MS / 1000} s Room held $seen, expected $expected; seeder errors: [$errors]; threads:\n${busyThreads()}")
         }
     }
 
@@ -81,6 +89,11 @@ class DemoAlertSeederTest {
     private fun busyThreads(): String = Thread.getAllStackTraces()
         .filter { (t, frames) -> frames.any { f -> f.className.startsWith("androidx.room") || f.className.startsWith("com.gekkotron") } || t.name.contains("arch_disk_io") }
         .entries.joinToString("\n") { (t, frames) -> "[${t.name} ${t.state}] " + frames.take(14).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" } }
+
+    private companion object {
+        /** A ceiling, not a delay: the poll returns as soon as Room holds the expected ids. */
+        const val WAIT_MS = 20_000L
+    }
 
     private suspend fun settle() = withContext(Dispatchers.Default) { delay(300) }
 
