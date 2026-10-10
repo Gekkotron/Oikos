@@ -26,6 +26,10 @@ sealed interface VoiceSessionState {
     data class Error(val kind: ErrorKind) : VoiceSessionState
 }
 
+/** Only a command that fully ran closes the sheet by itself (spec §3); failures stay up to be read. */
+fun autoCloses(state: VoiceSessionState): Boolean =
+    state is VoiceSessionState.Done && state.result.succeeded.isNotEmpty() && state.result.failed.isEmpty()
+
 enum class ErrorKind { MQTT_DOWN, SPEECH, PERMISSION, SILENCE, UNKNOWN }
 
 data class ExecutionResult(

@@ -15,10 +15,16 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.border
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -28,9 +34,14 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.voice.ErrorKind
 import com.gekkotron.oikos.feature.voice.R
 import com.gekkotron.oikos.feature.voice.VoiceSessionState
+import com.gekkotron.oikos.feature.voice.autoCloses
 import com.gekkotron.oikos.voice.Suggestion
 import com.gekkotron.oikos.voice.VoiceLang
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+
+/** How long a successful result stays up before the sheet closes by itself (spec §3: "about 2 s"). */
+private const val AUTO_CLOSE_MS = 2_000L
 
 @Composable
 internal fun rememberVoiceLang(): VoiceLang {
@@ -67,6 +78,14 @@ fun VoiceSheet(
 ) {
     val current = state.collectAsStateWithLifecycle().value
     val c = OikosTheme.colors
+    // Any touch on the sheet keeps it open ("unless touched"), including taps on its buttons.
+    var touched by remember { mutableStateOf(false) }
+    if (autoCloses(current) && !touched) {
+        LaunchedEffect(current) {
+            delay(AUTO_CLOSE_MS)
+            onCancel()
+        }
+    }
     Box(
         Modifier.fillMaxSize().clickable(
             interactionSource = remember { MutableInteractionSource() },
@@ -80,6 +99,14 @@ fun VoiceSheet(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(c.backgroundBottom)
+                .pointerInput(Unit) {
+                    // Initial pass: seen before the buttons consume it.
+                    awaitPointerEventScope {
+                        while (true) {
+                            if (awaitPointerEvent(PointerEventPass.Initial).changes.any { it.pressed }) touched = true
+                        }
+                    }
+                }
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp),
