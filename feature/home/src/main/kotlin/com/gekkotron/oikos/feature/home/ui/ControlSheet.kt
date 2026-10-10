@@ -273,7 +273,12 @@ private fun VacuumControls(card: CardUi, onSend: (Command) -> Unit) {
         Text(stringResource(R.string.sheet_suction))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (speed in card.capabilities.fanSpeeds) {
-                FilterChip(selected = vacuum?.fanSpeed == speed, onClick = { onSend(Command.SetFanSpeed(speed)) }, label = { Text(speed) })
+                FilterChip(
+                    selected = vacuum?.fanSpeed == speed,
+                    onClick = { onSend(Command.SetFanSpeed(speed)) },
+                    enabled = card.available,
+                    label = { Text(speed) },
+                )
             }
         }
     }

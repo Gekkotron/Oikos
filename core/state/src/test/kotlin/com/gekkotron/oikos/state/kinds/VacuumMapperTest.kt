@@ -92,7 +92,8 @@ class VacuumMapperTest {
         assertNull(VacuumMapper.predict(Command.VacuumAction("locate"), docked))
         assertEquals(Vacuum("docked", 100, "Silent"), VacuumMapper.predict(Command.SetFanSpeed("Silent"), docked))
         assertEquals(setOf("roborock/ha/state"), VacuumMapper.stateTopics(roborock))
-        assertEquals(setOf("roborock/ha/state"), VacuumMapper.feedbackTopics(roborock, Command.VacuumAction("start")))
+        assertEquals(emptySet(), VacuumMapper.feedbackTopics(roborock, Command.VacuumAction("start")))
+        assertEquals(emptySet(), VacuumMapper.feedbackTopics(roborock, Command.SetFanSpeed("Silent")))
         assertEquals(emptySet(), VacuumMapper.feedbackTopics(roborock, Command.VacuumAction("locate")))
     }
 }

@@ -55,7 +55,7 @@ class ConfigViewModel(
                     val order = result.areas.mapIndexed { i, area -> area.id to i }.toMap()
                     val names = result.areas.associate { it.id to it.name }
                     val rows = result.entities
-                        .filter { !it.ui.hidden && it.partOf == null }
+                        .filter { !it.ui.hidden && it.partOf == null && it.kind != Kind.VACUUM } // no vacuum tiles (vacuum spec)
                         .sortedWith(compareBy({ order[it.area] ?: Int.MAX_VALUE }, { it.name.lowercase() }))
                         .map { PickerRow(it.uniqueId, it.name, names[it.area] ?: it.area, it.kind, it.capabilities.alarmModes) }
                     _state.update { it.copy(loading = false, rows = rows, allRows = rows, selected = existing?.uniqueIds.orEmpty(), armMode = existing?.armMode) }

@@ -65,8 +65,11 @@ object VacuumMapper : KindMapper {
         return Encoded.Publish(listOf(outgoing(b, topic, b.str("payload_$action", action))))
     }
 
-    override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> =
-        if (command == Command.VacuumAction("locate")) emptySet() else stateTopics(b)
+    /**
+     * Optimistic: a bridge such as Roborock2Mqtt runs the command and then a status query before it
+     * publishes, which can outlast the confirmation window; the next state message corrects a wrong guess.
+     */
+    override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = emptySet()
 
     override fun predict(command: Command, previous: StateValue): StateValue? {
         val prev = previous as? StateValue.Vacuum ?: StateValue.Vacuum(null, null, null)
