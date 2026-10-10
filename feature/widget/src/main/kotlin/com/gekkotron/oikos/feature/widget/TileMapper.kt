@@ -64,6 +64,7 @@ object TileMapper {
         is StateValue.Cover -> TileValue.Cover(value.state, value.position)
         is StateValue.Climate -> TileValue.Climate(value.mode, value.current, value.target)
         is StateValue.Alarm -> TileValue.Alarm(value.state)
+        is StateValue.Vacuum -> value.state?.let { TileValue.Text(it) } ?: TileValue.None
     }
 
     private fun iconOf(entity: Entity): TileIcon = when (entity.kind) {
@@ -74,6 +75,6 @@ object TileMapper {
         Kind.ALARM_PANEL -> TileIcon.ALARM
         Kind.BUTTON -> TileIcon.BUTTON
         Kind.SENSOR -> if (entity.deviceClass == "temperature") TileIcon.TEMPERATURE else TileIcon.SENSOR
-        Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT -> TileIcon.SENSOR
+        Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT, Kind.VACUUM -> TileIcon.SENSOR
     }
 }

@@ -57,5 +57,6 @@ object KindMappers {
         Kind.NUMBER -> NumberMapper
         Kind.SELECT -> SelectMapper
         Kind.BUTTON -> ButtonMapper
+        Kind.VACUUM -> VacuumMapper
     }
 }

@@ -8,6 +8,7 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.state.kinds.AlarmPanelMapper
 import com.gekkotron.oikos.state.kinds.ClimateMapper
 import com.gekkotron.oikos.state.kinds.NumberMapper
+import com.gekkotron.oikos.state.kinds.VacuumMapper
 import com.gekkotron.oikos.state.mqtt.MqttBindings
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -38,6 +39,7 @@ object DiscoveryParser {
         "number" to Kind.NUMBER,
         "select" to Kind.SELECT,
         "button" to Kind.BUTTON,
+        "vacuum" to Kind.VACUUM,
     )
     private val REQUIRES_COMMAND = setOf(Kind.SWITCH, Kind.LIGHT, Kind.NUMBER, Kind.SELECT, Kind.BUTTON, Kind.ALARM_PANEL)
     private val REQUIRES_STATE = setOf(Kind.SENSOR, Kind.BINARY_SENSOR)
@@ -204,6 +206,7 @@ object DiscoveryParser {
             codeDisarmRequired = AlarmPanelMapper.codeRequired(b, arming = false),
             codeFormat = codeFormat(b.str("code")),
         )
+        Kind.VACUUM -> Capabilities(vacuumActions = VacuumMapper.actions(b), fanSpeeds = VacuumMapper.fanSpeeds(b))
         else -> Capabilities()
     }
 

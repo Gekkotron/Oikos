@@ -61,6 +61,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.NUMBER -> IconSpec.Static(OikosGlyph.SLIDER, on = false)
     Kind.SELECT -> IconSpec.Static(OikosGlyph.LIST, on = false)
     Kind.BUTTON -> IconSpec.Static(OikosGlyph.PLAY, on = false)
+    Kind.VACUUM -> IconSpec.Static(OikosGlyph.PLAY, on = false)
 }
 
 /** An unavailable cover keeps its last known position (closed could misreport it) but stops moving. */

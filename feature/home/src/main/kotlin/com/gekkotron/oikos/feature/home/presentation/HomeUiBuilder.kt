@@ -21,7 +21,7 @@ fun interface LabelText {
 object HomeUiBuilder {
     const val HERO_WEATHER = "hero_weather"
     private val WIDE_CLASSES = setOf("power", "energy")
-    private val SHEET_KINDS = setOf(Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL)
+    private val SHEET_KINDS = setOf(Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM)
     private val COMPANION_KINDS = setOf(Kind.NUMBER, Kind.SELECT)
 
     fun build(
@@ -191,7 +191,7 @@ object HomeUiBuilder {
     private fun tapFor(kind: Kind, hasHistory: Boolean) = when (kind) {
         Kind.LIGHT, Kind.SWITCH -> TapAction.TOGGLE
         Kind.BUTTON -> TapAction.PRESS
-        Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL -> TapAction.OPEN_SHEET
+        Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM -> TapAction.OPEN_SHEET
         Kind.SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
         Kind.BINARY_SENSOR -> TapAction.NONE
     }

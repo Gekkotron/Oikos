@@ -36,6 +36,7 @@ object TileActions {
             }
             Kind.CLIMATE -> climate(tile)
             Kind.ALARM_PANEL -> alarm(tile, armMode)
+            Kind.VACUUM -> TileAction.OpenHome
             Kind.SENSOR, Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT ->
                 if (tile.historyAvailable) TileAction.OpenHistory(id) else TileAction.OpenHome
         }

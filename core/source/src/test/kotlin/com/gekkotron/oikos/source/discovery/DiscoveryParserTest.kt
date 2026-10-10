@@ -117,12 +117,12 @@ class DiscoveryParserTest {
     fun `device-based discovery reports bad components but keeps good ones`() {
         val r = DiscoveryParser.parse(
             prefix, "homeassistant/device/d1/config",
-            """{"dev":{"ids":"d1","name":"D"},"cmps":{"a":{"p":"sensor","stat_t":"s","uniq_id":"a1"},"b":{"p":"vacuum","uniq_id":"b1"}}}""",
+            """{"dev":{"ids":"d1","name":"D"},"cmps":{"a":{"p":"sensor","stat_t":"s","uniq_id":"a1"},"b":{"p":"lawn_mower","uniq_id":"b1"}}}""",
         )
         assertIs<DiscoveryResult.Entities>(r)
         assertEquals(listOf("a1"), r.items.map { it.entity.uniqueId })
         assertEquals(1, r.skipped.size)
-        assertTrue("vacuum" in r.skipped.single())
+        assertTrue("lawn_mower" in r.skipped.single())
     }
 
     @Test
@@ -152,7 +152,7 @@ class DiscoveryParserTest {
     fun `validation failures are skipped with a reason`() {
         fun reason(topic: String, payload: String) =
             (DiscoveryParser.parse(prefix, topic, payload) as DiscoveryResult.Skipped).reason
-        assertTrue("vacuum" in reason("homeassistant/vacuum/x/config", """{"cmd_t":"c"}"""))
+        assertTrue("lawn_mower" in reason("homeassistant/lawn_mower/x/config", """{"cmd_t":"c"}"""))
         assertTrue("command_topic" in reason("homeassistant/switch/x/config", """{"stat_t":"s"}"""))
         assertTrue("state_topic" in reason("homeassistant/sensor/x/config", """{"name":"n"}"""))
         assertTrue("options" in reason("homeassistant/select/x/config", """{"cmd_t":"c","options":[]}"""))
@@ -214,6 +214,21 @@ class DiscoveryParserTest {
         val basicLight = single("homeassistant/light/l/config", """{"cmd_t":"c","bri_cmd_t":"b","rgb_cmd_t":"r"}""").entity.capabilities
         assertTrue(basicLight.brightness)
         assertEquals(setOf("rgb"), basicLight.colorModes)
+        val vacuum = single(
+            "homeassistant/vacuum/v/config",
+            """{"stat_t":"s","cmd_t":"c","set_fan_spd_t":"f","fanspd_lst":["Silent","Turbo"],
+               "sup_feat":["start","pause","return_home","locate","fan_speed","battery","status"]}""",
+        ).entity
+        assertEquals(Kind.VACUUM, vacuum.kind)
+        assertEquals(listOf("start", "pause", "return_to_base", "locate"), vacuum.capabilities.vacuumActions)
+        assertEquals(listOf("Silent", "Turbo"), vacuum.capabilities.fanSpeeds)
+        // HA defaults: start, stop, return_home, status, battery, clean_spot; no fan_speed feature → no speeds
+        val vacuumDefault = single("homeassistant/vacuum/w/config", """{"stat_t":"s","cmd_t":"c","set_fan_spd_t":"f","fanspd_lst":["Silent"]}""").entity.capabilities
+        assertEquals(listOf("start", "stop", "return_to_base"), vacuumDefault.vacuumActions)
+        assertEquals(emptyList(), vacuumDefault.fanSpeeds)
+        // fan_speed supported but no set_fan_speed_topic → no speeds
+        val noFanTopic = single("homeassistant/vacuum/x/config", """{"stat_t":"s","cmd_t":"c","fanspd_lst":["Silent"],"sup_feat":["start","fan_speed"]}""").entity.capabilities
+        assertEquals(emptyList(), noFanTopic.fanSpeeds)
     }
 
     @Test

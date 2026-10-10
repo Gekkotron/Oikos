@@ -22,6 +22,8 @@ sealed interface StateValue {
     data class Climate(val mode: String?, val target: Double?, val current: Double?, val fanMode: String? = null) : StateValue
 
     data class Alarm(val state: AlarmState) : StateValue
+    /** [state] is one of HA's vacuum states (cleaning, docked, paused, idle, returning, error); [battery] is 0..100. */
+    data class Vacuum(val state: String?, val battery: Int?, val fanSpeed: String?) : StateValue
 }
 
 enum class CoverState { OPEN, CLOSED, OPENING, CLOSING, STOPPED, UNKNOWN }

@@ -12,6 +12,10 @@ data class Capabilities(
     val hvacModes: List<String> = emptyList(),
     /** The climate's `fan_modes`, in published order; empty when it has no fan control. */
     val fanModes: List<String> = emptyList(),
+    /** The vacuum's supported actions (start, pause, stop, return_to_base, locate), in that order. */
+    val vacuumActions: List<String> = emptyList(),
+    /** The vacuum's `fan_speed_list`; empty when it cannot set a fan speed. */
+    val fanSpeeds: List<String> = emptyList(),
     val minTemp: Double? = null,
     val maxTemp: Double? = null,
     val tempStep: Double? = null,
