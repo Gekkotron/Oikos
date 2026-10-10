@@ -209,4 +209,16 @@
     <string name="customize_as_light">Show as a light</string>
     <string name="customize_grouped_light">Group with the other lights in this room</string>
     <string name="home_voice_cd">Say a command</string>
+    <string name="vacuum_state_cleaning">Cleaning</string>
+    <string name="vacuum_state_docked">Docked</string>
+    <string name="vacuum_state_paused">Paused</string>
+    <string name="vacuum_state_idle">Idle</string>
+    <string name="vacuum_state_returning">Returning to dock</string>
+    <string name="vacuum_state_error">Error</string>
+    <string name="vacuum_start">Start</string>
+    <string name="vacuum_pause">Pause</string>
+    <string name="vacuum_stop">Stop</string>
+    <string name="vacuum_dock">Dock</string>
+    <string name="vacuum_locate">Locate</string>
+    <string name="sheet_suction">Suction</string>
 </resources>

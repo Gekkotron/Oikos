@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.home.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.gekkotron.oikos.designsystem.alarm.alarmLabel
@@ -25,6 +26,10 @@ internal fun cardValueText(value: CardValue): String = when (value) {
             .joinToString(" · ")
             .ifEmpty { stringResource(R.string.value_none) }
     is CardValue.Alarm -> stringResource(alarmLabel(value.state))
+    is CardValue.Vacuum ->
+        listOfNotNull(value.state?.let { stringResource(vacuumStateLabel(it)) }, value.battery?.let { stringResource(R.string.value_percent, it) })
+            .joinToString(" · ")
+            .ifEmpty { stringResource(R.string.value_none) }
     is CardValue.CoverGroup -> when {
         value.moving == CoverState.OPENING -> stringResource(R.string.value_cover_opening)
         value.moving == CoverState.CLOSING -> stringResource(R.string.value_cover_closing)
@@ -85,4 +90,23 @@ internal fun modeLabel(mode: String): String = when (mode) {
     "dry" -> stringResource(R.string.mode_dry)
     "fan_only" -> stringResource(R.string.mode_fan_only)
     else -> mode.replaceFirstChar { it.uppercase() }
+}
+
+@StringRes
+internal fun vacuumStateLabel(state: String): Int = when (state) {
+    "cleaning" -> R.string.vacuum_state_cleaning
+    "docked" -> R.string.vacuum_state_docked
+    "paused" -> R.string.vacuum_state_paused
+    "returning" -> R.string.vacuum_state_returning
+    "error" -> R.string.vacuum_state_error
+    else -> R.string.vacuum_state_idle
+}
+
+@StringRes
+internal fun vacuumActionLabel(action: String): Int = when (action) {
+    "pause" -> R.string.vacuum_pause
+    "stop" -> R.string.vacuum_stop
+    "return_to_base" -> R.string.vacuum_dock
+    "locate" -> R.string.vacuum_locate
+    else -> R.string.vacuum_start
 }

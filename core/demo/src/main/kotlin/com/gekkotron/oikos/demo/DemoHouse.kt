@@ -41,6 +41,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         rgbLight("demo_living_ceiling", "Ceiling", "Living room", "demo/living/ceiling")
         plainLight("demo_living_spot", "Spot", "Living room", "demo/living/spot")
         climate("demo_living_ac", "Air conditioner", "Living room", "demo/living/ac")
+        vacuum("demo_living_vacuum", "Robot vacuum", "Living room", "demo/living/vacuum")
         sensor("demo_bedroom_temperature", "Bedroom", "Temperature", "Bedroom", "demo/bedroom/climate", "temperature", "temperature", "°C")
         sensor("demo_bedroom_humidity", "Bedroom", "Humidity", "Bedroom", "demo/bedroom/climate", "humidity", "humidity", "%")
         doc("demo/bedroom/climate", obj("temperature" to 19.6, "humidity" to 54))
@@ -323,6 +324,23 @@ class DemoHouse(private val random: Random = Random(7)) {
         echo("$topic/temperature/set", topic) { p -> p.toDoubleOrNull()?.let { obj("target" to it) } }
         echo("$topic/mode/set", topic) { p -> if (p in modes) obj("mode" to p) else null }
         echo("$topic/fan_mode/set", topic) { p -> if (p in fanModes) obj("fan_mode" to p) else null }
+    }
+
+    private fun vacuum(id: String, device: String, area: String, topic: String) {
+        val speeds = listOf("Silent", "Standard", "Medium", "Turbo", "Gentle", "Auto")
+        val states = mapOf("start" to "cleaning", "pause" to "paused", "stop" to "idle", "return_to_base" to "returning")
+        config("vacuum", id, device, null, area) {
+            put("state_topic", topic)
+            put("command_topic", "$topic/command")
+            put("set_fan_speed_topic", "$topic/fan_speed/set")
+            putJsonArray("fan_speed_list") { speeds.forEach { add(it) } }
+            putJsonArray("supported_features") {
+                listOf("start", "pause", "stop", "return_home", "locate", "fan_speed", "battery", "status").forEach { add(it) }
+            }
+        }
+        doc(topic, obj("state" to "docked", "battery_level" to 100, "fan_speed" to "Standard"))
+        echo("$topic/command", topic) { p -> states[p]?.let { obj("state" to it) } }
+        echo("$topic/fan_speed/set", topic) { p -> if (p in speeds) obj("fan_speed" to p) else null }
     }
 
     private fun sensor(

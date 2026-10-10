@@ -22,7 +22,7 @@ object CardFormatter {
         is StateValue.Climate ->
             CardValue.Climate(value.current?.let { number(it, locale) }, value.target?.let { number(it, locale) }, value.mode)
         is StateValue.Alarm -> CardValue.Alarm(value.state)
-        is StateValue.Vacuum -> CardValue.Text(value.state ?: "")
+        is StateValue.Vacuum -> CardValue.Vacuum(value.state, value.battery)
     }
 
     /** 0..255 → 0..100. */

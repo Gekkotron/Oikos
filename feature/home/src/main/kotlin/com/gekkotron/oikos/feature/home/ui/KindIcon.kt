@@ -27,6 +27,7 @@ import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.StateValue
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -61,7 +62,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.NUMBER -> IconSpec.Static(OikosGlyph.SLIDER, on = false)
     Kind.SELECT -> IconSpec.Static(OikosGlyph.LIST, on = false)
     Kind.BUTTON -> IconSpec.Static(OikosGlyph.PLAY, on = false)
-    Kind.VACUUM -> IconSpec.Static(OikosGlyph.PLAY, on = false)
+    Kind.VACUUM -> IconSpec.Static(OikosGlyph.VACUUM, on = (card.state as? StateValue.Vacuum)?.state == "cleaning")
 }
 
 /** An unavailable cover keeps its last known position (closed could misreport it) but stops moving. */

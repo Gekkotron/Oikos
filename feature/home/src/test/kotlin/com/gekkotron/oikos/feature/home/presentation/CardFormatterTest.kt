@@ -51,4 +51,11 @@ class CardFormatterTest {
         )
         assertEquals(CardValue.Alarm(AlarmState.DISARMED), CardFormatter.format(sensor, StateValue.Alarm(AlarmState.DISARMED), Locale.US))
     }
+
+    @Test
+    fun `vacuum shows state and battery`() {
+        val entity = testEntity("v", Kind.VACUUM)
+        assertEquals(CardValue.Vacuum("docked", 100), CardFormatter.format(entity, StateValue.Vacuum("docked", 100, "Turbo"), Locale.ENGLISH))
+        assertEquals(CardValue.Vacuum(null, null), CardFormatter.format(entity, StateValue.Vacuum(null, null, null), Locale.ENGLISH))
+    }
 }

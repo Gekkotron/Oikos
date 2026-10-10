@@ -209,4 +209,16 @@
     <string name="customize_as_light">Afficher comme une lumière</string>
     <string name="customize_grouped_light">Grouper avec les autres lumières de la pièce</string>
     <string name="home_voice_cd">Dis une commande</string>
+    <string name="vacuum_state_cleaning">Nettoyage</string>
+    <string name="vacuum_state_docked">Sur la base</string>
+    <string name="vacuum_state_paused">En pause</string>
+    <string name="vacuum_state_idle">À l\'arrêt</string>
+    <string name="vacuum_state_returning">Retour à la base</string>
+    <string name="vacuum_state_error">Erreur</string>
+    <string name="vacuum_start">Démarrer</string>
+    <string name="vacuum_pause">Pause</string>
+    <string name="vacuum_stop">Arrêter</string>
+    <string name="vacuum_dock">Retour base</string>
+    <string name="vacuum_locate">Localiser</string>
+    <string name="sheet_suction">Aspiration</string>
 </resources>

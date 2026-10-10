@@ -58,6 +58,7 @@ sealed interface CardValue {
     data class Cover(val state: CoverState, val position: Int?) : CardValue
     data class Climate(val current: String?, val target: String?, val mode: String?) : CardValue
     data class Alarm(val state: AlarmState) : CardValue
+    data class Vacuum(val state: String?, val battery: Int?) : CardValue
     data class Contact(val deviceClass: String?, val on: Boolean) : CardValue
 
     /** Room groups spec §3.1. [positions] has one 0..100 entry per member; a member without position counts 100 when open, 0 when closed. */

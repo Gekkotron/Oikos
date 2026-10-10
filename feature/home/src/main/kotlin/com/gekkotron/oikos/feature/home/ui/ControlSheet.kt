@@ -84,6 +84,7 @@ internal fun ControlSheet(
                     Kind.NUMBER -> NumberControls(card, send)
                     Kind.SELECT -> SelectControls(card, send)
                     Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
+                    Kind.VACUUM -> VacuumControls(card, send)
                     else -> Unit
                 }
             }
@@ -245,6 +246,35 @@ private fun SelectControls(card: CardUi, onSend: (Command) -> Unit) {
         ) {
             RadioButton(selected = option == current, onClick = null)
             Text(option, Modifier.padding(start = 12.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun VacuumControls(card: CardUi, onSend: (Command) -> Unit) {
+    val vacuum = card.state as? StateValue.Vacuum
+    val actions = card.capabilities.vacuumActions
+    // Start turns into Pause while cleaning, when the vacuum can pause
+    val primary = if (vacuum?.state == "cleaning" && "pause" in actions) "pause" else "start"
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (primary in actions) {
+            Button(onClick = { onSend(Command.VacuumAction(primary)) }, enabled = card.available) { Text(stringResource(vacuumActionLabel(primary))) }
+        }
+        for (action in listOf("stop", "return_to_base", "locate")) {
+            if (action in actions) {
+                FilledTonalButton(onClick = { onSend(Command.VacuumAction(action)) }, enabled = card.available) {
+                    Text(stringResource(vacuumActionLabel(action)))
+                }
+            }
+        }
+    }
+    if (card.capabilities.fanSpeeds.isNotEmpty()) {
+        Text(stringResource(R.string.sheet_suction))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (speed in card.capabilities.fanSpeeds) {
+                FilterChip(selected = vacuum?.fanSpeed == speed, onClick = { onSend(Command.SetFanSpeed(speed)) }, label = { Text(speed) })
+            }
         }
     }
 }

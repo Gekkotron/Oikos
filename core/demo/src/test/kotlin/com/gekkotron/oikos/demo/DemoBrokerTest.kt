@@ -34,7 +34,7 @@ import kotlin.time.Duration.Companion.seconds
 class DemoBrokerTest {
     private val allIds = setOf(
         "demo_living_lamp", "demo_kitchen_spots", "demo_coffee", "demo_garage_plug", "demo_siren", "demo_living_shutter",
-        "demo_living_ac", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
+        "demo_living_ac", "demo_living_vacuum", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
         "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_water_heater_power", "demo_ac_power", "demo_solar_energy", "demo_grid_energy", "demo_house_energy", "demo_water_heater_energy", "demo_ac_energy", "demo_front_door", "demo_hallway_motion",
         "demo_bedroom_window", "demo_kitchen_smoke", "demo_garage_leak",
         "demo_alarm", "demo_alarm_intrusion", "demo_water_heater_target", "demo_vacuum_mode", "demo_vacuum_start",
