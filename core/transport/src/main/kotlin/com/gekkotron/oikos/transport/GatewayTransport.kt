@@ -57,6 +57,10 @@ class GatewayTransport(
 
     @Volatile
     private var stopped = false
+
+    /** Set by [close] only: a refusal stops reconnecting but must not unmask the stream's own CLOSED. */
+    @Volatile
+    private var closed = false
     private val jobs = mutableListOf<Job>()
 
     override fun messages(): SharedFlow<MqttMessage> = handover.messages
@@ -71,16 +75,18 @@ class GatewayTransport(
     /**
      * A live stream that drops goes Offline(CLOSED) before [reconnect] has set its `Reconnecting` overlay,
      * and nothing orders the two on a multi-threaded dispatcher. Offline is final to an outer [Handover]
-     * waiting on this transport, so that gap is shown as the reconnect it is while not [stopped]; a
-     * refusal sets its overlay (and [stopped]) before closing anything, and [close] sets [stopped] first.
+     * waiting on this transport, so that gap is shown as the reconnect it is until [close]; a refusal
+     * shows its overlay instead. Keying this on [stopped] let a refusal leak a transient Offline(CLOSED)
+     * when the link was mapped between `stopped = true` and the overlay being set.
      */
     private fun shown(link: LinkState, over: LinkState?): LinkState = when {
         over != null -> over
-        !stopped && link == LinkState.Offline(LinkState.Offline.CLOSED) -> LinkState.Reconnecting(attempt + 1)
+        !closed && link == LinkState.Offline(LinkState.Offline.CLOSED) -> LinkState.Reconnecting(attempt + 1)
         else -> link
     }
 
     override suspend fun close() {
+        closed = true
         stopped = true
         jobs.forEach { it.cancelAndJoin() }
         handover.close()
