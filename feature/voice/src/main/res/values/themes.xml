@@ -1,4 +1,12 @@
 <resources>
-    <!-- The voice sheet floats over the previous app: no window background, no title. -->
-    <style name="Theme.OikosVoice.Translucent" parent="@android:style/Theme.Translucent.NoTitleBar" />
+    <!-- The voice sheet floats over the previous app: no window background, no title.
+         Material base, not Theme.Translucent: the legacy theme does not draw the bar backgrounds itself,
+         so the status bar stays black whatever enableEdgeToEdge asks for. -->
+    <style name="Theme.OikosVoice.Translucent" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

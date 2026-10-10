@@ -2,20 +2,29 @@ package com.gekkotron.oikos.feature.voice
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.ThemeChoice
 import com.gekkotron.oikos.feature.voice.ui.VoiceSheet
 import com.gekkotron.oikos.voice.VoiceLang
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -33,8 +42,21 @@ class VoiceActivity : ComponentActivity() {
                 finish()
                 return@launch
             }
+            // The user's theme, not the system one, so the sheet matches the app it opens over.
+            val theme = viewModel.preferences.theme.filterNotNull().first().toChoice()
             setContent {
-                OikosTheme {
+                val dark = when (theme) {
+                    ThemeChoice.NIGHT_GLASS -> true
+                    ThemeChoice.WARM_MINIMAL -> false
+                    ThemeChoice.SYSTEM -> isSystemInDarkTheme()
+                }
+                // Transparent bars: the translucent window otherwise draws them black over the app behind.
+                DisposableEffect(dark) {
+                    val style = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT) { dark }
+                    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                    onDispose {}
+                }
+                OikosTheme(theme) {
                     Surface(color = Color.Transparent) {
                         VoiceSheet(
                             state = viewModel.state,
@@ -62,4 +84,10 @@ class VoiceActivity : ComponentActivity() {
         viewModel.cancel()
         super.onDestroy()
     }
+}
+
+private fun ThemePreference.toChoice(): ThemeChoice = when (this) {
+    ThemePreference.SYSTEM -> ThemeChoice.SYSTEM
+    ThemePreference.NIGHT_GLASS -> ThemeChoice.NIGHT_GLASS
+    ThemePreference.WARM_MINIMAL -> ThemeChoice.WARM_MINIMAL
 }
