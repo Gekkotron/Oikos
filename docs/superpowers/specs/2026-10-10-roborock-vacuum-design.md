@@ -46,10 +46,11 @@ Keep the existing `miiocli` subprocess design and topics; add an HA layer in the
 ### `main.py` changes
 
 - New env: `HA_DISCOVERY_ENABLED` (default `false`), `HA_DISCOVERY_PREFIX` (default `homeassistant`), `HA_STATUS_INTERVAL` (default `30` s). README documents them.
-- On connect, when enabled: run `info` and `fan_speed_presets` once (retry on next connect if either fails), publish the retained discovery config, then start an HA status loop every `HA_STATUS_INTERVAL` that runs `status` and publishes `vacuum_state(...)` retained on `<prefix>/ha/state`. The existing `<prefix>/status` loop is unchanged.
+- On connect, when enabled: run `info` and `fan_speed_presets` (retried on every HA tick until both succeed), publish the retained discovery config, then start an HA status loop (started once, not again on reconnect) every `HA_STATUS_INTERVAL` that runs `status` and publishes `vacuum_state(...)` retained on `<prefix>/ha/state`. The existing `<prefix>/status` loop is unchanged.
 - Subscribe handling: `<prefix>/ha/command` → `command_for` → miiocli; `<prefix>/ha/fan_speed/set` → `fan_speed_command` → miiocli. After each, refresh HA state immediately and once more ~5 s later.
 - The existing `<prefix>/command` path is unchanged except that an `info` result goes through `redact_info` before publishing (applies whether or not discovery is enabled).
-- The bridge must ignore its own `<prefix>/ha/state` messages (it subscribes to `<prefix>/#`).
+- The bridge must ignore its own `<prefix>/ha/state` messages (it subscribes to `<prefix>/#`). Topic routing is exact (`<prefix>/command`, `<prefix>/ha/command`, `<prefix>/ha/fan_speed/set`); the old `endswith("/command")` test would also catch `<prefix>/ha/command`.
+- The `alive` heartbeat `1` is published retained, so a retained LWT `0` from an earlier crash cannot leave the vacuum unavailable until the next heartbeat.
 - Errors: a failed or non-JSON `status` leaves the last HA state as is and goes to `<prefix>/error` as today.
 
 ### Tests
@@ -72,7 +73,7 @@ Keep the existing `miiocli` subprocess design and topics; add an HA layer in the
 
 ### State (`core/state` VacuumMapper)
 
-- State topic: `state_topic`. Payload is JSON; read `state` (one of `cleaning, docked, paused, idle, returning, error`, else ignored), `battery_level`, `fan_speed`. Missing keys keep the previous value. Non-JSON payload → `Decoded.Error`.
+- State topic: `state_topic`. Payload is JSON; read `state` (one of `cleaning, docked, paused, idle, returning, error`, else ignored), `battery_level`, `fan_speed`. A missing key keeps the previous value; an explicit JSON `null` `fan_speed` clears it (the bridge sends null when `fan_power` matches no preset). Non-JSON payload → `Decoded.Error`.
 - Encode `VacuumAction` → publish the action's payload on `command_topic`, honouring HA overrides `payload_start`, `payload_pause`, `payload_stop`, `payload_return_to_base`, `payload_locate` (defaults equal the action names). Not in capabilities → `NotSupported`.
 - Encode `SetFanSpeed` → publish the speed on `set_fan_speed_topic`; not in `fan_speed_list` → `NotSupported`.
 - `TurnOff` → `return_to_base` if supported, else `NotSupported`.
