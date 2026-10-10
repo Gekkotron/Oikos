@@ -67,6 +67,16 @@ private fun coverText(value: CardValue.Cover): String {
 }
 
 @Composable
+internal fun fanModeLabel(mode: String): String = when (mode) {
+    "auto" -> stringResource(R.string.mode_auto)
+    "silence" -> stringResource(R.string.fan_quiet)
+    "low" -> stringResource(R.string.fan_low)
+    "medium" -> stringResource(R.string.fan_medium)
+    "high" -> stringResource(R.string.fan_high)
+    else -> mode
+}
+
+@Composable
 internal fun modeLabel(mode: String): String = when (mode) {
     "off" -> stringResource(R.string.mode_off)
     "cool" -> stringResource(R.string.mode_cool)

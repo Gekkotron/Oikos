@@ -9,16 +9,20 @@ import com.gekkotron.oikos.state.template.formatNumber
 
 object ClimateMapper : KindMapper {
     val DEFAULT_MODES = listOf("auto", "off", "cool", "heat", "dry", "fan_only")
+    val DEFAULT_FAN_MODES = listOf("auto", "low", "medium", "high")
     const val DEFAULT_MIN_TEMP = 7.0
     const val DEFAULT_MAX_TEMP = 35.0
     const val DEFAULT_TEMP_STEP = 1.0
 
     fun modes(b: MqttBindings): List<String> = b.strList("modes") ?: DEFAULT_MODES
 
+    fun fanModes(b: MqttBindings): List<String> = b.strList("fan_modes") ?: DEFAULT_FAN_MODES
+
     override fun stateTopics(b: MqttBindings): Set<String> = setOfNotNull(
         b.str("current_temperature_topic"),
         b.str("temperature_state_topic"),
         b.str("mode_state_topic"),
+        b.str("fan_mode_state_topic"),
     )
 
     override fun decode(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded {
@@ -45,6 +49,13 @@ object ClimateMapper : KindMapper {
                 true
             }
         }
+        if (topic == b.str("fan_mode_state_topic")) {
+            parts.part(renderIncoming(b, "fan_mode_state_template", payload)) { v ->
+                val fan = v.asPayloadString()?.takeIf { it in fanModes(b) } ?: return@part false
+                climate = climate.copy(fanMode = fan)
+                true
+            }
+        }
         return parts.result(climate)
     }
 
@@ -61,12 +72,16 @@ object ClimateMapper : KindMapper {
         is Command.SetHvacMode ->
             if (command.mode !in modes(b)) Encoded.NotSupported("mode '${command.mode}' not supported")
             else publish(b, "mode_command_topic", "mode_command_template", command.mode)
+        is Command.SetFanMode ->
+            if (command.mode !in fanModes(b)) Encoded.NotSupported("fan mode '${command.mode}' not supported")
+            else publish(b, "fan_mode_command_topic", "fan_mode_command_template", command.mode)
         Command.TurnOff -> encode(b, Command.SetHvacMode("off"), previous)
         else -> Encoded.NotSupported("climate cannot $command")
     }
 
     override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = when (command) {
         is Command.SetTemperature -> setOfNotNull(b.str("temperature_state_topic"))
+        is Command.SetFanMode -> setOfNotNull(b.str("fan_mode_state_topic"))
         is Command.SetHvacMode, Command.TurnOff -> setOfNotNull(b.str("mode_state_topic"))
         else -> stateTopics(b)
     }
@@ -76,6 +91,7 @@ object ClimateMapper : KindMapper {
         return when (command) {
             is Command.SetTemperature -> prev.copy(target = command.temperature)
             is Command.SetHvacMode -> prev.copy(mode = command.mode)
+            is Command.SetFanMode -> prev.copy(fanMode = command.mode)
             Command.TurnOff -> prev.copy(mode = "off")
             else -> null
         }

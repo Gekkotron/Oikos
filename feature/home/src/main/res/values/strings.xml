@@ -39,6 +39,11 @@
     <string name="sheet_close">Close</string>
     <string name="sheet_position">Position</string>
     <string name="sheet_target">Target</string>
+    <string name="sheet_fan_speed">Fan speed</string>
+    <string name="fan_quiet">Quiet</string>
+    <string name="fan_low">Low</string>
+    <string name="fan_medium">Medium</string>
+    <string name="fan_high">High</string>
     <string name="sheet_decrease">Decrease</string>
     <string name="sheet_increase">Increase</string>
     <string name="home_not_confirmed">Not confirmed</string>

@@ -60,4 +60,25 @@ class ClimateMapperTest {
         assertEquals(setOf("jeedom/data/rooms/living/climatisation", "m"), ClimateMapper.stateTopics(daikin))
         assertEquals(ClimateMapper.DEFAULT_MODES, ClimateMapper.modes(bindings("climate", "{}")))
     }
+
+    private val fan = bindings(
+        "climate",
+        """{"fan_modes":["auto","silence","1","3"],"fan_mode_state_topic":"s",
+           "fan_mode_state_template":"{{ value_json.fan_mode }}","fan_mode_command_topic":"f/set"}""",
+    )
+
+    @Test
+    fun `fan mode is decoded only when listed`() {
+        assertEquals(Decoded.State(Climate(null, 21.0, null, "3")), ClimateMapper.decode(fan, "s", """{"fan_mode":"3"}""", Climate(null, 21.0, null)))
+        assertEquals(Decoded.Ignored, ClimateMapper.decode(fan, "s", """{"fan_mode":"5"}""", Unknown))
+        assertEquals(setOf("s"), ClimateMapper.stateTopics(fan))
+    }
+
+    @Test
+    fun `fan mode commands`() {
+        assertEquals(publishes("f/set", "3"), ClimateMapper.encode(fan, Command.SetFanMode("3"), Unknown))
+        assertIs<Encoded.NotSupported>(ClimateMapper.encode(fan, Command.SetFanMode("5"), Unknown))
+        assertIs<Encoded.NotSupported>(ClimateMapper.encode(daikin, Command.SetFanMode("auto"), Unknown))
+        assertEquals(Climate(null, null, null, "silence"), ClimateMapper.predict(Command.SetFanMode("silence"), Unknown))
+    }
 }

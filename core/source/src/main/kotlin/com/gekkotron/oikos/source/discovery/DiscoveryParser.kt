@@ -187,6 +187,7 @@ object DiscoveryParser {
         Kind.COVER -> Capabilities(position = b.str("set_position_topic") != null)
         Kind.CLIMATE -> Capabilities(
             hvacModes = ClimateMapper.modes(b),
+            fanModes = if (b.str("fan_mode_command_topic") != null) ClimateMapper.fanModes(b) else emptyList(),
             minTemp = b.double("min_temp") ?: ClimateMapper.DEFAULT_MIN_TEMP,
             maxTemp = b.double("max_temp") ?: ClimateMapper.DEFAULT_MAX_TEMP,
             tempStep = b.double("temp_step") ?: ClimateMapper.DEFAULT_TEMP_STEP,

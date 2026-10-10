@@ -199,6 +199,14 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             FilterChip(selected = climate?.mode == mode, onClick = { onSend(Command.SetHvacMode(mode)) }, label = { Text(modeLabel(mode)) })
         }
     }
+    if (caps.fanModes.isNotEmpty()) {
+        Text(stringResource(R.string.sheet_fan_speed))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (fan in caps.fanModes) {
+                FilterChip(selected = climate?.fanMode == fan, onClick = { onSend(Command.SetFanMode(fan)) }, label = { Text(fanModeLabel(fan)) })
+            }
+        }
+    }
 }
 
 @Composable

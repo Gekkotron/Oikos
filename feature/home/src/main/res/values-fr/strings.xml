@@ -39,6 +39,11 @@
     <string name="sheet_close">Fermer</string>
     <string name="sheet_position">Position</string>
     <string name="sheet_target">Consigne</string>
+    <string name="sheet_fan_speed">Vitesse du ventilateur</string>
+    <string name="fan_quiet">Silencieux</string>
+    <string name="fan_low">Faible</string>
+    <string name="fan_medium">Moyenne</string>
+    <string name="fan_high">Élevée</string>
     <string name="sheet_decrease">Diminuer</string>
     <string name="sheet_increase">Augmenter</string>
     <string name="home_not_confirmed">Non confirmé</string>

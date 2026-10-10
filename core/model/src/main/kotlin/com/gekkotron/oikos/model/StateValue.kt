@@ -19,7 +19,7 @@ sealed interface StateValue {
     /** [position] is normalised to 0 (closed) .. 100 (open). */
     data class Cover(val state: CoverState, val position: Int? = null) : StateValue
 
-    data class Climate(val mode: String?, val target: Double?, val current: Double?) : StateValue
+    data class Climate(val mode: String?, val target: Double?, val current: Double?, val fanMode: String? = null) : StateValue
 
     data class Alarm(val state: AlarmState) : StateValue
 }

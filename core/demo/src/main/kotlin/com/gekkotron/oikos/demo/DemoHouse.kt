@@ -300,6 +300,7 @@ class DemoHouse(private val random: Random = Random(7)) {
 
     private fun climate(id: String, device: String, area: String, topic: String) {
         val modes = listOf("off", "cool", "heat", "auto")
+        val fanModes = listOf("auto", "silence", "1", "2", "3", "4", "5")
         config("climate", id, device, null, area) {
             putJsonArray("modes") { modes.forEach { add(it) } }
             put("min_temp", 16)
@@ -313,10 +314,15 @@ class DemoHouse(private val random: Random = Random(7)) {
             put("mode_state_template", "{{ value_json.mode }}")
             put("temperature_command_topic", "$topic/temperature/set")
             put("mode_command_topic", "$topic/mode/set")
+            putJsonArray("fan_modes") { fanModes.forEach { add(it) } }
+            put("fan_mode_state_topic", topic)
+            put("fan_mode_state_template", "{{ value_json.fan_mode }}")
+            put("fan_mode_command_topic", "$topic/fan_mode/set")
         }
-        doc(topic, obj("current" to 22.4, "target" to 21.0, "mode" to "heat"))
+        doc(topic, obj("current" to 22.4, "target" to 21.0, "mode" to "heat", "fan_mode" to "auto"))
         echo("$topic/temperature/set", topic) { p -> p.toDoubleOrNull()?.let { obj("target" to it) } }
         echo("$topic/mode/set", topic) { p -> if (p in modes) obj("mode" to p) else null }
+        echo("$topic/fan_mode/set", topic) { p -> if (p in fanModes) obj("fan_mode" to p) else null }
     }
 
     private fun sensor(

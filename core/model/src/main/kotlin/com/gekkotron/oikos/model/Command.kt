@@ -25,6 +25,7 @@ sealed interface Command {
     data object Stop : Command
     data class SetTemperature(val temperature: Double) : Command
     data class SetHvacMode(val mode: String) : Command
+    data class SetFanMode(val mode: String) : Command
     data class SetNumber(val value: Double) : Command
     data class SelectOption(val option: String) : Command
     data object Press : Command

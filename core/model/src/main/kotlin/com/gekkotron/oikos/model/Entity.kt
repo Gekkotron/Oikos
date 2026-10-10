@@ -10,6 +10,8 @@ data class Capabilities(
     val effects: List<String> = emptyList(),
     val position: Boolean = false,
     val hvacModes: List<String> = emptyList(),
+    /** The climate's `fan_modes`, in published order; empty when it has no fan control. */
+    val fanModes: List<String> = emptyList(),
     val minTemp: Double? = null,
     val maxTemp: Double? = null,
     val tempStep: Double? = null,
