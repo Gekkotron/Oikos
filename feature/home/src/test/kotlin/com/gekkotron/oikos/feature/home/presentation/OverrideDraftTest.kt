@@ -120,4 +120,15 @@ class OverrideDraftTest {
         assertTrue(draft.grouped)
         assertTrue(draft.copy(grouped = false).applyTo(card).ungrouped)
     }
+
+    @Test
+    fun `showing a switch as a light round-trips and keeps the protocol kind`() {
+        val asLight = testEntity("lamp", Kind.LIGHT, "Lamp", ui = UiOverride(asLight = true)).copy(protocolKind = Kind.SWITCH)
+        val card = card(asLight)
+        assertEquals(Kind.SWITCH, card.protocolKind)
+        val draft = OverrideDraft.from(card)
+        assertTrue(draft.asLight)
+        assertEquals(UiOverride(asLight = true), draft.applyTo(card))
+        assertFalse(draft.copy(asLight = false).applyTo(card).asLight)
+    }
 }

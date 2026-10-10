@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.source
 
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.transport.MqttTransport
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CompletableDeferred
@@ -557,5 +558,41 @@ class MqttDiscoverySourceTest {
         assertEquals("oikos/voice/shortcut/abc1234567890abc1234567890abc123", last.topic)
         assertEquals(0, last.payload.size)
         assertEquals(true, last.retained)
+    }
+
+    @Test
+    fun `a switch with asLight is a light that still speaks switch payloads`() = runTest {
+        val h = start()
+        h.transport.deliver("homeassistant/switch/a/config", switchConfig("a", ""","payload_on":"1","payload_off":"0""""))
+        runCurrent()
+        settle()
+        assertEquals(Kind.SWITCH, h.source.entities.value.getValue("a").kind)
+
+        h.transport.deliver("oikos/ui/a", """{"asLight":true}""")
+        runCurrent()
+        val e = h.source.entities.value.getValue("a")
+        assertEquals(Kind.LIGHT, e.kind)
+        assertEquals(Kind.SWITCH, e.protocolKind)
+
+        h.transport.deliver("sw/a", "0")
+        runCurrent()
+        assertEquals(StateValue.Light(false), h.state("a").value)
+        assertEquals(CommandResult.Accepted, h.source.send("a", Command.TurnOn()))
+        assertEquals("sw/a/set" to "1", h.transport.publishedStrings().last())
+
+        h.transport.deliver("oikos/ui/a", "")
+        runCurrent()
+        assertEquals(Kind.SWITCH, h.source.entities.value.getValue("a").kind)
+    }
+
+    @Test
+    fun `asLight leaves a real light alone`() = runTest {
+        val h = start()
+        h.transport.deliver(lightTopic, lightConfig)
+        h.transport.deliver("oikos/ui/$lightId", """{"asLight":true}""")
+        runCurrent()
+        val e = h.source.entities.value.getValue(lightId)
+        assertEquals(Kind.LIGHT, e.kind)
+        assertEquals(Kind.LIGHT, e.protocolKind)
     }
 }

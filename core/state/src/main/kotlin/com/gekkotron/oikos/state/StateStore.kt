@@ -50,8 +50,9 @@ class StateStore(
         val fresh = mutableSetOf<String>()
         tracked = entities.mapNotNull { e ->
             val b = e.bindings as? MqttBindings ?: return@mapNotNull null
-            val kept = old[e.uniqueId]?.takeIf { it.bindings == b }
-            val t = kept ?: Tracked(b, KindMappers.forKind(e.kind), AvailabilitySpec.of(b)?.let(::AvailabilityTracker))
+            val mapper = KindMappers.forEntity(e)
+            val kept = old[e.uniqueId]?.takeIf { it.bindings == b && it.mapper == mapper }
+            val t = kept ?: Tracked(b, mapper, AvailabilitySpec.of(b)?.let(::AvailabilityTracker))
                 .also { fresh += e.uniqueId }
             e.uniqueId to t
         }.toMap()

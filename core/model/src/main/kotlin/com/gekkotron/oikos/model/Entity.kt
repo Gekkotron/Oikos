@@ -46,4 +46,6 @@ data class Entity(
     val deviceName: String? = null,
     /** The entity's own label as published (e.g. "Local temperature"), or null when [name] isn't device + label. */
     val label: String? = null,
+    /** The kind as discovered, which picks the MQTT mapper; differs from [kind] only when the user shows a switch as a light. */
+    val protocolKind: Kind = kind,
 )

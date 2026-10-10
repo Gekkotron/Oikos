@@ -165,6 +165,7 @@ object HomeUiBuilder {
             id = entity.uniqueId,
             name = name,
             kind = entity.kind,
+            protocolKind = entity.protocolKind,
             deviceClass = entity.deviceClass,
             areaName = if (entity.area == UNASSIGNED_AREA) null else areaNames[entity.area] ?: entity.area,
             value = CardFormatter.format(entity, value, locale),

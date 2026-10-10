@@ -32,6 +32,8 @@ data class UiOverride(
     val securityAsk: Boolean = true,
     /** Keeps this cover or light out of its room's group card (room groups spec §6). */
     val ungrouped: Boolean = false,
+    /** Shows this switch as an on/off light (switch-as-light). */
+    val asLight: Boolean = false,
 )
 
 @OptIn(ExperimentalSerializationApi::class)
