@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_sheet_title">Voice</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_not_understood">Did you mean…?</string>
+    <string name="voice_other">Other…</string>
+    <string name="voice_ignore">Ignore</string>
+    <string name="voice_wrong">✗ Wrong</string>
+    <string name="voice_mqtt_down">No connection to the house</string>
+    <string name="voice_silence">I didn\'t hear anything</string>
+    <string name="voice_speech_error">Speech recognizer unavailable</string>
+    <string name="voice_permission_denied">Microphone permission needed</string>
+    <string name="voice_unknown_error">Something went wrong</string>
+    <string name="voice_confirm_disarm">Disarm the alarm?</string>
+    <string name="voice_confirm_arm_away">Arm the alarm (away)?</string>
+    <string name="voice_confirm_arm_home">Arm the alarm (home)?</string>
+    <string name="voice_confirm_siren">Turn on the siren?</string>
+    <string name="voice_yes">Yes</string>
+    <string name="voice_no">No</string>
+    <string name="voice_cancel">Cancel</string>
+    <string name="voice_mic_cd">Say a command</string>
+    <string name="voice_disarm">Disarm</string>
+    <string name="voice_arm_away">Arm (away)</string>
+    <string name="voice_arm_home">Arm (home)</string>
+</resources>

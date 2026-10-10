@@ -23,7 +23,7 @@ enum class ThemePreference { SYSTEM, NIGHT_GLASS, WARM_MINIMAL }
 
 /** The theme is kept as a name so a value written by a newer app decodes as System instead of corrupting the file. */
 @Serializable
-internal data class StoredPreferences(val theme: String = ThemePreference.SYSTEM.name)
+internal data class StoredPreferences(val theme: String = ThemePreference.SYSTEM.name, val voiceEnabled: Boolean = false)
 
 /** Per-phone preferences, kept apart from the profile so "Set up again" leaves them alone. */
 class AppPreferences internal constructor(private val store: DataStore<StoredPreferences>, scope: CoroutineScope) {
@@ -34,6 +34,14 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
 
     suspend fun setTheme(theme: ThemePreference) {
         store.updateData { it.copy(theme = theme.name) }
+    }
+
+    val voiceEnabled: StateFlow<Boolean?> = store.data
+        .map { it.voiceEnabled }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    suspend fun setVoiceEnabled(enabled: Boolean) {
+        store.updateData { it.copy(voiceEnabled = enabled) }
     }
 
     companion object {

@@ -55,4 +55,18 @@
     <string name="settings_frigate_user">Identifiant (facultatif)</string>
     <string name="settings_frigate_password">Mot de passe</string>
     <string name="settings_frigate_unchanged">Inchangé</string>
+    <string name="voice_section_title">Voix</string>
+    <string name="voice_toggle_label">Commandes vocales</string>
+    <string name="voice_availability_needs_api_31">Nécessite Android 12 ou plus récent.</string>
+    <string name="voice_availability_no_on_device">La reconnaissance vocale sur l\u2019appareil n\u2019est pas disponible sur ce téléphone.</string>
+    <string name="voice_availability_language_pack_missing">Téléchargez le pack de langue vocale %1$s pour utiliser les commandes vocales.</string>
+    <string name="voice_shortcuts_section_title">Raccourcis vocaux</string>
+    <string name="voice_shortcuts_empty">Aucun raccourci pour l\u2019instant. Apprenez-en un depuis la feuille vocale.</string>
+    <string name="voice_shortcut_delete_cd">Supprimer le raccourci %1$s</string>
+    <string name="voice_shortcut_delete_confirm_title">Supprimer ce raccourci ?</string>
+    <string name="voice_shortcut_delete_confirm_body">\u00ab %1$s \u00bb ne sera plus compris.</string>
+    <string name="voice_delete">Supprimer</string>
+    <string name="voice_cancel_action">Annuler</string>
+    <string name="voice_permission_denied_snackbar">L\u2019autorisation du micro est nécessaire pour les commandes vocales.</string>
+    <string name="voice_broken_label">Cassé</string>
 </resources>

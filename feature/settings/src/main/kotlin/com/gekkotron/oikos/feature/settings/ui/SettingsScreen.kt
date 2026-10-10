@@ -1,5 +1,9 @@
 package com.gekkotron.oikos.feature.settings.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -48,6 +54,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -104,6 +111,7 @@ fun SettingsRoute(
         state, version, route, viewModel::setTheme, onRouteChange, onSetUpAgain, onOpenRooms, onOpenLicences, onBack,
         onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
         onOpenChannels = { openNotificationSettings(context) },
+        onVoiceEnabled = viewModel::setVoiceEnabled, onDeleteShortcut = viewModel::deleteShortcut,
     )
 }
 
@@ -123,7 +131,26 @@ fun SettingsScreen(
     now: Instant = Instant.now(),
     onSaveHistoryUrl: (String) -> Boolean = { true },
     onSaveFrigate: (url: String, user: String, password: String) -> Boolean = { _, _, _ -> true },
+    onVoiceEnabled: (Boolean) -> Unit = {},
+    onDeleteShortcut: (String) -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val snackbar = remember { SnackbarHostState() }
+    val deniedMessage = stringResource(R.string.voice_permission_denied_snackbar)
+    var micDenied by remember { mutableStateOf(false) }
+    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) onVoiceEnabled(true) else { onVoiceEnabled(false); micDenied = true }
+    }
+    LaunchedEffect(micDenied) {
+        if (micDenied) {
+            snackbar.showSnackbar(deniedMessage)
+            micDenied = false
+        }
+    }
+    val onVoiceToggle: (Boolean) -> Unit = { on ->
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        if (!on || granted) onVoiceEnabled(on) else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
     var confirm by rememberSaveable { mutableStateOf(false) }
     var pushSheet by rememberSaveable { mutableStateOf(false) }
     var historyDialog by rememberSaveable { mutableStateOf(false) }
@@ -132,6 +159,7 @@ fun SettingsScreen(
         containerColor = Color.Transparent,
         contentColor = OikosTheme.colors.content,
         topBar = { SettingsTopBar(stringResource(R.string.settings_title), onBack) },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
@@ -153,6 +181,8 @@ fun SettingsScreen(
                     Text(stringResource(R.string.settings_set_up_again))
                 }
             }
+            VoiceSection(state.voice, onVoiceToggle)
+            VoiceShortcutsSection(state.voice.shortcuts, onDeleteShortcut)
             Section(stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.settings_version, version), style = OikosTheme.type.body)
                 Text(stringResource(R.string.settings_notice), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)

@@ -73,6 +73,10 @@ class WidgetMirrorTest {
         override val entities: StateFlow<Map<String, Entity>> = MutableStateFlow(entities.associateBy { it.uniqueId })
         override val devices: StateFlow<Map<String, Device>> = MutableStateFlow(emptyMap())
         override val areas: StateFlow<List<Area>> = MutableStateFlow(emptyList())
+        override val shortcuts: kotlinx.coroutines.flow.StateFlow<Map<String, com.gekkotron.oikos.voice.VoiceShortcut>> =
+            kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
+        override suspend fun saveShortcut(shortcut: com.gekkotron.oikos.voice.VoiceShortcut) {}
+        override suspend fun deleteShortcut(id: String) {}
         override val commandFailures: SharedFlow<CommandFailure> = MutableSharedFlow()
         override fun states(): Flow<Map<String, EntityState>> = states
         override suspend fun send(uniqueId: String, command: Command): CommandResult = CommandResult.Accepted

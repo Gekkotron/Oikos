@@ -15,6 +15,10 @@ import com.gekkotron.oikos.transport.LinkState
 import com.gekkotron.oikos.transport.MqttMessage
 import com.gekkotron.oikos.transport.PublishFailed
 import com.gekkotron.oikos.transport.testing.FakeMqttTransport
+import com.gekkotron.oikos.voice.VoiceAction
+import com.gekkotron.oikos.voice.VoiceIntent
+import com.gekkotron.oikos.voice.VoiceLang
+import com.gekkotron.oikos.voice.VoiceShortcut
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -70,7 +74,7 @@ class MqttDiscoverySourceTest {
     @Test
     fun `subscribes to discovery and overrides first`() = runTest {
         val h = start()
-        assertEquals(setOf("homeassistant/#", "oikos/ui/#"), h.transport.subscriptionHistory.first())
+        assertEquals(setOf("homeassistant/#", "oikos/ui/#", "oikos/voice/shortcut/#"), h.transport.subscriptionHistory.first())
     }
 
     @Test
@@ -82,7 +86,7 @@ class MqttDiscoverySourceTest {
         val light = h.source.entities.value.getValue(lightId)
         assertEquals("Lampe", light.name)
         assertEquals("Salon", light.area)
-        assertEquals(setOf("homeassistant/#", "oikos/ui/#"), h.transport.subscriptions)
+        assertEquals(setOf("homeassistant/#", "oikos/ui/#", "oikos/voice/shortcut/#"), h.transport.subscriptions)
 
         settle()
         assertTrue("z2m/lampe" in h.transport.subscriptions)
@@ -508,5 +512,50 @@ class MqttDiscoverySourceTest {
         val areas = listOf("p", "q", "r").map { h.source.entities.value.getValue(it).area }.toSet()
         assertEquals(1, areas.size, "got $areas")
         assertEquals(areas, h.source.areas.value.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `voice shortcut topic is subscribed with the ui prefix`() = runTest {
+        val h = start()
+        assertEquals(setOf("homeassistant/#", "oikos/ui/#", "oikos/voice/shortcut/#"), h.transport.subscriptions)
+    }
+
+    @Test
+    fun `an incoming shortcut appears in the shortcuts flow`() = runTest {
+        val h = start()
+        h.transport.deliver(
+            "oikos/voice/shortcut/abc1234567890abc1234567890abc123",
+            """{"v":1,"phrase":"il fait sombre","lang":"fr","action":"TURN_ON","entityIds":["lampe"]}""",
+        )
+        runCurrent()
+        val map = h.source.shortcuts.first { it.isNotEmpty() }
+        assertEquals(1, map.size)
+        assertEquals("il fait sombre", map.values.first().phrase)
+    }
+
+    @Test
+    fun `saveShortcut publishes a retained payload under the id topic`() = runTest {
+        val h = start()
+        val sc = VoiceShortcut(
+            id = "abc1234567890abc1234567890abc123",
+            phrase = "test",
+            lang = VoiceLang.FR,
+            intent = VoiceIntent(VoiceAction.TURN_ON, listOf("lampe")),
+        )
+        h.source.saveShortcut(sc)
+        val last = h.transport.published.last()
+        assertEquals("oikos/voice/shortcut/${sc.id}", last.topic)
+        assertEquals(true, last.retained)
+        assertTrue(last.payloadString().contains("\"phrase\":\"test\""))
+    }
+
+    @Test
+    fun `deleteShortcut publishes an empty retained payload`() = runTest {
+        val h = start()
+        h.source.deleteShortcut("abc1234567890abc1234567890abc123")
+        val last = h.transport.published.last()
+        assertEquals("oikos/voice/shortcut/abc1234567890abc1234567890abc123", last.topic)
+        assertEquals(0, last.payload.size)
+        assertEquals(true, last.retained)
     }
 }

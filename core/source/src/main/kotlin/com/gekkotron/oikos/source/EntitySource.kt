@@ -9,6 +9,7 @@ import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.voice.VoiceShortcut
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,13 @@ interface EntitySource {
     suspend fun setOverride(uniqueId: String, override: UiOverride)
 
     suspend fun setAreas(areas: List<Area>)
+
+    /** Voice shortcuts (tap-to-teach phrases) keyed by [VoiceShortcut.id]. */
+    val shortcuts: StateFlow<Map<String, VoiceShortcut>>
+
+    suspend fun saveShortcut(shortcut: VoiceShortcut)
+
+    suspend fun deleteShortcut(id: String)
 
     /** Replays cached messages (topic → payload) as if they had arrived retained; live data wins (entity cache spec §3.1). */
     suspend fun restore(messages: Map<String, String>) {}

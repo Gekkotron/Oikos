@@ -55,4 +55,18 @@
     <string name="settings_frigate_user">Username (optional)</string>
     <string name="settings_frigate_password">Password</string>
     <string name="settings_frigate_unchanged">Unchanged</string>
+    <string name="voice_section_title">Voice</string>
+    <string name="voice_toggle_label">Voice commands</string>
+    <string name="voice_availability_needs_api_31">Needs Android 12 or later.</string>
+    <string name="voice_availability_no_on_device">On-device speech recognition is not available on this phone.</string>
+    <string name="voice_availability_language_pack_missing">Download the %1$s speech language pack to use voice commands.</string>
+    <string name="voice_shortcuts_section_title">Voice shortcuts</string>
+    <string name="voice_shortcuts_empty">No shortcuts yet. Teach one from the voice sheet.</string>
+    <string name="voice_shortcut_delete_cd">Delete shortcut %1$s</string>
+    <string name="voice_shortcut_delete_confirm_title">Delete this shortcut?</string>
+    <string name="voice_shortcut_delete_confirm_body">\u201c%1$s\u201d will no longer be understood.</string>
+    <string name="voice_delete">Delete</string>
+    <string name="voice_cancel_action">Cancel</string>
+    <string name="voice_permission_denied_snackbar">Microphone permission is needed for voice commands.</string>
+    <string name="voice_broken_label">Broken</string>
 </resources>
