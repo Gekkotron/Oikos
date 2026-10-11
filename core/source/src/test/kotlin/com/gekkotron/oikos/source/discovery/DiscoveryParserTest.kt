@@ -352,4 +352,49 @@ class DiscoveryParserTest {
         assertEquals(false, none.codeArmRequired)
         assertEquals(false, none.codeDisarmRequired)
     }
+
+    @Test
+    fun `abbreviated water_heater config becomes a WATER_HEATER entity`() {
+        val built = single(
+            "homeassistant/water_heater/jeedom/water_heater/config",
+            """{"uniq_id":"jeedom_water_heater","modes":["off","eco","performance"],
+               "min_temp":40,"max_temp":65,"precision":1.0,
+               "curr_temp_t":"water-heater/data","curr_temp_tpl":"{{ value_json.temp_0 }}",
+               "mode_stat_t":"jeedom/water_heater/state","mode_stat_tpl":"{{ value_json.mode }}",
+               "temp_stat_t":"jeedom/water_heater/state","temp_stat_tpl":"{{ value_json.target }}",
+               "mode_cmd_t":"jeedom/water_heater/mode/set",
+               "temp_cmd_t":"jeedom/water_heater/temperature/set"}""",
+        )
+        assertEquals(Kind.WATER_HEATER, built.entity.kind)
+        val caps = built.entity.capabilities
+        assertEquals(listOf("off", "eco", "performance"), caps.hvacModes)
+        assertEquals(40.0, caps.minTemp)
+        assertEquals(65.0, caps.maxTemp)
+        assertEquals(1.0, caps.tempStep)
+    }
+
+    @Test
+    fun `water_heater defaults when the config omits ranges`() {
+        val built = single(
+            "homeassistant/water_heater/x/config",
+            """{"mode_cmd_t":"m/set"}""",
+        )
+        val caps = built.entity.capabilities
+        assertEquals(43.0, caps.minTemp)
+        assertEquals(60.0, caps.maxTemp)
+        assertEquals(1.0, caps.tempStep)
+        assertEquals(
+            listOf("off", "eco", "electric", "gas", "heat_pump", "high_demand", "performance"),
+            caps.hvacModes,
+        )
+    }
+
+    @Test
+    fun `water_heater without a command topic is still discovered`() {
+        val built = single(
+            "homeassistant/water_heater/read/config",
+            """{"curr_temp_t":"t"}""",
+        )
+        assertEquals(Kind.WATER_HEATER, built.entity.kind)
+    }
 }

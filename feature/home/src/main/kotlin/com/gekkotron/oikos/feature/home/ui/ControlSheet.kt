@@ -76,7 +76,7 @@ internal fun ControlSheet(
                 GroupControls(card, onSend, onSendGroup, onOpenMember)
             } else {
                 Text(card.name, style = OikosTheme.type.display.copy(fontSize = 22.sp))
-                Text(cardValueText(card.value), style = OikosTheme.type.body)
+                Text(cardValueText(card.value, card.kind), style = OikosTheme.type.body)
                 when (card.kind) {
                     Kind.LIGHT -> LightControls(card, onSend)
                     Kind.COVER -> CoverControls(card, send)
@@ -85,6 +85,7 @@ internal fun ControlSheet(
                     Kind.SELECT -> SelectControls(card, send)
                     Kind.ALARM_PANEL -> AlarmControls((card.state as? StateValue.Alarm)?.state, card.available, card.capabilities, send)
                     Kind.VACUUM -> VacuumControls(card, send)
+                    Kind.WATER_HEATER -> WaterHeaterControls(card, send) { id, cmd -> onSend(id, cmd) }
                     else -> Unit
                 }
             }
@@ -206,6 +207,55 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             for (fan in caps.fanModes) {
                 FilterChip(selected = climate?.fanMode == fan, onClick = { onSend(Command.SetFanMode(fan)) }, label = { Text(fanModeLabel(fan)) })
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSendCompanion: (String, Command) -> Unit) {
+    val climate = card.state as? StateValue.Climate
+    val caps = card.capabilities
+    val min = caps.minTemp ?: 43.0
+    val max = caps.maxTemp ?: 60.0
+    val step = caps.tempStep ?: 1.0
+    val target = climate?.target ?: ((min + max) / 2)
+    val locale = LocalConfiguration.current.locales[0]
+    val decrease = stringResource(R.string.sheet_decrease)
+    val increase = stringResource(R.string.sheet_increase)
+
+    // Mode chips: every discovered mode except "off"; "eco" and "performance" get the Éco / Force labels.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (mode in caps.hvacModes.filter { it != "off" }) {
+            FilterChip(
+                selected = climate?.mode == mode,
+                onClick = { onSend(Command.SetHvacMode(mode)) },
+                label = { Text(waterHeaterModeLabel(mode)) },
+                enabled = card.available,
+            )
+        }
+    }
+
+    Text(stringResource(R.string.sheet_target))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+        FilledTonalIconButton(
+            onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, -step, min, max))) },
+            enabled = card.available && target > min,
+            modifier = Modifier.semantics { contentDescription = decrease },
+        ) { Text("−", fontSize = 22.sp) }
+        Text(CardFormatter.number(target, locale) + "°", style = OikosTheme.type.display)
+        FilledTonalIconButton(
+            onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, step, min, max))) },
+            enabled = card.available && target < max,
+            modifier = Modifier.semantics { contentDescription = increase },
+        ) { Text("+", fontSize = 22.sp) }
+    }
+
+    // Same-device Kind.NUMBER companions (e.g. Force power); each still has its own standalone card.
+    for (companion in card.companions) {
+        if (companion.kind == Kind.NUMBER) {
+            Text(companion.name)
+            NumberControls(companion) { onSendCompanion(companion.id, it) }
         }
     }
 }

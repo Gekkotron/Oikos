@@ -37,7 +37,7 @@ class DemoBrokerTest {
         "demo_living_ac", "demo_living_vacuum", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
         "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_water_heater_power", "demo_ac_power", "demo_solar_energy", "demo_grid_energy", "demo_house_energy", "demo_water_heater_energy", "demo_ac_energy", "demo_front_door", "demo_hallway_motion",
         "demo_bedroom_window", "demo_kitchen_smoke", "demo_garage_leak",
-        "demo_alarm", "demo_alarm_intrusion", "demo_water_heater_target", "demo_vacuum_mode", "demo_vacuum_start",
+        "demo_alarm", "demo_alarm_intrusion", "demo_water_heater", "demo_water_heater_force_power", "demo_vacuum_mode", "demo_vacuum_start",
         "demo_bedroom_strip", "demo_bedroom_strip_effect_speed", "demo_bedroom_strip_effect_intensity",
         "demo_living_shutter_side", "demo_living_door_shutter", "demo_living_ceiling", "demo_living_spot",
     )
@@ -119,12 +119,30 @@ class DemoBrokerTest {
     }
 
     @Test
+    fun `forcing the water heater round-trips through the demo broker`() = runTest {
+        val h = start()
+        assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater", Command.SetHvacMode("performance")))
+        settle()
+        val forced = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
+        assertEquals("performance", forced.mode)
+
+        assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater", Command.SetHvacMode("eco")))
+        settle()
+        val eco = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
+        assertEquals("eco", eco.mode)
+
+        assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater", Command.SetTemperature(58.0)))
+        settle()
+        val tempered = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
+        assertEquals(58.0, tempered.target)
+    }
+
+    @Test
     fun `cover, climate, number, select and alarm commands are echoed`() = runTest {
         val h = start()
         h.source.send("demo_living_shutter", Command.SetPosition(25))
         h.source.send("demo_living_ac", Command.SetTemperature(21.5))
         h.source.send("demo_living_ac", Command.SetHvacMode("cool"))
-        h.source.send("demo_water_heater_target", Command.SetNumber(58.0))
         h.source.send("demo_vacuum_mode", Command.SelectOption("turbo"))
         h.source.send("demo_alarm", Command.Arm(AlarmMode.AWAY))
         settle()
@@ -132,7 +150,6 @@ class DemoBrokerTest {
         val ac = assertIs<StateValue.Climate>(h.value("demo_living_ac"))
         assertEquals(21.5, ac.target)
         assertEquals("cool", ac.mode)
-        assertEquals(StateValue.Numeric(58.0), h.value("demo_water_heater_target"))
         assertEquals(StateValue.Text("turbo"), h.value("demo_vacuum_mode"))
         assertEquals(StateValue.Alarm(AlarmState.ARMING), h.value("demo_alarm"))
     }

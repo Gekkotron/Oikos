@@ -75,6 +75,6 @@ object TileMapper {
         Kind.ALARM_PANEL -> TileIcon.ALARM
         Kind.BUTTON -> TileIcon.BUTTON
         Kind.SENSOR -> if (entity.deviceClass == "temperature") TileIcon.TEMPERATURE else TileIcon.SENSOR
-        Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT, Kind.VACUUM -> TileIcon.SENSOR
+        Kind.BINARY_SENSOR, Kind.NUMBER, Kind.SELECT, Kind.VACUUM, Kind.WATER_HEATER -> TileIcon.SENSOR
     }
 }

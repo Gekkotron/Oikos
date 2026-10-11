@@ -14,7 +14,7 @@ private val OPENING_CLASSES = setOf("door", "window", "garage_door", "opening")
 private val MOTION_CLASSES = setOf("motion", "occupancy", "presence")
 
 @Composable
-internal fun cardValueText(value: CardValue): String = when (value) {
+internal fun cardValueText(value: CardValue, kind: Kind = Kind.SENSOR): String = when (value) {
     CardValue.None -> stringResource(R.string.value_none)
     is CardValue.OnOff -> stringResource(if (value.on) R.string.value_on else R.string.value_off)
     is CardValue.Brightness -> stringResource(R.string.value_percent, value.percent)
@@ -22,7 +22,8 @@ internal fun cardValueText(value: CardValue): String = when (value) {
     is CardValue.Text -> value.value
     is CardValue.Cover -> coverText(value)
     is CardValue.Climate ->
-        listOfNotNull(value.current?.let { "$it°" }, value.mode?.let { modeLabel(it) })
+        if (kind == Kind.WATER_HEATER) waterHeaterSubtitle(value)
+        else listOfNotNull(value.current?.let { "$it°" }, value.mode?.let { modeLabel(it) })
             .joinToString(" · ")
             .ifEmpty { stringResource(R.string.value_none) }
     is CardValue.Alarm -> stringResource(alarmLabel(value.state))
@@ -109,4 +110,34 @@ internal fun vacuumActionLabel(action: String): Int = when (action) {
     "return_to_base" -> R.string.vacuum_dock
     "locate" -> R.string.vacuum_locate
     else -> R.string.vacuum_start
+}
+
+@Composable
+private fun waterHeaterSubtitle(value: CardValue.Climate): String {
+    val target = value.target
+    return when (val mode = value.mode) {
+        "performance" -> if (target != null) stringResource(R.string.water_heater_forced_to, target)
+                        else stringResource(R.string.water_heater_forced)
+        "eco" -> if (target != null) stringResource(R.string.water_heater_eco_target, target)
+                 else stringResource(R.string.water_heater_eco)
+        "off" -> if (target != null) stringResource(R.string.water_heater_hot_target, target)
+                 else stringResource(R.string.water_heater_hot)
+        null -> stringResource(R.string.value_none)
+        else -> {
+            val label = waterHeaterModeLabel(mode)
+            if (target != null) "$label · ${stringResource(R.string.water_heater_target, target)}" else label
+        }
+    }
+}
+
+@Composable
+internal fun waterHeaterModeLabel(mode: String): String = when (mode) {
+    "eco" -> stringResource(R.string.water_heater_mode_eco)
+    "performance" -> stringResource(R.string.water_heater_mode_performance)
+    "off" -> stringResource(R.string.mode_off)
+    "electric" -> stringResource(R.string.water_heater_mode_electric)
+    "gas" -> stringResource(R.string.water_heater_mode_gas)
+    "heat_pump" -> stringResource(R.string.water_heater_mode_heat_pump)
+    "high_demand" -> stringResource(R.string.water_heater_mode_high_demand)
+    else -> mode.replaceFirstChar { it.uppercase() }
 }

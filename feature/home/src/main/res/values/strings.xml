@@ -221,4 +221,18 @@
     <string name="vacuum_dock">Dock</string>
     <string name="vacuum_locate">Locate</string>
     <string name="sheet_suction">Suction</string>
+    <string name="water_heater_eco">Eco</string>
+    <string name="water_heater_eco_target">Eco · %1$s°C target</string>
+    <string name="water_heater_forced">Forced</string>
+    <string name="water_heater_forced_to">Forced → %1$s°C</string>
+    <string name="water_heater_hot">Hot</string>
+    <string name="water_heater_hot_target">Hot · %1$s°C target</string>
+    <string name="water_heater_target">%1$s°C target</string>
+    <string name="water_heater_mode_eco">Eco</string>
+    <string name="water_heater_mode_performance">Force</string>
+    <string name="water_heater_mode_electric">Electric</string>
+    <string name="water_heater_mode_gas">Gas</string>
+    <string name="water_heater_mode_heat_pump">Heat pump</string>
+    <string name="water_heater_mode_high_demand">High demand</string>
+    <string name="card_force_toggle">Force %1$s</string>
 </resources>
