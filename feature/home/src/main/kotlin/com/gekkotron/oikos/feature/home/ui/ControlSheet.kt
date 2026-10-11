@@ -213,7 +213,7 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSendCompanion: (String, Command) -> Unit) {
+internal fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSendCompanion: (String, Command) -> Unit) {
     val climate = card.state as? StateValue.Climate
     val caps = card.capabilities
     val min = caps.minTemp ?: 43.0

@@ -71,7 +71,7 @@ class DemoHouse(private val random: Random = Random(7)) {
         binarySensor("demo_kitchen_smoke", "Kitchen smoke", "Kitchen", "demo/kitchen/smoke", "smoke", "smoke", onValue = true, initial = false)
         binarySensor("demo_garage_leak", "Garage leak", "Garage", "demo/garage/leak", "moisture", "water_leak", onValue = true, initial = false)
         alarm("demo_alarm", "Alarm", "Hallway", ALARM)
-        number("demo_water_heater_target", "Water heater target", "Garage", "demo/garage/water_heater")
+        waterHeater("demo_water_heater", "Water heater", "Garage", "demo/water_heater")
         vacuum("Living room", "demo/living/vacuum")
         override("demo_outdoor_temperature", """{"cardStyle":"hero_weather"}""")
         override("demo_living_lamp", """{"favorite":true}""")
@@ -398,18 +398,38 @@ class DemoHouse(private val random: Random = Random(7)) {
         }
     }
 
-    private fun number(id: String, device: String, area: String, topic: String) {
-        config("number", id, device, null, area) {
-            put("state_topic", topic)
-            put("value_template", "{{ value_json.target }}")
-            put("command_topic", "$topic/target/set")
-            put("min", 40)
-            put("max", 65)
-            put("step", 1)
-            put("unit_of_measurement", "°C")
+    /** HA water_heater on the `Water heater` device, with a Force power number companion on the same device. */
+    private fun waterHeater(id: String, device: String, area: String, topic: String) {
+        val modes = listOf("off", "eco", "performance")
+        config("water_heater", id, device, null, area) {
+            putJsonArray("modes") { modes.forEach { add(it) } }
+            put("min_temp", 40)
+            put("max_temp", 65)
+            put("precision", 1.0)
+            put("current_temperature_topic", topic)
+            put("current_temperature_template", "{{ value_json.current }}")
+            put("mode_state_topic", topic)
+            put("mode_state_template", "{{ value_json.mode }}")
+            put("temperature_state_topic", topic)
+            put("temperature_state_template", "{{ value_json.target }}")
+            put("mode_command_topic", "$topic/mode/set")
+            put("temperature_command_topic", "$topic/temperature/set")
         }
-        doc(topic, obj("target" to 55))
-        echo("$topic/target/set", topic) { p -> p.toDoubleOrNull()?.let { obj("target" to it) } }
+        config("number", "${id}_force_power", device, "Force power", area) {
+            put("state_topic", topic)
+            put("value_template", "{{ value_json.force_power }}")
+            put("command_topic", "$topic/force_power/set")
+            put("min", 0)
+            put("max", 100)
+            put("step", 10)
+            put("unit_of_measurement", "%")
+        }
+        doc(topic, obj("current" to 52.0, "target" to 60.0, "mode" to "eco", "force_power" to 60))
+        echo("$topic/mode/set", topic) { p -> if (p in modes) obj("mode" to p) else null }
+        echo("$topic/temperature/set", topic) { p -> p.toDoubleOrNull()?.let { obj("target" to it) } }
+        echo("$topic/force_power/set", topic) { p ->
+            p.toDoubleOrNull()?.roundToInt()?.coerceIn(0, 100)?.let { obj("force_power" to it) }
+        }
     }
 
     private fun vacuum(area: String, topic: String) {

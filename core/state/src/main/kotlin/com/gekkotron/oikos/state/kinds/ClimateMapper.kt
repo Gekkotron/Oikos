@@ -19,17 +19,19 @@ object ClimateMapper : KindMapper {
         ThermostatBase.stateTopics(b) + setOfNotNull(b.str("fan_mode_state_topic"))
 
     override fun decode(b: MqttBindings, topic: String, payload: String, previous: StateValue): Decoded {
-        if (topic == b.str("fan_mode_state_topic")) {
-            var climate = previous as? StateValue.Climate ?: StateValue.Climate(null, null, null)
-            val parts = PartialDecode()
-            parts.part(renderIncoming(b, "fan_mode_state_template", payload)) { v ->
-                val fan = v.asPayloadString()?.takeIf { it in fanModes(b) } ?: return@part false
-                climate = climate.copy(fanMode = fan)
-                true
-            }
-            return parts.result(climate)
+        val base = ThermostatBase.decode(b, topic, payload, previous, modes(b))
+        if (topic != b.str("fan_mode_state_topic")) return base
+        // The fan mode can share its topic with current/target/mode (one JSON doc): apply it on top of that result.
+        var climate = (base as? Decoded.State)?.value as? StateValue.Climate
+            ?: previous as? StateValue.Climate ?: StateValue.Climate(null, null, null)
+        val parts = PartialDecode()
+        parts.part(renderIncoming(b, "fan_mode_state_template", payload)) { v ->
+            val fan = v.asPayloadString()?.takeIf { it in fanModes(b) } ?: return@part false
+            climate = climate.copy(fanMode = fan)
+            true
         }
-        return ThermostatBase.decode(b, topic, payload, previous, modes(b))
+        val fan = parts.result(climate)
+        return if (fan is Decoded.State || base is Decoded.Ignored) fan else base
     }
 
     override fun encode(b: MqttBindings, command: Command, previous: StateValue): Encoded = when (command) {
