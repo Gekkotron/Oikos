@@ -57,7 +57,7 @@ class HomeViewModel @Inject constructor(
         source.entities,
         source.states(),
         source.areas,
-        combine(savedState.getStateFlow(KEY_FILTER, RoomFilter.All.key), savedState.getStateFlow(KEY_QUERY, ""), ::Pair),
+        combine(savedState.getStateFlow(KEY_FILTER, RoomFilter.Favorites.key), savedState.getStateFlow(KEY_QUERY, ""), ::Pair),
         combine(source.link, history.available, ::Pair),
     ) { entities, states, areas, (key, query), (link, historyOn) ->
         val ui = HomeUiBuilder.build(entities, states, areas, RoomFilter.fromKey(key), link, Locale.getDefault(), labels, query, historyOn)

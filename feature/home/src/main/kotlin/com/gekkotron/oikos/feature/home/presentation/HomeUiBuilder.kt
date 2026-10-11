@@ -50,15 +50,17 @@ object HomeUiBuilder {
         val groupable = RoomGroups.groupableIds(grid)
 
         val used = grid.mapTo(mutableSetOf()) { it.area }
+        val hasFavorites = grid.any { it.ui.favorite }
         val chips = buildList {
+            if (hasFavorites) add(ChipUi(RoomFilter.Favorites, null))
             add(ChipUi(RoomFilter.All, null))
-            if (grid.any { it.ui.favorite }) add(ChipUi(RoomFilter.Favorites, null))
             for (area in areas) {
                 if (area.id in used) add(ChipUi(RoomFilter.Area(area.id), area.name.takeUnless { area.id == UNASSIGNED_AREA }))
             }
             if (hidden.isNotEmpty()) add(ChipUi(RoomFilter.Hidden, null))
         }
-        val effective = selected.takeIf { s -> chips.any { it.filter == s } } ?: RoomFilter.All
+        val fallback = if (hasFavorites) RoomFilter.Favorites else RoomFilter.All
+        val effective = selected.takeIf { s -> chips.any { it.filter == s } } ?: fallback
 
         val shown = when {
             query.isNotBlank() -> standalone.filter { SearchMatch.matches(query, names.getValue(it.uniqueId), it.deviceName, areaNames[it.area]) }

@@ -56,17 +56,28 @@ class HomeUiBuilderTest {
     }
 
     @Test
-    fun `chips list All, Favourites when any, then only areas with visible cards in area order`() {
+    fun `chips list Favourites first when any, then All, then only areas with visible cards in area order`() {
         val s = build(
             testEntity("coffee", Kind.SWITCH, area = "kitchen"),
             testEntity("lamp", Kind.LIGHT, area = "living", ui = UiOverride(favorite = true)),
             testEntity("x", Kind.SWITCH),
         )
         assertEquals(
-            listOf(RoomFilter.All, RoomFilter.Favorites, RoomFilter.Area("living"), RoomFilter.Area("kitchen")),
+            listOf(RoomFilter.Favorites, RoomFilter.All, RoomFilter.Area("living"), RoomFilter.Area("kitchen")),
             s.chips.map { it.filter },
         )
         assertEquals("Living room", s.chips[2].label)
+    }
+
+    @Test
+    fun `Favourites is the fallback when the selected chip is gone and favourites exist`() {
+        val s = build(
+            testEntity("lamp", Kind.LIGHT, area = "living", ui = UiOverride(favorite = true)),
+            testEntity("coffee", Kind.SWITCH, area = "kitchen"),
+            selected = RoomFilter.Area("garage"),
+        )
+        assertEquals(RoomFilter.Favorites, s.selected)
+        assertEquals(listOf("lamp"), s.cards.map { it.id })
     }
 
     @Test
