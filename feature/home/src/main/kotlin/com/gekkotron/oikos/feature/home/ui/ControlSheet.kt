@@ -38,8 +38,17 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.graphicsLayer
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.alarm.AlarmControls
+import com.gekkotron.oikos.designsystem.icons.OikosGlyph
+import com.gekkotron.oikos.designsystem.icons.StaticIcon
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardFormatter
@@ -201,6 +210,14 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             )
         }
     }
+    val running = climate?.mode != null && climate.mode != "off"
+    if (running) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) { FanIcon(running = true, fanMode = climate?.fanMode) }
+    }
     Text(stringResource(R.string.sheet_target))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
         FilledTonalIconButton(
@@ -351,4 +368,32 @@ private fun VacuumControls(card: CardUi, onSend: (Command) -> Unit) {
             }
         }
     }
+}
+
+/** A climate blade that spins while the AC is on; cheap infinite transition, paused when not running. */
+@Composable
+private fun FanIcon(running: Boolean, fanMode: String?) {
+    val periodMs = when (fanMode?.lowercase()) {
+        "silence", "silent", "quiet", "low", "1" -> 2400
+        "2" -> 2000
+        "medium", "med", "3" -> 1600
+        "4" -> 1300
+        "high", "5" -> 1000
+        else -> 1800
+    }
+    val angle = if (running) {
+        val transition = rememberInfiniteTransition(label = "fan")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(animation = tween(periodMs, easing = LinearEasing)),
+            label = "angle",
+        ).value
+    } else {
+        0f
+    }
+    StaticIcon(
+        OikosGlyph.FAN,
+        modifier = Modifier.size(48.dp).graphicsLayer { rotationZ = angle },
+    )
 }
