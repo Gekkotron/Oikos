@@ -182,6 +182,25 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
+    val powerable = "off" in caps.hvacModes && caps.hvacModes.any { it != "off" }
+    if (powerable) {
+        val isOn = climate?.mode != null && climate.mode != "off"
+        val powerLabel = stringResource(R.string.sheet_power)
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(powerLabel, modifier = Modifier.weight(1f))
+            Switch(
+                checked = isOn,
+                onCheckedChange = { on ->
+                    val next = if (on) caps.hvacModes.firstOrNull { it == "auto" } ?: caps.hvacModes.first { it != "off" } else "off"
+                    onSend(Command.SetHvacMode(next))
+                },
+                modifier = Modifier.semantics { contentDescription = powerLabel },
+            )
+        }
+    }
     Text(stringResource(R.string.sheet_target))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
         FilledTonalIconButton(
