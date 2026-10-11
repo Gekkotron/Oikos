@@ -76,14 +76,14 @@ class RoomGroupsTest {
     }
 
     @Test
-    fun `the group takes its first member's place in the order`() {
+    fun `the group lifts above individual devices in the same room`() {
         val s = build(
             testEntity("aaa", Kind.SWITCH, "aaa", area = "living"),
             shutter("zz1"),
             testEntity("mmm", Kind.SWITCH, "mmm", area = "living"),
             shutter("bbb"),
         )
-        assertEquals(listOf("aaa", "group:living:cover", "mmm"), s.cards.map { it.id })
+        assertEquals(listOf("group:living:cover", "aaa", "mmm"), s.cards.map { it.id })
     }
 
     @Test

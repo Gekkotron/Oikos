@@ -79,7 +79,20 @@ object HomeUiBuilder {
             .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled, it.uniqueId in groupable) }
         // Room groups spec §2.1: groups only in All and a room, never in Favourites, Hidden or search.
         val folds = query.isBlank() && (effective == RoomFilter.All || effective is RoomFilter.Area)
-        val cards = if (folds) RoomGroups.fold(sorted, areas) else sorted
+        val cards = if (folds) {
+            // Within each area block, lift group cards above individual devices. Stable sort keeps
+            // the alphabetical intra-bucket order from the per-entity sort above; the explicit ui.order
+            // pin still wins since it's the first key.
+            RoomGroups.fold(sorted, areas).sortedWith(
+                compareBy(
+                    { it.ui.order ?: Int.MAX_VALUE },
+                    { areaIndex[it.areaId] ?: Int.MAX_VALUE },
+                    { !it.isGroup },
+                ),
+            )
+        } else {
+            sorted
+        }
 
         return HomeUiState(
             loading = entities.isEmpty(),
