@@ -190,7 +190,15 @@ fun HomeScreen(
                             onSendGroup = onSendGroup,
                         )
                     } else {
-                        EntityCard(card = card, onClick = onClick, onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id })
+                        EntityCard(
+                            card = card,
+                            onClick = onClick,
+                            onLongClick = { if (card.hasSheet) sheetId = card.id else customizeId = card.id },
+                            onForce = {
+                                val next = if (card.forceToggle == true) "eco" else "performance"
+                                onSend(card.id, Command.SetHvacMode(next))
+                            },
+                        )
                     }
                 }
             }

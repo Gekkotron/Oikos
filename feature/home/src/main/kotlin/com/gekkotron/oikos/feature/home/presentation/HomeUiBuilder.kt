@@ -21,7 +21,7 @@ fun interface LabelText {
 object HomeUiBuilder {
     const val HERO_WEATHER = "hero_weather"
     private val WIDE_CLASSES = setOf("power", "energy")
-    private val SHEET_KINDS = setOf(Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM)
+    private val SHEET_KINDS = setOf(Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM, Kind.WATER_HEATER)
     private val COMPANION_KINDS = setOf(Kind.NUMBER, Kind.SELECT)
 
     fun build(
@@ -41,7 +41,7 @@ object HomeUiBuilder {
         val areaNames = areas.associate { it.id to it.name }
         val standalone = entities.values.filter { it.partOf == null }
         val children = childrenByParent(entities)
-        fun companionsOf(e: Entity): List<CardUi> = companions(e, children, states, areaNames, locale, labels, historyEnabled)
+        fun companionsOf(e: Entity): List<CardUi> = companions(e, children, entities, states, areaNames, locale, labels, historyEnabled)
         // What Energy or Security already shows stays off Home unless pinned; search still finds it.
         val visible = standalone.filter { Placement.onHome(it.kind, it.deviceClass, it.ui) }
         val hidden = standalone.filter { it.ui.hidden }
@@ -104,7 +104,7 @@ object HomeUiBuilder {
     ): CardUi? {
         val e = entities[id]?.takeIf { it.partOf == null } ?: return null
         val areaNames = areas.associate { it.id to it.name }
-        return card(e, displayName(e, labels), states[id], areaNames, locale, companions(e, childrenByParent(entities), states, areaNames, locale, labels, historyEnabled), historyEnabled)
+        return card(e, displayName(e, labels), states[id], areaNames, locale, companions(e, childrenByParent(entities), entities, states, areaNames, locale, labels, historyEnabled), historyEnabled)
     }
 
     private fun childrenByParent(entities: Map<String, Entity>): Map<String, List<Entity>> =
@@ -113,14 +113,28 @@ object HomeUiBuilder {
     private fun companions(
         e: Entity,
         children: Map<String, List<Entity>>,
+        entities: Map<String, Entity>,
         states: Map<String, EntityState>,
         areaNames: Map<String, String>,
         locale: Locale,
         labels: LabelText,
         historyEnabled: Boolean,
-    ): List<CardUi> = if (e.kind != Kind.LIGHT) emptyList() else children[e.uniqueId].orEmpty()
-        .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList(), historyEnabled) }
-        .sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id }))
+    ): List<CardUi> {
+        val list: List<Entity> = when (e.kind) {
+            Kind.LIGHT -> children[e.uniqueId].orEmpty()
+            Kind.WATER_HEATER -> {
+                val deviceId = e.deviceId
+                if (deviceId == null) emptyList()
+                else entities.values.filter {
+                    it.kind == Kind.NUMBER && it.deviceId == deviceId && !it.ui.hidden && it.uniqueId != e.uniqueId
+                }.sortedBy { it.uniqueId }
+            }
+            else -> emptyList()
+        }
+        return list
+            .map { c -> card(c, companionName(c, labels), states[c.uniqueId], areaNames, locale, emptyList(), historyEnabled) }
+            .let { cards -> if (e.kind == Kind.LIGHT) cards.sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id })) else cards }
+    }
 
     private fun matches(entity: Entity, filter: RoomFilter) = when (filter) {
         RoomFilter.All -> true
@@ -185,15 +199,23 @@ object HomeUiBuilder {
             hidden = entity.ui.hidden,
             companions = companions,
             groupable = groupable,
+            forceToggle = forceToggleFor(entity, value),
         )
     }
 
     private fun tapFor(kind: Kind, hasHistory: Boolean) = when (kind) {
         Kind.LIGHT, Kind.SWITCH -> TapAction.TOGGLE
         Kind.BUTTON -> TapAction.PRESS
-        Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM -> TapAction.OPEN_SHEET
+        Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM, Kind.WATER_HEATER -> TapAction.OPEN_SHEET
         Kind.SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
         Kind.BINARY_SENSOR -> TapAction.NONE
+    }
+
+    private fun forceToggleFor(entity: Entity, value: StateValue): Boolean? {
+        if (entity.kind != Kind.WATER_HEATER) return null
+        val modes = entity.capabilities.hvacModes
+        if ("performance" !in modes || "eco" !in modes) return null
+        return (value as? StateValue.Climate)?.mode == "performance"
     }
 
     private fun isOn(kind: Kind, v: StateValue) = when (v) {
@@ -201,7 +223,9 @@ object HomeUiBuilder {
         is StateValue.OnOff -> kind == Kind.SWITCH && v.on
         is StateValue.Cover -> v.state == CoverState.OPEN || v.state == CoverState.OPENING ||
             (v.state == CoverState.STOPPED && (v.position ?: 0) > 0)
-        is StateValue.Climate -> v.mode != null && v.mode != "off"
+        is StateValue.Climate ->
+            if (kind == Kind.WATER_HEATER) v.mode == "performance"
+            else v.mode != null && v.mode != "off"
         else -> false
     }
 }

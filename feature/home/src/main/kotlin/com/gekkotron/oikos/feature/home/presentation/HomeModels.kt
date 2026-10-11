@@ -102,6 +102,8 @@ data class CardUi(
     val members: List<CardUi> = emptyList(),
     /** A cover or light whose room has another one: its Customize shows the "Group with…" switch. */
     val groupable: Boolean = false,
+    /** Water heater on-card Force switch (spec §5): null = no toggle, true = currently in `performance`. */
+    val forceToggle: Boolean? = null,
 ) {
     val isGroup: Boolean get() = members.isNotEmpty()
 }

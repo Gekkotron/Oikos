@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,8 +26,8 @@ import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.feature.home.presentation.TapAction
 
 @Composable
-internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
-    val valueText = if (card.available) cardValueText(card.value) else stringResource(R.string.value_unavailable)
+internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, onForce: () -> Unit = {}, modifier: Modifier = Modifier) {
+    val valueText = if (card.available) cardValueText(card.value, card.kind) else stringResource(R.string.value_unavailable)
     val room = card.areaName ?: stringResource(R.string.area_unassigned)
     val description = stringResource(if (card.hidden) R.string.card_description_hidden else R.string.card_description, card.name, valueText, room)
     val onText = stringResource(R.string.value_on)
@@ -53,6 +54,9 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
         Row(verticalAlignment = Alignment.CenterVertically) {
             KindIcon(icon)
             Spacer(Modifier.weight(1f))
+            card.forceToggle?.let { forced ->
+                Switch(checked = forced, onCheckedChange = { onForce() }, enabled = card.available)
+            }
             if (card.pending) PendingDot()
         }
         Spacer(Modifier.height(8.dp))

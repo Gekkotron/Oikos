@@ -221,4 +221,17 @@
     <string name="vacuum_dock">Retour base</string>
     <string name="vacuum_locate">Localiser</string>
     <string name="sheet_suction">Aspiration</string>
+    <string name="water_heater_eco">Éco</string>
+    <string name="water_heater_eco_target">Éco · cible %1$s °C</string>
+    <string name="water_heater_forced">Forcé</string>
+    <string name="water_heater_forced_to">Forcé → %1$s °C</string>
+    <string name="water_heater_hot">Chaud</string>
+    <string name="water_heater_hot_target">Chaud · cible %1$s °C</string>
+    <string name="water_heater_target">cible %1$s °C</string>
+    <string name="water_heater_mode_eco">Éco</string>
+    <string name="water_heater_mode_performance">Forcé</string>
+    <string name="water_heater_mode_electric">Électrique</string>
+    <string name="water_heater_mode_gas">Gaz</string>
+    <string name="water_heater_mode_heat_pump">Pompe à chaleur</string>
+    <string name="water_heater_mode_high_demand">Forte demande</string>
 </resources>

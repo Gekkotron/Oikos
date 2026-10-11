@@ -56,6 +56,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
         ?: IconSpec.Static(binaryGlyph(card.deviceClass), on = false)
     Kind.LIGHT -> IconSpec.Static(OikosGlyph.BULB, card.on)
     Kind.SWITCH -> IconSpec.Static(OikosGlyph.PLUG, card.on)
+    Kind.WATER_HEATER -> IconSpec.Static(OikosGlyph.WATER_HEATER, card.on)
     Kind.CLIMATE -> IconSpec.Static(OikosGlyph.SNOWFLAKE, on = false)
     Kind.SENSOR -> IconSpec.Static(sensorGlyph(card.deviceClass), on = false)
     Kind.ALARM_PANEL -> IconSpec.Static(OikosGlyph.SHIELD, on = false)
