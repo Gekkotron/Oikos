@@ -55,7 +55,13 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
             KindIcon(icon)
             Spacer(Modifier.weight(1f))
             card.forceToggle?.let { forced ->
-                Switch(checked = forced, onCheckedChange = { onForce() }, enabled = card.available)
+                val forceDescription = stringResource(R.string.card_force_toggle, card.name)
+                Switch(
+                    checked = forced,
+                    onCheckedChange = { onForce() },
+                    enabled = card.available,
+                    modifier = Modifier.semantics { contentDescription = forceDescription },
+                )
             }
             if (card.pending) PendingDot()
         }

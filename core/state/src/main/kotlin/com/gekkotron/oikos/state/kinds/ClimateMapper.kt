@@ -48,7 +48,7 @@ object ClimateMapper : KindMapper {
 
     override fun feedbackTopics(b: MqttBindings, command: Command): Set<String> = when (command) {
         is Command.SetFanMode -> setOfNotNull(b.str("fan_mode_state_topic"))
-        else -> ThermostatBase.feedbackTopics(b, command)
+        else -> ThermostatBase.feedbackTopics(b, command) + setOfNotNull(b.str("fan_mode_state_topic"))
     }
 
     override fun predict(command: Command, previous: StateValue): StateValue? {

@@ -6,8 +6,9 @@ import com.gekkotron.oikos.state.mqtt.MqttBindings
 
 /**
  * HA `water_heater`. Reuses [ThermostatBase] for current / target / mode and keeps the state as a
- * [StateValue.Climate] with `fanMode = null`. Jeedom owns `off`, so the app never sends it even
- * when `off` is in the modes — Task 5's UI filters it out of the chips.
+ * [StateValue.Climate] with `fanMode = null`. The UI never sends `off` (the Force toggle flips
+ * between `eco`/`performance` and the sheet filters `off` out of the chips); the mapper itself
+ * still accepts `SetHvacMode("off")` or `TurnOff` when `off` is in the modes.
  */
 object WaterHeaterMapper : KindMapper {
     val DEFAULT_MODES = listOf("off", "eco", "electric", "gas", "heat_pump", "high_demand", "performance")

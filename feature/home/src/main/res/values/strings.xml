@@ -234,4 +234,5 @@
     <string name="water_heater_mode_gas">Gas</string>
     <string name="water_heater_mode_heat_pump">Heat pump</string>
     <string name="water_heater_mode_high_demand">High demand</string>
+    <string name="card_force_toggle">Force %1$s</string>
 </resources>
