@@ -34,7 +34,25 @@ data class UiOverride(
     val ungrouped: Boolean = false,
     /** Shows this switch as an on/off light (switch-as-light). */
     val asLight: Boolean = false,
+    /** When set and the user taps a light's tile to turn it on, send this preset's brightness and
+     *  colour instead of a bare `on`, so the strip comes back the way the user wants rather than
+     *  the state another command (scene, voice…) last left it in. One of [LightOnPreset.key] or null. */
+    val lightOnPreset: String? = null,
 )
+
+/** Named defaults for [UiOverride.lightOnPreset]. Kept small on purpose: a free picker belongs in the light sheet, not the override. */
+enum class LightOnPreset(val key: String, val brightness: Int, val color: Hs) {
+    WHITE("white", 255, Hs(0.0, 0.0)),
+    WARM("warm", 200, Hs(30.0, 0.3)),
+    RED("red", 255, Hs(0.0, 1.0)),
+    GREEN("green", 255, Hs(120.0, 1.0)),
+    BLUE("blue", 240, Hs(240.0, 1.0)),
+    ;
+
+    companion object {
+        fun of(key: String?): LightOnPreset? = key?.let { k -> entries.firstOrNull { it.key == k } }
+    }
+}
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

@@ -8,6 +8,7 @@ import com.gekkotron.oikos.history.HistoryClient
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
+import com.gekkotron.oikos.model.LightOnPreset
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -131,11 +132,20 @@ class HomeViewModel @Inject constructor(
                     sendGroup(card.id, GroupCommands.toggle(card))
                 } else {
                     // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
-                    send(card.id, if (card.on) Command.TurnOff else Command.TurnOn())
+                    send(card.id, if (card.on) Command.TurnOff else turnOnFor(card))
                 }
             TapAction.PRESS -> send(card.id, Command.Press)
             TapAction.OPEN_SHEET, TapAction.OPEN_HISTORY, TapAction.NONE -> Unit
         }
+    }
+
+    /** A light with a saved on-state preset turns on at that colour/brightness; otherwise plain on. */
+    private fun turnOnFor(card: CardUi): Command.TurnOn {
+        if (card.kind != Kind.LIGHT) return Command.TurnOn()
+        val preset = LightOnPreset.of(card.ui.lightOnPreset) ?: return Command.TurnOn()
+        val color = preset.color.takeIf { card.capabilities.colorModes.isNotEmpty() }
+        val brightness = preset.brightness.takeIf { card.capabilities.brightness }
+        return Command.TurnOn(brightness = brightness, color = color)
     }
 
     fun send(id: String, command: Command) {

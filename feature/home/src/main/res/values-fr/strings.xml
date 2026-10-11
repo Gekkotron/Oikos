@@ -208,6 +208,13 @@
     <string name="customize_grouped_cover">Grouper avec les autres volets de la pièce</string>
     <string name="customize_as_light">Afficher comme une lumière</string>
     <string name="customize_grouped_light">Grouper avec les autres lumières de la pièce</string>
+    <string name="customize_light_on_default">Allumer en</string>
+    <string name="customize_light_on_resume">Dernier état</string>
+    <string name="customize_light_on_white">Blanc</string>
+    <string name="customize_light_on_warm">Chaud</string>
+    <string name="customize_light_on_red">Rouge</string>
+    <string name="customize_light_on_green">Vert</string>
+    <string name="customize_light_on_blue">Bleu</string>
     <string name="home_voice_cd">Dis une commande</string>
     <string name="vacuum_state_cleaning">Nettoyage</string>
     <string name="vacuum_state_docked">Sur la base</string>

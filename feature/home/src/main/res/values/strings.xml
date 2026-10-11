@@ -208,6 +208,13 @@
     <string name="customize_grouped_cover">Group with the other shutters in this room</string>
     <string name="customize_as_light">Show as a light</string>
     <string name="customize_grouped_light">Group with the other lights in this room</string>
+    <string name="customize_light_on_default">Turn on in</string>
+    <string name="customize_light_on_resume">Last state</string>
+    <string name="customize_light_on_white">White</string>
+    <string name="customize_light_on_warm">Warm</string>
+    <string name="customize_light_on_red">Red</string>
+    <string name="customize_light_on_green">Green</string>
+    <string name="customize_light_on_blue">Blue</string>
     <string name="home_voice_cd">Say a command</string>
     <string name="vacuum_state_cleaning">Cleaning</string>
     <string name="vacuum_state_docked">Docked</string>

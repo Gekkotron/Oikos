@@ -42,6 +42,7 @@ import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.oikos.feature.home.presentation.OverrideDraft
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.EnergyRole
+import com.gekkotron.oikos.model.LightOnPreset
 import com.gekkotron.oikos.model.PowerUnits
 import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.designsystem.R as DsR
@@ -72,10 +73,11 @@ internal fun CustomizeSheet(
     var energyInvert by rememberSaveable(card.id) { mutableStateOf(start.energyInvert) }
     var grouped by rememberSaveable(card.id) { mutableStateOf(start.grouped) }
     var asLight by rememberSaveable(card.id) { mutableStateOf(start.asLight) }
+    var lightOnPreset by rememberSaveable(card.id) { mutableStateOf(start.lightOnPreset) }
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped, asLight = asLight)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped, asLight = asLight, lightOnPreset = lightOnPreset)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -134,6 +136,23 @@ internal fun CustomizeSheet(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (card.kind == Kind.LIGHT && card.capabilities.colorModes.isNotEmpty()) {
+                Text(stringResource(R.string.customize_light_on_default), style = OikosTheme.type.label)
+                ChipRow {
+                    FilterChip(
+                        selected = lightOnPreset == null,
+                        onClick = { lightOnPreset = null },
+                        label = { Text(stringResource(R.string.customize_light_on_resume)) },
+                    )
+                    LightOnPreset.entries.forEach { preset ->
+                        FilterChip(
+                            selected = lightOnPreset == preset.key,
+                            onClick = { lightOnPreset = preset.key },
+                            label = { Text(stringResource(presetLabel(preset))) },
+                        )
+                    }
+                }
+            }
             if (card.kind == Kind.SENSOR) {
                 Text(stringResource(R.string.customize_style), style = OikosTheme.type.label)
                 ChipRow {
@@ -181,6 +200,14 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 @Composable
 private fun ChipRow(content: @Composable () -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+}
+
+private fun presetLabel(preset: LightOnPreset): Int = when (preset) {
+    LightOnPreset.WHITE -> R.string.customize_light_on_white
+    LightOnPreset.WARM -> R.string.customize_light_on_warm
+    LightOnPreset.RED -> R.string.customize_light_on_red
+    LightOnPreset.GREEN -> R.string.customize_light_on_green
+    LightOnPreset.BLUE -> R.string.customize_light_on_blue
 }
 
 @Composable

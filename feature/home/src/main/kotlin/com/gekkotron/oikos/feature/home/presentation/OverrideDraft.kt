@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.home.presentation
 
 import com.gekkotron.oikos.model.EnergyRole
+import com.gekkotron.oikos.model.LightOnPreset
 import com.gekkotron.oikos.model.UiOverride
 
 /**
@@ -27,6 +28,8 @@ data class OverrideDraft(
     val grouped: Boolean = true,
     /** On = this switch is shown as a light (switch-as-light). */
     val asLight: Boolean = false,
+    /** A named preset the tile uses when turning the light on, or null to resume the last state. */
+    val lightOnPreset: String? = null,
 ) {
     val orderValid: Boolean
         get() = order.isBlank() || order.trim().let { t -> t.all(Char::isDigit) && t.toIntOrNull()?.let { it in 0..MAX_ORDER } == true }
@@ -55,6 +58,7 @@ data class OverrideDraft(
             securityAsk = securityAsk,
             ungrouped = !grouped,
             asLight = asLight,
+            lightOnPreset = lightOnPreset?.takeIf { LightOnPreset.of(it) != null },
         )
     }
 
@@ -76,6 +80,7 @@ data class OverrideDraft(
             securityAsk = card.ui.securityAsk,
             grouped = !card.ui.ungrouped,
             asLight = card.ui.asLight,
+            lightOnPreset = card.ui.lightOnPreset,
         )
     }
 }
