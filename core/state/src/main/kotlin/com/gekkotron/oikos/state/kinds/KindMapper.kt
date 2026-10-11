@@ -58,5 +58,6 @@ object KindMappers {
         Kind.SELECT -> SelectMapper
         Kind.BUTTON -> ButtonMapper
         Kind.VACUUM -> VacuumMapper
+        Kind.WATER_HEATER -> WaterHeaterMapper
     }
 }
