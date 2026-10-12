@@ -53,4 +53,19 @@ class IconsSmokeTest {
         }
         compose.waitForIdle()
     }
+
+    @Test
+    fun `the vacuum draws in every motion, with and without an accent`() {
+        compose.setContent {
+            OikosTheme(ThemeChoice.NIGHT_GLASS) {
+                Row {
+                    VacuumMotion.entries.forEach { motion ->
+                        VacuumIcon(motion, fanSpeed = "balanced")
+                        VacuumIcon(motion, fanSpeed = "max", accent = Color.Yellow)
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
 }

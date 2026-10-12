@@ -15,7 +15,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +26,8 @@ import com.gekkotron.oikos.designsystem.icons.GarageIcon
 import com.gekkotron.oikos.designsystem.icons.OikosGlyph
 import com.gekkotron.oikos.designsystem.icons.ShutterIcon
 import com.gekkotron.oikos.designsystem.icons.StaticIcon
+import com.gekkotron.oikos.designsystem.icons.VacuumIcon
+import com.gekkotron.oikos.designsystem.icons.VacuumMotion
 import com.gekkotron.oikos.designsystem.icons.WindowIcon
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
@@ -51,8 +52,8 @@ internal sealed interface IconSpec {
     /** Climate tile: a spinning fan while [running], SNOWFLAKE otherwise; period follows [fanMode]. */
     data class Climate(val running: Boolean, val fanMode: String?) : IconSpec
 
-    /** Vacuum tile: the robot's LIDAR dome spins while [running]; period follows [fanSpeed]. */
-    data class Vacuum(val running: Boolean, val fanSpeed: String?) : IconSpec
+    /** Vacuum tile: the side brush spins while cleaning (dust puffs trail) and the robot nudges home while returning. */
+    data class Vacuum(val motion: VacuumMotion, val fanSpeed: String?) : IconSpec
 }
 
 /** An open door, window or garage door: the card gets the accent border. */
@@ -75,8 +76,14 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.SELECT -> IconSpec.Static(OikosGlyph.LIST, on = false)
     Kind.BUTTON -> IconSpec.Static(OikosGlyph.PLAY, on = false)
     Kind.VACUUM -> (card.state as? StateValue.Vacuum).let { s ->
-        IconSpec.Vacuum(running = s?.state == "cleaning", fanSpeed = s?.fanSpeed)
+        IconSpec.Vacuum(motion = vacuumMotion(s?.state), fanSpeed = s?.fanSpeed)
     }
+}
+
+private fun vacuumMotion(state: String?): VacuumMotion = when (state) {
+    "cleaning" -> VacuumMotion.CLEANING
+    "returning" -> VacuumMotion.RETURNING
+    else -> VacuumMotion.IDLE
 }
 
 /** An unavailable cover keeps its last known position (closed could misreport it) but stops moving. */
@@ -201,7 +208,10 @@ internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
         // Warm Minimal's on-card is espresso: its dark amber would vanish, so a lit glyph uses the card's content color there.
         is IconSpec.Static -> StaticIcon(spec.glyph, if (spec.on) (if (c.isDark) c.warning else neutral) else null, m)
         is IconSpec.Climate -> ClimateIcon(spec.running, spec.fanMode, animate, m)
-        is IconSpec.Vacuum -> VacuumIcon(spec.running, spec.fanSpeed, animate, if (spec.running) (if (c.isDark) c.warning else neutral) else null, m)
+        is IconSpec.Vacuum -> {
+            val active = spec.motion != VacuumMotion.IDLE
+            VacuumIcon(spec.motion, spec.fanSpeed, if (active) (if (c.isDark) c.warning else neutral) else null, animate, m)
+        }
     }
 }
 
@@ -232,34 +242,6 @@ private fun fanPeriodMs(fanMode: String?): Int = when (fanMode?.lowercase()) {
     "medium", "med", "3" -> 1600
     "4" -> 1300
     "high", "5" -> 1000
-    else -> 1800
-}
-
-/** On the vacuum tile: the LIDAR dome spins while cleaning; period follows the suction preset. */
-@Composable
-private fun VacuumIcon(running: Boolean, fanSpeed: String?, animate: Boolean, accent: Color?, modifier: Modifier) {
-    if (!running) {
-        StaticIcon(OikosGlyph.VACUUM, accent, modifier)
-        return
-    }
-    val angle = if (animate) {
-        val transition = rememberInfiniteTransition(label = "vacuum")
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(animation = tween(vacuumSpinPeriodMs(fanSpeed), easing = LinearEasing)),
-            label = "angle",
-        ).value
-    } else {
-        0f
-    }
-    StaticIcon(OikosGlyph.VACUUM, accent, modifier.graphicsLayer { rotationZ = angle })
-}
-
-private fun vacuumSpinPeriodMs(fanSpeed: String?): Int = when (fanSpeed?.lowercase()) {
-    "silent", "silence", "quiet", "eco", "low" -> 2400
-    "turbo", "high" -> 1400
-    "max", "max+", "max_plus" -> 1100
     else -> 1800
 }
 

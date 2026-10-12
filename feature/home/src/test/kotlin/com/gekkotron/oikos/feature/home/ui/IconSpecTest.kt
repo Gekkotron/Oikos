@@ -1,6 +1,7 @@
 package com.gekkotron.oikos.feature.home.ui
 
 import com.gekkotron.oikos.designsystem.icons.OikosGlyph
+import com.gekkotron.oikos.designsystem.icons.VacuumMotion
 import com.gekkotron.oikos.feature.home.presentation.HomeUiBuilder
 import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.testEntity
@@ -85,10 +86,10 @@ class IconSpecTest {
         assertEquals(IconSpec.Static(OikosGlyph.SLIDER, false), spec(Kind.NUMBER, null))
         assertEquals(IconSpec.Static(OikosGlyph.LIST, false), spec(Kind.SELECT, null))
         assertEquals(IconSpec.Static(OikosGlyph.PLAY, false), spec(Kind.BUTTON, null))
-        assertEquals(IconSpec.Vacuum(running = false, fanSpeed = null), spec(Kind.VACUUM, null))
-        assertEquals(IconSpec.Vacuum(running = false, fanSpeed = "balanced"), spec(Kind.VACUUM, StateValue.Vacuum("docked", 80, "balanced")))
-        assertEquals(IconSpec.Vacuum(running = true, fanSpeed = "turbo"), spec(Kind.VACUUM, StateValue.Vacuum("cleaning", 60, "turbo")))
-        assertEquals(IconSpec.Vacuum(running = false, fanSpeed = "max"), spec(Kind.VACUUM, StateValue.Vacuum("returning", 40, "max")))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.IDLE, fanSpeed = null), spec(Kind.VACUUM, null))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.IDLE, fanSpeed = "balanced"), spec(Kind.VACUUM, StateValue.Vacuum("docked", 80, "balanced")))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.CLEANING, fanSpeed = "turbo"), spec(Kind.VACUUM, StateValue.Vacuum("cleaning", 60, "turbo")))
+        assertEquals(IconSpec.Vacuum(motion = VacuumMotion.RETURNING, fanSpeed = "max"), spec(Kind.VACUUM, StateValue.Vacuum("returning", 40, "max")))
     }
 
     @Test
