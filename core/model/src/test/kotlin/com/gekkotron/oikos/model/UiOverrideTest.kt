@@ -144,4 +144,26 @@ class UiOverrideTest {
         assertEquals(UiOverride(ungrouped = true), UiOverrides.decode(UiOverrides.encode(UiOverride(ungrouped = true))))
         assertFalse(UiOverrides.decode("""{"name":"X"}""")!!.ungrouped)
     }
+
+    @Test
+    fun `lightOnBrightness and climatePresets round-trip and are omitted when null`() {
+        val o = UiOverride(lightOnPreset = "white", lightOnBrightness = 80, climatePresets = "19,21,23")
+        val json = UiOverrides.encode(o)
+        assertEquals(o, UiOverrides.decode(json))
+        assertFalse(UiOverrides.encode(UiOverride()).contains("lightOnBrightness"))
+        assertFalse(UiOverrides.encode(UiOverride()).contains("climatePresets"))
+    }
+
+    @Test
+    fun `ClimatePresets parse drops blanks, caps at MAX and keeps order`() {
+        assertEquals(listOf(19.0, 21.0, 23.0), ClimatePresets.parse("19, 21, 23"))
+        assertEquals(listOf(19.5, 22.0), ClimatePresets.parse("19.5 ; 22"))
+        assertEquals(emptyList(), ClimatePresets.parse(null))
+        assertEquals(emptyList(), ClimatePresets.parse("   "))
+        // Garbage tokens drop; good ones survive.
+        assertEquals(listOf(20.0), ClimatePresets.parse("foo, 20, bar"))
+        // Duplicates are removed, cap applies in input order.
+        assertEquals(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), ClimatePresets.parse("1,2,3,4,5,6,7,8"))
+        assertEquals(listOf(1.0, 2.0), ClimatePresets.parse("1,2,1,2"))
+    }
 }

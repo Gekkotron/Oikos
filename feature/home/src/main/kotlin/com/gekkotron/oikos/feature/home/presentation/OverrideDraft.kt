@@ -30,6 +30,10 @@ data class OverrideDraft(
     val asLight: Boolean = false,
     /** A named preset the tile uses when turning the light on, or null to resume the last state. */
     val lightOnPreset: String? = null,
+    /** Overrides the preset's baked brightness (1..255); null keeps the preset default. */
+    val lightOnBrightness: Int? = null,
+    /** Raw text for the climate quick-target chips; parsed by [com.gekkotron.oikos.model.ClimatePresets.parse]. */
+    val climatePresets: String = "",
 ) {
     val orderValid: Boolean
         get() = order.isBlank() || order.trim().let { t -> t.all(Char::isDigit) && t.toIntOrNull()?.let { it in 0..MAX_ORDER } == true }
@@ -59,6 +63,8 @@ data class OverrideDraft(
             ungrouped = !grouped,
             asLight = asLight,
             lightOnPreset = lightOnPreset?.takeIf { LightOnPreset.of(it) != null },
+            lightOnBrightness = lightOnBrightness?.takeIf { lightOnPreset != null && it in 1..255 },
+            climatePresets = climatePresets.trim().takeIf { it.isNotEmpty() },
         )
     }
 
@@ -81,6 +87,8 @@ data class OverrideDraft(
             grouped = !card.ui.ungrouped,
             asLight = card.ui.asLight,
             lightOnPreset = card.ui.lightOnPreset,
+            lightOnBrightness = card.ui.lightOnBrightness,
+            climatePresets = card.ui.climatePresets.orEmpty(),
         )
     }
 }

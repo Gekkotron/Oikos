@@ -139,12 +139,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** A light with a saved on-state preset turns on at that colour/brightness; otherwise plain on. */
+    /** A light with a saved on-state preset turns on at that colour/brightness; otherwise plain on.
+     *  A customised [UiOverride.lightOnBrightness] replaces the preset's baked brightness. */
     private fun turnOnFor(card: CardUi): Command.TurnOn {
         if (card.kind != Kind.LIGHT) return Command.TurnOn()
         val preset = LightOnPreset.of(card.ui.lightOnPreset) ?: return Command.TurnOn()
         val color = preset.color.takeIf { card.capabilities.colorModes.isNotEmpty() }
-        val brightness = preset.brightness.takeIf { card.capabilities.brightness }
+        val brightness = (card.ui.lightOnBrightness ?: preset.brightness).takeIf { card.capabilities.brightness }
         return Command.TurnOn(brightness = brightness, color = color)
     }
 

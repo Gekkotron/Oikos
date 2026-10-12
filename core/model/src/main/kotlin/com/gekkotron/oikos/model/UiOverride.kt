@@ -38,6 +38,12 @@ data class UiOverride(
      *  colour instead of a bare `on`, so the strip comes back the way the user wants rather than
      *  the state another command (scene, voice…) last left it in. One of [LightOnPreset.key] or null. */
     val lightOnPreset: String? = null,
+    /** Overrides the preset's baked brightness (1..255). Only read when [lightOnPreset] is set and the
+     *  light supports brightness; a null keeps the preset's own value. */
+    val lightOnBrightness: Int? = null,
+    /** Comma-separated °C targets for the climate sheet's quick-set chips (e.g. "19,21,23").
+     *  Blank or null = no chips; invalid entries drop silently so a typo cannot break the sheet. */
+    val climatePresets: String? = null,
 )
 
 /** Named defaults for [UiOverride.lightOnPreset]. Kept small on purpose: a free picker belongs in the light sheet, not the override. */
@@ -51,6 +57,21 @@ enum class LightOnPreset(val key: String, val brightness: Int, val color: Hs) {
 
     companion object {
         fun of(key: String?): LightOnPreset? = key?.let { k -> entries.firstOrNull { it.key == k } }
+    }
+}
+
+object ClimatePresets {
+    /** The sheet shows at most this many chips, so a pasted number list cannot swamp the row. */
+    const val MAX = 6
+
+    /** Parses "19,21,23" (or "19 ; 21 ; 23") into targets, dropping blanks and unparseable tokens
+     *  so a typo never kills the whole list. Clamped to [MAX] and de-duplicated in input order. */
+    fun parse(csv: String?): List<Double> {
+        if (csv.isNullOrBlank()) return emptyList()
+        return csv.split(',', ';')
+            .mapNotNull { it.trim().replace(',', '.').toDoubleOrNull() }
+            .distinct()
+            .take(MAX)
     }
 }
 

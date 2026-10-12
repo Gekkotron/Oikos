@@ -114,6 +114,22 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `a saved on-preset brightness overrides the preset's baked value`() = runTest(dispatcher) {
+        source.entities.value = mapOf(
+            "led" to testEntity(
+                "led", Kind.LIGHT, area = "kitchen",
+                capabilities = Capabilities(brightness = true, colorModes = setOf("hs")),
+                ui = UiOverride(lightOnPreset = "white", lightOnBrightness = 80),
+            ),
+        )
+        source.stateMap.value = mapOf("led" to EntityState("led", StateValue.Light(false, 10)))
+        val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
+        backgroundScope.launch { vm.state.collect {} }
+        vm.tap(vm.state.value.card("led")!!)
+        assertEquals("led" to Command.TurnOn(brightness = 80, color = com.gekkotron.oikos.model.Hs(0.0, 0.0)), source.sent.last())
+    }
+
+    @Test
     fun `unconfirmed command becomes a NotConfirmed event`() = runTest(dispatcher) {
         val vm = HomeViewModel(source, SavedStateHandle(), dispatcher, preferences = testPreferences())
         source.commandFailures.emit(CommandFailure("lamp", Command.Toggle, "timeout"))

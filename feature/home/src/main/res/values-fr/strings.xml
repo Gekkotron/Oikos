@@ -215,6 +215,9 @@
     <string name="customize_light_on_red">Rouge</string>
     <string name="customize_light_on_green">Vert</string>
     <string name="customize_light_on_blue">Bleu</string>
+    <string name="customize_light_on_brightness">Luminosité</string>
+    <string name="customize_climate_presets">Raccourcis consigne (°C)</string>
+    <string name="customize_climate_presets_hint">Séparés par des virgules, ex. 19, 21, 23. Jusqu\'à 6 raccourcis.</string>
     <string name="home_voice_cd">Dis une commande</string>
     <string name="vacuum_state_cleaning">Nettoyage</string>
     <string name="vacuum_state_docked">Sur la base</string>

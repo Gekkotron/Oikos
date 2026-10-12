@@ -41,7 +41,11 @@ internal fun resetToRoot(stack: MutableList<NavKey>, root: NavKey) {
 internal fun showsTabBar(top: NavKey?): Boolean = top == HomeKey || (top != null && top in SIDE_TABS)
 
 @Composable
-internal fun MainTabBar(selected: NavKey?, onSelect: (NavKey) -> Unit) {
+internal fun MainTabBar(
+    selected: NavKey?,
+    onSelect: (NavKey) -> Unit,
+    status: TabStatus = TabStatus(),
+) {
     val colors = OikosTheme.colors
     val itemColors = NavigationBarItemDefaults.colors(
         // The icon sits on the indicator pill; the label sits below it, on the bar.
@@ -51,6 +55,9 @@ internal fun MainTabBar(selected: NavKey?, onSelect: (NavKey) -> Unit) {
         unselectedTextColor = colors.contentMuted,
         indicatorColor = colors.chipSelected,
     )
+    // When unselected and active, the glyph fills with its state colour; selected keeps the pill contrast.
+    val bolt = if (!status.solarActive || selected == EnergyKey) null else colors.solar
+    val shield = if (!status.alarmArmed || selected == SecurityKey) null else colors.warning
     NavigationBar(containerColor = colors.backgroundTop.copy(alpha = 0.92f)) {
         NavigationBarItem(
             selected = selected == HomeKey,
@@ -62,14 +69,14 @@ internal fun MainTabBar(selected: NavKey?, onSelect: (NavKey) -> Unit) {
         NavigationBarItem(
             selected = selected == EnergyKey,
             onClick = { onSelect(EnergyKey) },
-            icon = { StaticIcon(OikosGlyph.BOLT, modifier = Modifier.size(24.dp)) },
+            icon = { StaticIcon(OikosGlyph.BOLT, accent = bolt, modifier = Modifier.size(24.dp)) },
             label = { Text(stringResource(R.string.nav_energy)) },
             colors = itemColors,
         )
         NavigationBarItem(
             selected = selected == SecurityKey,
             onClick = { onSelect(SecurityKey) },
-            icon = { StaticIcon(OikosGlyph.SHIELD, modifier = Modifier.size(24.dp)) },
+            icon = { StaticIcon(OikosGlyph.SHIELD, accent = shield, modifier = Modifier.size(24.dp)) },
             label = { Text(stringResource(R.string.nav_security)) },
             colors = itemColors,
         )

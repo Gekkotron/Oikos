@@ -16,12 +16,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -48,6 +50,7 @@ import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.designsystem.R as DsR
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
+import kotlin.math.roundToInt
 
 /** Long-press override sheet (spec §5.2): rename, room, favourite, hide, position, card style, energy role. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,10 +77,12 @@ internal fun CustomizeSheet(
     var grouped by rememberSaveable(card.id) { mutableStateOf(start.grouped) }
     var asLight by rememberSaveable(card.id) { mutableStateOf(start.asLight) }
     var lightOnPreset by rememberSaveable(card.id) { mutableStateOf(start.lightOnPreset) }
+    var lightOnBrightness by rememberSaveable(card.id) { mutableStateOf(start.lightOnBrightness) }
+    var climatePresets by rememberSaveable(card.id) { mutableStateOf(start.climatePresets) }
     // Rooms typed here stay local to the draft; Save publishes them (spec §5.2), so dismissing without
     // saving never declares a room nobody asked to keep.
     var newRooms by remember(card.id) { mutableStateOf(emptyList<Area>()) }
-    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped, asLight = asLight, lightOnPreset = lightOnPreset)
+    val draft = OverrideDraft(name, areaId, favorite, hidden, order, cardStyle, energyRole, energyInvert, securityHidden, homePinned, securityAction, securityAsk, grouped = grouped, asLight = asLight, lightOnPreset = lightOnPreset, lightOnBrightness = lightOnBrightness, climatePresets = climatePresets)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
@@ -141,7 +146,7 @@ internal fun CustomizeSheet(
                 ChipRow {
                     FilterChip(
                         selected = lightOnPreset == null,
-                        onClick = { lightOnPreset = null },
+                        onClick = { lightOnPreset = null; lightOnBrightness = null },
                         label = { Text(stringResource(R.string.customize_light_on_resume)) },
                     )
                     LightOnPreset.entries.forEach { preset ->
@@ -152,6 +157,29 @@ internal fun CustomizeSheet(
                         )
                     }
                 }
+                val activePreset = LightOnPreset.of(lightOnPreset)
+                if (activePreset != null && card.capabilities.brightness) {
+                    val effective = lightOnBrightness ?: activePreset.brightness
+                    var slider by remember(card.id, lightOnPreset) { mutableFloatStateOf(effective.toFloat()) }
+                    Text(stringResource(R.string.customize_light_on_brightness))
+                    Slider(
+                        value = slider,
+                        onValueChange = { slider = it },
+                        valueRange = 1f..255f,
+                        onValueChangeFinished = { lightOnBrightness = slider.roundToInt() },
+                    )
+                }
+            }
+            if (card.kind == Kind.CLIMATE) {
+                OutlinedTextField(
+                    value = climatePresets,
+                    onValueChange = { climatePresets = it },
+                    label = { Text(stringResource(R.string.customize_climate_presets)) },
+                    supportingText = { Text(stringResource(R.string.customize_climate_presets_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
             if (card.kind == Kind.SENSOR) {
                 Text(stringResource(R.string.customize_style), style = OikosTheme.type.label)

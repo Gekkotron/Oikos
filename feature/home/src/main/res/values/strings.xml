@@ -215,6 +215,9 @@
     <string name="customize_light_on_red">Red</string>
     <string name="customize_light_on_green">Green</string>
     <string name="customize_light_on_blue">Blue</string>
+    <string name="customize_light_on_brightness">Brightness</string>
+    <string name="customize_climate_presets">Target presets (°C)</string>
+    <string name="customize_climate_presets_hint">Comma-separated, e.g. 19, 21, 23. Up to 6 chips.</string>
     <string name="home_voice_cd">Say a command</string>
     <string name="vacuum_state_cleaning">Cleaning</string>
     <string name="vacuum_state_docked">Docked</string>

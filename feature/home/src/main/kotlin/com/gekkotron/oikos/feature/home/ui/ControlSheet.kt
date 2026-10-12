@@ -47,6 +47,7 @@ import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.EffectNames
 import com.gekkotron.oikos.feature.home.presentation.hasColor
 import com.gekkotron.oikos.feature.home.presentation.StepMath
+import com.gekkotron.oikos.model.ClimatePresets
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Hs
 import com.gekkotron.oikos.model.Kind
@@ -214,6 +215,18 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             enabled = target < max,
             modifier = Modifier.semantics { contentDescription = increase },
         ) { Text("+", fontSize = 22.sp) }
+    }
+    val presets = ClimatePresets.parse(card.ui.climatePresets).filter { it in min..max }
+    if (presets.isNotEmpty()) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (preset in presets) {
+                FilterChip(
+                    selected = climate?.target == preset,
+                    onClick = { onSend(Command.SetTemperature(preset)) },
+                    label = { Text(CardFormatter.number(preset, locale) + "°") },
+                )
+            }
+        }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for (mode in caps.hvacModes) {

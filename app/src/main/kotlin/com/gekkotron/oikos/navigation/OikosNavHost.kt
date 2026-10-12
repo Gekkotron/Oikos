@@ -169,7 +169,13 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0),
-        bottomBar = { if (tabs) MainTabBar(selected = top, onSelect = { selectTab(backStack, it) }) },
+        bottomBar = {
+            if (tabs) {
+                val tabsVm: MainTabsViewModel = hiltViewModel()
+                val status by tabsVm.status.collectAsStateWithLifecycle()
+                MainTabBar(selected = top, onSelect = { selectTab(backStack, it) }, status = status)
+            }
+        },
     ) { padding ->
         NavDisplay(
             backStack = backStack,
