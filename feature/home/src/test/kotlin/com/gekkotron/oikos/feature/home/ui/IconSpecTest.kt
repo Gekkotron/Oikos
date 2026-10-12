@@ -85,6 +85,10 @@ class IconSpecTest {
         assertEquals(IconSpec.Static(OikosGlyph.SLIDER, false), spec(Kind.NUMBER, null))
         assertEquals(IconSpec.Static(OikosGlyph.LIST, false), spec(Kind.SELECT, null))
         assertEquals(IconSpec.Static(OikosGlyph.PLAY, false), spec(Kind.BUTTON, null))
+        assertEquals(IconSpec.Vacuum(running = false, fanSpeed = null), spec(Kind.VACUUM, null))
+        assertEquals(IconSpec.Vacuum(running = false, fanSpeed = "balanced"), spec(Kind.VACUUM, StateValue.Vacuum("docked", 80, "balanced")))
+        assertEquals(IconSpec.Vacuum(running = true, fanSpeed = "turbo"), spec(Kind.VACUUM, StateValue.Vacuum("cleaning", 60, "turbo")))
+        assertEquals(IconSpec.Vacuum(running = false, fanSpeed = "max"), spec(Kind.VACUUM, StateValue.Vacuum("returning", 40, "max")))
     }
 
     @Test
