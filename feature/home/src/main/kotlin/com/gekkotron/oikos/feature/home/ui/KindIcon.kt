@@ -4,6 +4,9 @@ import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
@@ -12,6 +15,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -42,6 +46,9 @@ internal sealed interface IconSpec {
     data class Swing(val shape: SwingShape, val open: Boolean?) : IconSpec
 
     data class Static(val glyph: OikosGlyph, val on: Boolean) : IconSpec
+
+    /** Climate tile: a spinning fan while [running], SNOWFLAKE otherwise; period follows [fanMode]. */
+    data class Climate(val running: Boolean, val fanMode: String?) : IconSpec
 }
 
 /** An open door, window or garage door: the card gets the accent border. */
@@ -57,7 +64,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.LIGHT -> IconSpec.Static(OikosGlyph.BULB, card.on)
     Kind.SWITCH -> IconSpec.Static(OikosGlyph.PLUG, card.on)
     Kind.WATER_HEATER -> IconSpec.Static(OikosGlyph.WATER_HEATER, card.on)
-    Kind.CLIMATE -> IconSpec.Static(OikosGlyph.SNOWFLAKE, on = false)
+    Kind.CLIMATE -> IconSpec.Climate(running = card.available && card.on, fanMode = (card.state as? StateValue.Climate)?.fanMode)
     Kind.SENSOR -> IconSpec.Static(sensorGlyph(card.deviceClass), on = false)
     Kind.ALARM_PANEL -> IconSpec.Static(OikosGlyph.SHIELD, on = false)
     Kind.NUMBER -> IconSpec.Static(OikosGlyph.SLIDER, on = false)
@@ -111,12 +118,14 @@ private fun IconSpec.known(): Boolean = when (this) {
     is IconSpec.Shutter -> target != null
     is IconSpec.Swing -> open != null
     is IconSpec.Static -> true
+    is IconSpec.Climate -> true
 }
 
 private fun IconSpec.target(): Float? = when (this) {
     is IconSpec.Shutter -> target
     is IconSpec.Swing -> if (open == true) 1f else 0f
     is IconSpec.Static -> null
+    is IconSpec.Climate -> null
 }
 
 /**
@@ -155,6 +164,7 @@ internal fun rememberIconProgress(spec: IconSpec, animate: Boolean): State<Float
                 if (ms > 0) progress.animateTo(end, tween(ms, easing = LinearEasing))
             }
             is IconSpec.Static -> Unit
+            is IconSpec.Climate -> Unit
         }
     }
     return progress.asState()
@@ -181,7 +191,38 @@ internal fun KindIcon(spec: IconSpec, modifier: Modifier = Modifier) {
         }
         // Warm Minimal's on-card is espresso: its dark amber would vanish, so a lit glyph uses the card's content color there.
         is IconSpec.Static -> StaticIcon(spec.glyph, if (spec.on) (if (c.isDark) c.warning else neutral) else null, m)
+        is IconSpec.Climate -> ClimateIcon(spec.running, spec.fanMode, animate, m)
     }
+}
+
+/** On the AC tile: SNOWFLAKE when idle, a spinning FAN while running; period follows fan mode. */
+@Composable
+private fun ClimateIcon(running: Boolean, fanMode: String?, animate: Boolean, modifier: Modifier) {
+    if (!running) {
+        StaticIcon(OikosGlyph.SNOWFLAKE, null, modifier)
+        return
+    }
+    val angle = if (animate) {
+        val transition = rememberInfiniteTransition(label = "fan")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(animation = tween(fanPeriodMs(fanMode), easing = LinearEasing)),
+            label = "angle",
+        ).value
+    } else {
+        0f
+    }
+    StaticIcon(OikosGlyph.FAN, null, modifier.graphicsLayer { rotationZ = angle })
+}
+
+private fun fanPeriodMs(fanMode: String?): Int = when (fanMode?.lowercase()) {
+    "silence", "silent", "quiet", "low", "1" -> 2400
+    "2" -> 2000
+    "medium", "med", "3" -> 1600
+    "4" -> 1300
+    "high", "5" -> 1000
+    else -> 1800
 }
 
 @Composable
