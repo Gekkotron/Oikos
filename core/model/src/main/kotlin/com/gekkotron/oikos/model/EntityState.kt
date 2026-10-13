@@ -13,4 +13,6 @@ data class EntityState(
     val pending: Boolean = false,
     /** True while the value comes from the entity cache and no live message has confirmed it. */
     val stale: Boolean = false,
+    /** When a live message last changed the confirmed value; null until the app has seen a flip itself (last-change spec §4.3). */
+    val changedAt: Instant? = null,
 )

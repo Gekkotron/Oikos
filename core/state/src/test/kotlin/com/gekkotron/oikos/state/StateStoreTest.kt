@@ -205,4 +205,57 @@ class StateStoreTest {
         store.setEntities(listOf(lamp))
         assertEquals(StateValue.OnOff(true), value("l"))
     }
+
+    private var time = Instant.parse("2026-10-14T08:00:00Z")
+    private val timed = StateStore(now = { time })
+    private val door = testEntity("door", Kind.BINARY_SENSOR, "binary_sensor", """{"state_topic":"d"}""")
+    private fun changedAt() = timed.states.value.getValue("door").changedAt
+
+    @Test
+    fun `a live flip sets changedAt and a repeat keeps it`() {
+        timed.setEntities(listOf(door))
+        timed.onMessage("d", "OFF")
+        assertEquals(null, changedAt()) // the first message: the flip was not seen
+        time = time.plusSeconds(60)
+        timed.onMessage("d", "ON")
+        assertEquals(time, changedAt())
+        val flippedAt = time
+        time = time.plusSeconds(600)
+        timed.onMessage("d", "ON") // a battery report republishes the same state
+        assertEquals(flippedAt, changedAt())
+        assertEquals(time, timed.states.value.getValue("door").lastUpdate)
+    }
+
+    @Test
+    fun `cache restores never count as a flip`() {
+        timed.setEntities(listOf(door))
+        timed.onMessage("d", "OFF", restored = true)
+        time = time.plusSeconds(60)
+        timed.onMessage("d", "ON") // differs from the cached value, but the change happened while the app was away
+        assertEquals(null, changedAt())
+        time = time.plusSeconds(60)
+        timed.onMessage("d", "OFF")
+        assertEquals(time, changedAt())
+    }
+
+    @Test
+    fun `a value back from unknown after settle is not a flip`() {
+        timed.setEntities(listOf(door))
+        timed.onMessage("d", "OFF", restored = true)
+        timed.settle() // never re-sent: back to Unknown
+        timed.onMessage("d", "ON")
+        assertEquals(null, changedAt())
+    }
+
+    @Test
+    fun `confirmPending and revert leave changedAt alone`() {
+        timed.setEntities(listOf(lamp))
+        timed.onMessage("s", "OFF")
+        timed.markPending("l", StateValue.OnOff(true))
+        timed.confirmPending("l")
+        assertEquals(null, timed.states.value.getValue("l").changedAt)
+        timed.markPending("l", StateValue.OnOff(false))
+        timed.revert("l")
+        assertEquals(null, timed.states.value.getValue("l").changedAt)
+    }
 }
