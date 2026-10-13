@@ -10,6 +10,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -21,18 +23,29 @@ import com.gekkotron.oikos.designsystem.permissions.openNotificationSettings
 import com.gekkotron.oikos.designsystem.permissions.rememberNotificationEnabler
 import com.gekkotron.oikos.feature.onboarding.R
 
-/** The last onboarding step, after rooms (push alerts spec §7.5). [onDone] runs whatever the user answers. */
+/**
+ * The last onboarding step, after rooms (push alerts spec §7.5). [onDone] runs whatever the user answers, and right
+ * away, without showing the step, when notifications are already on (the permission survives "Set up again").
+ */
 @Composable
 fun NotificationsRoute(onDone: () -> Unit) {
     val context = LocalContext.current
     val canAsk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val alreadyOn = remember {
+        (!canAsk || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+    if (alreadyOn) {
+        LaunchedEffect(Unit) { onDone() }
+        return
+    }
     val ask = rememberNotificationEnabler(onResult = onDone)
     val onEnable: () -> Unit = {
         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         when {
             !canAsk -> onDone()
             !granted -> ask()
-            // Already allowed (it survives "Set up again"): nothing to ask. Switched off for the app: show the settings, but never strand the step.
+            // Granted but switched off for the app: show the settings, but never strand the step.
             else -> {
                 if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) openNotificationSettings(context)
                 onDone()
