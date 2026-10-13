@@ -78,6 +78,7 @@ dependencies {
     implementation(project(":core:push"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.play.services.location)
     // coil3.SingletonImageLoader lives in the `coil` artifact, not in coil-core.
     implementation(libs.coil)
     // Coil's own HTTP fetcher, for any future non-alert image. Alert pictures never use it: they are AlertMedia requests.
@@ -102,6 +103,7 @@ dependencies {
     releaseImplementation(libs.firebase.crashlytics)
     releaseImplementation(libs.firebase.appdistribution)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.androidx.work.testing)
     testImplementation(testFixtures(project(":core:transport")))
     kspTest(libs.hilt.compiler)
 }

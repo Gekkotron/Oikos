@@ -49,6 +49,7 @@ class ReplyReceiverTest {
         )
         override val replies: ReplyQueue = this@ReplyReceiverTest.replies
         override val ingestor: AlertIngestor get() = error("not used")
+        override val presenceRefresher: PresenceRefresher get() = error("not used")
     }
 
     @Test

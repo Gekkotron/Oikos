@@ -121,10 +121,16 @@ object PushModule {
 
     @Provides
     @Singleton
-    fun pushComponent(alertIngestor: AlertIngestor, pushRegistrar: PushRegistrar, replyQueue: ReplyQueue): PushComponent = object : PushComponent {
+    fun pushComponent(
+        alertIngestor: AlertIngestor,
+        pushRegistrar: PushRegistrar,
+        replyQueue: ReplyQueue,
+        presenceRefresher: com.gekkotron.oikos.push.PresenceRefresher,
+    ): PushComponent = object : PushComponent {
         override val ingestor = alertIngestor
         override val registrar = pushRegistrar
         override val replies = replyQueue
+        override val presenceRefresher = presenceRefresher
     }
 
     @Provides

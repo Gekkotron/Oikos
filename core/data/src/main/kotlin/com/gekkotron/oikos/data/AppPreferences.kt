@@ -21,9 +21,37 @@ import java.io.OutputStream
 /** The theme the user picked on this phone (settings spec §3). Mirrors `ThemeChoice` without depending on the design system. */
 enum class ThemePreference { SYSTEM, NIGHT_GLASS, WARM_MINIMAL }
 
+/** Phone-local presence settings. [radiusM] is clamped on save; a null home means no geofence can register yet. */
+@Serializable
+data class PresenceConfig(
+    val enabled: Boolean = false,
+    val alias: String = "",
+    val homeLat: Double? = null,
+    val homeLng: Double? = null,
+    val radiusM: Int = 150,
+) {
+    companion object {
+        const val MIN_RADIUS_M = 50
+        const val MAX_RADIUS_M = 500
+    }
+}
+
+@Serializable
+internal data class StoredPresence(
+    val enabled: Boolean = false,
+    val alias: String = "",
+    val homeLat: Double? = null,
+    val homeLng: Double? = null,
+    val radiusM: Int = 150,
+)
+
 /** The theme is kept as a name so a value written by a newer app decodes as System instead of corrupting the file. */
 @Serializable
-internal data class StoredPreferences(val theme: String = ThemePreference.SYSTEM.name, val voiceEnabled: Boolean = false)
+internal data class StoredPreferences(
+    val theme: String = ThemePreference.SYSTEM.name,
+    val voiceEnabled: Boolean = false,
+    val presence: StoredPresence = StoredPresence(),
+)
 
 /** Per-phone preferences, kept apart from the profile so "Set up again" leaves them alone. */
 class AppPreferences internal constructor(private val store: DataStore<StoredPreferences>, scope: CoroutineScope) {
@@ -42,6 +70,28 @@ class AppPreferences internal constructor(private val store: DataStore<StoredPre
 
     suspend fun setVoiceEnabled(enabled: Boolean) {
         store.updateData { it.copy(voiceEnabled = enabled) }
+    }
+
+    val presence: StateFlow<PresenceConfig?> = store.data
+        .map { stored ->
+            val s = stored.presence
+            PresenceConfig(s.enabled, s.alias, s.homeLat, s.homeLng, s.radiusM)
+        }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    suspend fun setPresence(config: PresenceConfig) {
+        val radius = config.radiusM.coerceIn(PresenceConfig.MIN_RADIUS_M, PresenceConfig.MAX_RADIUS_M)
+        store.updateData {
+            it.copy(
+                presence = StoredPresence(
+                    enabled = config.enabled,
+                    alias = config.alias,
+                    homeLat = config.homeLat,
+                    homeLng = config.homeLng,
+                    radiusM = radius,
+                ),
+            )
+        }
     }
 
     companion object {

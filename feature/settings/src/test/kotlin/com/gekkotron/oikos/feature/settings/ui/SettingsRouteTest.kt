@@ -68,7 +68,7 @@ class SettingsRouteTest {
         compose.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 OikosTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm)
+                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm, presenceSection = {})
                 }
             }
         }
@@ -102,7 +102,7 @@ class SettingsRouteTest {
         compose.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 OikosTheme(ThemeChoice.NIGHT_GLASS) {
-                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm, clock = { clock })
+                    SettingsRoute(Route.AUTO, {}, {}, {}, {}, {}, viewModel = vm, clock = { clock }, presenceSection = {})
                 }
             }
         }

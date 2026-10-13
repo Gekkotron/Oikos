@@ -27,6 +27,7 @@ class OikosMessagingServiceTest {
 
     private val app = RuntimeEnvironment.getApplication() as TestPushApp
     private val queue = FakeQueue()
+    private val refresher = CountingRefresher()
 
     private fun install(): AlertRepository {
         val db = Room.inMemoryDatabaseBuilder(app, AlertDatabase::class.java).allowMainThreadQueries().build()
@@ -40,8 +41,14 @@ class OikosMessagingServiceTest {
             override val registrar = theRegistrar
             override val replies: ReplyQueue get() = error("not used")
             override val ingestor = theIngestor
+            override val presenceRefresher = refresher
         }
         return repo
+    }
+
+    private class CountingRefresher : PresenceRefresher {
+        var calls = 0
+        override fun requestRefresh() { calls++ }
     }
 
     @Test
@@ -67,5 +74,16 @@ class OikosMessagingServiceTest {
         val service = Robolectric.buildService(OikosMessagingService::class.java).create().get()
         service.onNewToken("fresh-token")
         assertEquals(1, queue.enqueued)
+    }
+
+    @Test
+    fun `a presence_refresh command triggers the refresher and skips alert ingestion`(): Unit = runBlocking {
+        val repo = install()
+        val service = Robolectric.buildService(OikosMessagingService::class.java).create().get()
+        service.onMessageReceived(
+            RemoteMessage.Builder("to").setData(mapOf("v" to "1", "cmd" to "presence_refresh")).build(),
+        )
+        assertEquals(1, refresher.calls)
+        assertEquals(0, repo.all(channel = null).first().size, "a cmd message must not be stored as an alert")
     }
 }

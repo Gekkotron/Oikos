@@ -15,6 +15,7 @@ import com.gekkotron.oikos.connection.WidgetMirror
 import com.gekkotron.oikos.feature.widget.WidgetComponent
 import com.gekkotron.oikos.feature.widget.WidgetComponentProvider
 import com.gekkotron.oikos.feature.widget.work.WidgetWorkerFactory
+import com.gekkotron.oikos.presence.PresenceWorkerFactory
 import com.gekkotron.oikos.push.AlertChannels
 import com.gekkotron.oikos.push.PushComponent
 import com.gekkotron.oikos.push.PushComponentProvider
@@ -37,6 +38,12 @@ class OikosApplication : Application(), PushComponentProvider, WidgetComponentPr
 
     @Inject
     lateinit var workerFactory: PushWorkerFactory
+
+    @Inject
+    lateinit var presenceWorkerFactory: PresenceWorkerFactory
+
+    @Inject
+    lateinit var presenceGeofenceManager: com.gekkotron.oikos.presence.PresenceGeofenceManager
 
     @Inject
     lateinit var imageLoader: Lazy<ImageLoader>
@@ -62,6 +69,7 @@ class OikosApplication : Application(), PushComponentProvider, WidgetComponentPr
         get() = Configuration.Builder().setWorkerFactory(
             DelegatingWorkerFactory().apply {
                 addFactory(workerFactory)
+                addFactory(presenceWorkerFactory)
                 addFactory(WidgetWorkerFactory { widgets.refresher })
             },
         ).build()
@@ -74,6 +82,7 @@ class OikosApplication : Application(), PushComponentProvider, WidgetComponentPr
         pushWiring.start()
         historyWiring.start()
         widgetMirror.start()
+        presenceGeofenceManager.start()
         // Connected only in the foreground; ActiveTransport closes 30 s after onStop (spec §3.3).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = transport.setForeground(true)

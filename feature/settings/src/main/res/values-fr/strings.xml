@@ -69,4 +69,18 @@
     <string name="voice_cancel_action">Annuler</string>
     <string name="voice_permission_denied_snackbar">L\u2019autorisation du micro est nécessaire pour les commandes vocales.</string>
     <string name="voice_broken_label">Cassé</string>
+    <string name="presence_section_title">Présence</string>
+    <string name="presence_toggle_label">Diffuser ma présence</string>
+    <string name="presence_toggle_summary">Permet à Home Assistant d’armer ou désarmer votre alarme quand vous partez ou rentrez.</string>
+    <string name="presence_alias_label">Alias de ce téléphone</string>
+    <string name="presence_alias_hint">Apparaît dans Home Assistant comme « Oikos &lt;alias&gt; ».</string>
+    <string name="presence_use_current_location">Utiliser ma position actuelle comme domicile</string>
+    <string name="presence_home_set">Domicile fixé à %1$.5f, %2$.5f</string>
+    <string name="presence_home_unset">Pas encore de domicile.</string>
+    <string name="presence_radius_label">Rayon : %1$d m</string>
+    <string name="presence_permission_fine">Oikos a besoin de la localisation pour détecter votre départ.</string>
+    <string name="presence_permission_background">Sur Android 10 et plus récent, Oikos a aussi besoin de la localisation en arrière-plan pour détecter les transitions quand l’app est fermée.</string>
+    <string name="presence_permission_denied">Autorisation de localisation refusée.</string>
+    <string name="presence_grant_permission">Accorder l’autorisation</string>
+    <string name="presence_location_needed">Activez la localisation pour choisir un domicile.</string>
 </resources>
