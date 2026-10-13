@@ -147,7 +147,27 @@ class HomeScreenTest {
         show()
         compose.onNodeWithTag("card-ac").performClick()
         compose.onNodeWithContentDescription("Increase").performClick()
+        compose.mainClock.advanceTimeBy(SETPOINT_DEBOUNCE_MS + 100)
         assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetTemperature(21.5)), sends)
+    }
+
+    @Test
+    fun `climate sheet shows taps at once and sends one setpoint after the burst`() {
+        show()
+        compose.onNodeWithTag("card-ac").performClick()
+        compose.mainClock.autoAdvance = false
+        repeat(3) { compose.onNodeWithContentDescription("Increase").performClick() }
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("22.5°").assertExists()
+        assertEquals(emptyList(), sends)
+        compose.mainClock.advanceTimeBy(SETPOINT_DEBOUNCE_MS + 100)
+        assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetTemperature(22.5)), sends)
+    }
+
+    @Test
+    fun `climate card leads with the setpoint`() {
+        show()
+        compose.onNodeWithContentDescription("Air conditioner, 21° · Heat, Living room").assertExists()
     }
 
     @Test

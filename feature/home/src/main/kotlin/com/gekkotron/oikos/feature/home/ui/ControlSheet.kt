@@ -25,9 +25,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +48,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardFormatter
 import com.gekkotron.oikos.feature.home.presentation.CardUi
+import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.feature.home.presentation.EffectNames
 import com.gekkotron.oikos.feature.home.presentation.hasColor
 import com.gekkotron.oikos.feature.home.presentation.StepMath
@@ -52,7 +57,11 @@ import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Hs
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+
+/** Quiet time after the last +/- tap before the setpoint goes out: a burst of taps sends one command. */
+internal const val SETPOINT_DEBOUNCE_MS = 600L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +86,9 @@ internal fun ControlSheet(
                 GroupControls(card, onSend, onSendGroup, onOpenMember)
             } else {
                 Text(card.name, style = OikosTheme.type.display.copy(fontSize = 22.sp))
-                Text(cardValueText(card.value, card.kind), style = OikosTheme.type.body)
+                // The card leads with the setpoint, which the climate controls below already show: the room temperature is more useful here.
+                val header = (card.value as? CardValue.Climate)?.takeIf { card.kind == Kind.CLIMATE }?.copy(target = null) ?: card.value
+                Text(cardValueText(header, card.kind), style = OikosTheme.type.body)
                 when (card.kind) {
                     Kind.LIGHT -> LightControls(card, onSend)
                     Kind.COVER -> CoverControls(card, send)
@@ -179,7 +190,21 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     val min = caps.minTemp ?: 7.0
     val max = caps.maxTemp ?: 35.0
     val step = caps.tempStep ?: 1.0
-    val target = climate?.target ?: climate?.current ?: ((min + max) / 2)
+    val confirmed = climate?.target ?: climate?.current ?: ((min + max) / 2)
+    // +/- move a local draft at once and send it after SETPOINT_DEBOUNCE_MS of quiet: steps no longer wait for the
+    // device's echo, and a burst of taps sends one command. A draft still pending when the sheet closes goes out then.
+    val draft = remember(card.id) { mutableStateOf<Double?>(null) }
+    val target = draft.value ?: confirmed
+    val send by rememberUpdatedState(onSend)
+    LaunchedEffect(draft.value) {
+        val value = draft.value ?: return@LaunchedEffect
+        delay(SETPOINT_DEBOUNCE_MS)
+        draft.value = null
+        send(Command.SetTemperature(value))
+    }
+    DisposableEffect(card.id) {
+        onDispose { draft.value?.let { draft.value = null; send(Command.SetTemperature(it)) } }
+    }
     val locale = LocalConfiguration.current.locales[0]
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
@@ -205,13 +230,13 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     Text(stringResource(R.string.sheet_target))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
         FilledTonalIconButton(
-            onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, -step, min, max))) },
+            onClick = { draft.value = StepMath.stepTemperature(draft.value ?: confirmed, -step, min, max) },
             enabled = target > min,
             modifier = Modifier.semantics { contentDescription = decrease },
         ) { Text("−", fontSize = 22.sp) }
         Text(CardFormatter.number(target, locale) + "°", style = OikosTheme.type.display)
         FilledTonalIconButton(
-            onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, step, min, max))) },
+            onClick = { draft.value = StepMath.stepTemperature(draft.value ?: confirmed, step, min, max) },
             enabled = target < max,
             modifier = Modifier.semantics { contentDescription = increase },
         ) { Text("+", fontSize = 22.sp) }
@@ -221,8 +246,8 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (preset in presets) {
                 FilterChip(
-                    selected = climate?.target == preset,
-                    onClick = { onSend(Command.SetTemperature(preset)) },
+                    selected = target == preset,
+                    onClick = { draft.value = null; onSend(Command.SetTemperature(preset)) },
                     label = { Text(CardFormatter.number(preset, locale) + "°") },
                 )
             }

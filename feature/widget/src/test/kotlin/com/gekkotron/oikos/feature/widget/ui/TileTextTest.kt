@@ -38,7 +38,11 @@ class TileTextTest {
     fun cover_closed() = assertEquals("Closed", TileText.of(context, TileValue.Cover(CoverState.CLOSED, 0), Locale.US))
 
     @Test
-    fun climate_shows_current_temperature() = assertEquals("20.5°", TileText.of(context, TileValue.Climate("heat", 20.5, 21.0), Locale.US))
+    fun climate_shows_setpoint() = assertEquals("21°", TileText.of(context, TileValue.Climate("heat", 20.5, 21.0), Locale.US))
+
+    @Test
+    fun climate_without_setpoint_shows_current_temperature() =
+        assertEquals("20.5°", TileText.of(context, TileValue.Climate("heat", 20.5, null), Locale.US))
 
     @Test
     fun door_contact_reads_open() = assertEquals("Open", TileText.of(context, TileValue.Contact("door", true), Locale.US))
