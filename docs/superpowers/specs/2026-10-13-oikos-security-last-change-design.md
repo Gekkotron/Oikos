@@ -157,7 +157,7 @@ from(bucket: "<bucket>")
 
 - Pass 1: `R = 24h`. Pass 2: `R = 30d`, only for the series pass 1 found no change for.
 - A row gives `changed_at` = its `_time` (`difference` reports the change at the later point, i.e. the first point carrying the new value).
-- Series still without a change after pass 2: a third query, the §3.3 existence probe over `-30d` for those series in one `or` filter with `|> group(…) |> last()`, decides `recorded: true` (has points, no flip) vs `recorded: false`.
+- Series still without a change after pass 2: a third query (one Flux script, two yields) over those series reads `first()` in `-30d` and `last()` in `range(start: 0, stop: -30d)`. When both exist and their values differ, the flip is the window's first point (a sensor that reports only on change can hold a single point in the window), so `changed_at` = its time. Otherwise any row means `recorded: true` (has history, no flip in the window), none means `recorded: false`.
 - All strings escaped with `escape_flux_string`.
 
 ### A.3 Response
@@ -174,8 +174,8 @@ from(bucket: "<bucket>")
 
 - `window`: seconds searched (30 d).
 - `{"changed_at": t}`: last flip at `t`.
-- `{"changed_at": null, "recorded": true}`: points in the window, no flip.
-- `{"changed_at": null, "recorded": false}`: no points in the window, or no prefix matched. No whole-response `404`.
+- `{"changed_at": null, "recorded": true}`: recorded, but no flip in the window.
+- `{"changed_at": null, "recorded": false}`: no points at all, or no prefix matched. No whole-response `404`.
 
 ### A.4 Errors and limits
 
