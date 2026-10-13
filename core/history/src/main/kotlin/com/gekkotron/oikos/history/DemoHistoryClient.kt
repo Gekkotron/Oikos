@@ -55,6 +55,12 @@ class DemoHistoryClient(private val clock: () -> Long = System::currentTimeMilli
     override suspend fun today(ref: HistoryRef, scale: EnergyScale): HistoryResult<Double?> =
         HistoryResult.Ok(scaled(5.0 + Random(ref.hashCode()).nextDouble() * 4.0, scale))
 
+    /** Each sensor flipped between 1 min and 3 days ago, the same for the same ref. */
+    override suspend fun lastChanges(refs: List<HistoryRef>): HistoryResult<Map<HistoryRef, LastChange>> {
+        val now = clock() / 1000
+        return HistoryResult.Ok(refs.associateWith { LastChange.At(Instant.ofEpochSecond(now - Random(it.hashCode()).nextLong(60, 3 * 86_400L))) })
+    }
+
     private fun scaled(kwh: Double, scale: EnergyScale) = round(kwh * scale.factor * 1000) / 1000
 
     private fun isCounter(key: String) = key.contains("kwh") || key.contains("energy") || key.contains("total")
