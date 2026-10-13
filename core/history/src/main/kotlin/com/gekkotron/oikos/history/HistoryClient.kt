@@ -13,6 +13,10 @@ interface HistoryClient {
     suspend fun daily(ref: HistoryRef, days: Int, scale: EnergyScale): HistoryResult<DailyTotals>
     suspend fun today(ref: HistoryRef, scale: EnergyScale): HistoryResult<Double?>
 
+    /** Last flip per ref (last-change spec §4.2); refs absent from the map got no answer. */
+    suspend fun lastChanges(refs: List<HistoryRef>): HistoryResult<Map<HistoryRef, LastChange>> =
+        HistoryResult.Unavailable("not supported")
+
     companion object {
         /** No history: entry points hide. */
         val None: HistoryClient = object : HistoryClient {
@@ -21,6 +25,7 @@ interface HistoryClient {
             override suspend fun series(ref: HistoryRef, range: HistoryRange) = off
             override suspend fun daily(ref: HistoryRef, days: Int, scale: EnergyScale) = off
             override suspend fun today(ref: HistoryRef, scale: EnergyScale) = off
+            override suspend fun lastChanges(refs: List<HistoryRef>) = off
         }
     }
 }
@@ -43,6 +48,20 @@ class HttpHistoryClient(
 
     override suspend fun today(ref: HistoryRef, scale: EnergyScale) =
         fetch({ HistoryApi.todayUrl(it, ref, scale.kind) }, SHORT_TTL) { HistoryApi.parseToday(it, scale.factor) }
+
+    override suspend fun lastChanges(refs: List<HistoryRef>): HistoryResult<Map<HistoryRef, LastChange>> {
+        // Sorted and de-duplicated: the same set of refs is the same URL, so the same cache entry.
+        val sorted = refs.distinct().sortedWith(compareBy({ it.topic }, { it.key }))
+        if (sorted.isEmpty()) return HistoryResult.Ok(emptyMap())
+        val all = HashMap<HistoryRef, LastChange>()
+        for (chunk in sorted.chunked(MAX_REFS)) {
+            when (val r = fetch({ HistoryApi.lastChangeUrl(it, chunk) }, SHORT_TTL) { HistoryApi.parseLastChange(it, chunk) }) {
+                is HistoryResult.Ok -> all += r.value
+                else -> return r
+            }
+        }
+        return HistoryResult.Ok(all)
+    }
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun <T> fetch(url: (String) -> String, ttl: Long, parse: (String) -> T): HistoryResult<T> {
@@ -74,5 +93,6 @@ class HttpHistoryClient(
     private companion object {
         const val SHORT_TTL = 60_000L
         const val LONG_TTL = 600_000L
+        const val MAX_REFS = 50
     }
 }

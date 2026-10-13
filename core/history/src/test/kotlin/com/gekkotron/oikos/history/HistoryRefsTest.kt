@@ -49,4 +49,23 @@ class HistoryRefsTest {
         val e = entity(Kind.CLIMATE, null, "current_temperature_topic" to "jeedom/data/rooms/remi/climatisation", "current_temperature_template" to "{{ value_json['température_int.'] }}")
         assertEquals(HistoryRef("jeedom/data/rooms/remi/climatisation", "température_int."), HistoryRefs.of(e))
     }
+
+    @Test
+    fun `changeRef reads a binary sensor's topic and key`() {
+        val door = entity(Kind.BINARY_SENSOR, null, "state_topic" to "zigbee2mqtt/entrance/door", "value_template" to "{{ value_json.contact }}")
+        assertEquals(HistoryRef("zigbee2mqtt/entrance/door", "contact"), HistoryRefs.changeRef(door))
+        val bracket = entity(Kind.BINARY_SENSOR, null, "state_topic" to "z/d", "value_template" to "{{ value_json['occupancy'] }}")
+        assertEquals(HistoryRef("z/d", "occupancy"), HistoryRefs.changeRef(bracket))
+    }
+
+    @Test
+    fun `changeRef is null for other kinds, no topic or an unreadable template`() {
+        assertNull(HistoryRefs.changeRef(entity(Kind.SENSOR, "°C", "state_topic" to "t", "value_template" to "{{ value_json.temperature }}")))
+        assertNull(HistoryRefs.changeRef(entity(Kind.BINARY_SENSOR, null, "value_template" to "{{ value_json.contact }}")))
+        assertNull(HistoryRefs.changeRef(entity(Kind.BINARY_SENSOR, null, "state_topic" to "t", "value_template" to "{{ value }}")))
+    }
+
+    @Test
+    fun `binary sensors still get no chart ref`() =
+        assertNull(HistoryRefs.of(entity(Kind.BINARY_SENSOR, null, "state_topic" to "t", "value_template" to "{{ value_json.contact }}")))
 }

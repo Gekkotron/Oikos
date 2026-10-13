@@ -27,4 +27,16 @@ object HistoryRefs {
         val key = jsonKey(b.str(templateKey)) ?: return null
         return HistoryRef(topic, key)
     }
+
+    /**
+     * A binary sensor's recorded series, read for the time of its last flip (last-change spec §4.1). Kept apart
+     * from [of] on purpose: binary sensors get no chart of 0/1 means.
+     */
+    fun changeRef(entity: Entity): HistoryRef? {
+        if (entity.kind != Kind.BINARY_SENSOR) return null
+        val b = entity.bindings as? MqttBindings ?: return null
+        val topic = b.str("state_topic") ?: return null
+        val key = jsonKey(b.str("value_template")) ?: return null
+        return HistoryRef(topic, key)
+    }
 }
