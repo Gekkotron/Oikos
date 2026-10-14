@@ -60,13 +60,35 @@ class NotificationsScreenTest {
 
     @Test
     @Config(sdk = [33], qualifiers = "w411dp-h914dp")
-    fun `with the permission already granted the primary button finishes and opens no settings`() {
+    fun `with notifications already on the step is skipped without being shown`() {
         val app = ApplicationProvider.getApplicationContext<android.app.Application>()
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         var done = 0
         compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { NotificationsRoute(onDone = { done++ }) } }
-        compose.onNodeWithText("Turn on notifications").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Turn on notifications").assertDoesNotExist()
         assertEquals(1, done)
         assertEquals(null, shadowOf(app).nextStartedActivity)
+    }
+
+    @Test
+    @Config(sdk = [33], qualifiers = "w411dp-h914dp")
+    fun `with the permission missing the step is shown and waits for an answer`() {
+        var done = 0
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { NotificationsRoute(onDone = { done++ }) } }
+        compose.onNodeWithText("Turn on notifications").assertExists()
+        assertEquals(0, done)
+    }
+
+    @Test
+    @Config(sdk = [33], qualifiers = "w411dp-h914dp")
+    fun `with the permission granted but notifications switched off the step is shown`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        shadowOf(app.getSystemService(android.app.NotificationManager::class.java)).setNotificationsEnabled(false)
+        var done = 0
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { NotificationsRoute(onDone = { done++ }) } }
+        compose.onNodeWithText("Turn on notifications").assertExists()
+        assertEquals(0, done)
     }
 }

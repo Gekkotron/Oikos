@@ -73,4 +73,44 @@ class AppPreferencesTest {
         assertEquals(false, p.voiceEnabled.filterNotNull().first())
         assertEquals(ThemePreference.WARM_MINIMAL, p.theme.first { it == ThemePreference.WARM_MINIMAL })
     }
+
+    @Test
+    fun `presence defaults to disabled`() = runTest {
+        val p = prefs().presence.filterNotNull().first()
+        assertEquals(false, p.enabled)
+        assertEquals("", p.alias)
+        assertEquals(null, p.homeLat)
+        assertEquals(null, p.homeLng)
+        assertEquals(150, p.radiusM)
+    }
+
+    @Test
+    fun `presence round-trips`() = runTest {
+        val p = prefs()
+        p.setPresence(PresenceConfig(enabled = true, alias = "pixel", homeLat = 48.858, homeLng = 2.294, radiusM = 200))
+        val back = p.presence.first { it != null && it.enabled }!!
+        assertEquals(true, back.enabled)
+        assertEquals("pixel", back.alias)
+        assertEquals(48.858, back.homeLat)
+        assertEquals(2.294, back.homeLng)
+        assertEquals(200, back.radiusM)
+    }
+
+    @Test
+    fun `an older file without presence keeps theme and defaults presence to disabled`() = runTest {
+        val f = file().apply { writeText("""{"theme":"NIGHT_GLASS","voiceEnabled":true}""") }
+        val p = prefs(f)
+        assertEquals(false, p.presence.filterNotNull().first().enabled)
+        assertEquals(ThemePreference.NIGHT_GLASS, p.theme.first { it == ThemePreference.NIGHT_GLASS })
+        assertEquals(true, p.voiceEnabled.first { it == true })
+    }
+
+    @Test
+    fun `presence radius is clamped to 50 to 500`() = runTest {
+        val p = prefs()
+        p.setPresence(PresenceConfig(enabled = true, alias = "a", homeLat = 0.0, homeLng = 0.0, radiusM = 10))
+        assertEquals(50, p.presence.first { it != null && it.radiusM == 50 }!!.radiusM)
+        p.setPresence(PresenceConfig(enabled = true, alias = "a", homeLat = 0.0, homeLng = 0.0, radiusM = 5000))
+        assertEquals(500, p.presence.first { it != null && it.radiusM == 500 }!!.radiusM)
+    }
 }

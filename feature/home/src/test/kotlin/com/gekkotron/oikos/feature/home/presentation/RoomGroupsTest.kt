@@ -67,12 +67,29 @@ class RoomGroupsTest {
     }
 
     @Test
-    fun `groups show in All and room filters only`() {
+    fun `individually-favorited members of the same room group fold under Favorites too`() {
         val e = arrayOf(shutter("bay", ui = UiOverride(favorite = true)), shutter("side", ui = UiOverride(favorite = true)))
         assertTrue(build(*e, selected = RoomFilter.Area("living")).cards.single().isGroup)
-        assertEquals(listOf("bay", "side"), build(*e, selected = RoomFilter.Favorites).cards.map { it.id })
+        assertTrue(build(*e, selected = RoomFilter.Favorites).cards.single().isGroup)
         // "living" matches both through their room name (SearchMatch also searches the area name).
         assertEquals(listOf("bay", "side"), build(*e, query = "living").cards.map { it.id }.sorted())
+    }
+
+    @Test
+    fun `a room with a group pinned to Favorites lifts the whole group there`() {
+        val favLiving = listOf(Area("living", "Living room", groupFavorites = setOf("cover")), Area("kitchen", "Kitchen"))
+        val s = build(shutter("bay"), shutter("side"), light("lamp"), areaList = favLiving, selected = RoomFilter.Favorites)
+        val group = s.cards.single { it.isGroup }
+        assertEquals("group:living:cover", group.id)
+        assertTrue(group.ui.favorite)
+        assertEquals(listOf("group:living:cover"), s.cards.map { it.id })
+    }
+
+    @Test
+    fun `a group pin draws the Favorites chip even when no device is individually favorited`() {
+        val favLiving = listOf(Area("living", "Living room", groupFavorites = setOf("cover")))
+        val s = build(shutter("bay"), shutter("side"), areaList = favLiving)
+        assertTrue(s.chips.any { it.filter == RoomFilter.Favorites })
     }
 
     @Test

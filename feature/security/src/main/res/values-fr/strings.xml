@@ -7,6 +7,7 @@
     <string name="security_empty">Ni centrale d\'alarme ni capteur de sécurité pour l\'instant. Publiez un alarm_control_panel MQTT, ou appairez des capteurs de porte, de mouvement, de fumée ou de fuite.</string>
     <string name="security_show">Afficher dans Sécurité</string>
     <string name="security_hide_hint">Pour le réafficher, passez par Personnaliser sur l\'Accueil.</string>
+    <string name="security_history">Voir l\'historique</string>
     <string name="security_unassigned">Sans pièce</string>
     <string name="security_unavailable">Indisponible</string>
     <string name="security_unknown">—</string>
@@ -53,4 +54,18 @@
     <string name="security_action_settings">Réglages</string>
     <string name="security_cancel">Annuler</string>
     <string name="security_customize">Personnaliser…</string>
+    <string name="security_state_since">%1$s · %2$s</string>
+    <string name="security_since_short_now">&lt;1 min</string>
+    <string name="security_since_short_minutes">%1$d min</string>
+    <string name="security_since_short_hours">%1$d h</string>
+    <string name="security_since_short_days">%1$d j</string>
+    <string name="security_since_short_over">%1$d+ j</string>
+    <string name="security_state_for">%1$s depuis %2$s</string>
+    <string name="security_since_long_now">moins d’une minute</string>
+    <plurals name="security_since_long_minutes"><item quantity="one">%1$d minute</item><item quantity="other">%1$d minutes</item></plurals>
+    <plurals name="security_since_long_hours"><item quantity="one">%1$d heure</item><item quantity="other">%1$d heures</item></plurals>
+    <plurals name="security_since_long_days"><item quantity="one">%1$d jour</item><item quantity="other">%1$d jours</item></plurals>
+    <plurals name="security_since_long_over"><item quantity="one">plus de %1$d jour</item><item quantity="other">plus de %1$d jours</item></plurals>
+    <string name="security_since_at">Depuis %1$s</string>
+    <plurals name="security_no_change"><item quantity="one">Aucun changement depuis %1$d jour</item><item quantity="other">Aucun changement depuis %1$d jours</item></plurals>
 </resources>

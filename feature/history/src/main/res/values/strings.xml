@@ -21,4 +21,11 @@
     <string name="history_cd_range_24h">last 24 hours</string>
     <string name="history_cd_range_7d">last 7 days</string>
     <string name="history_cd_range_30d">last 30 days</string>
+    <string name="history_binary_on">On</string>
+    <string name="history_binary_off">Off</string>
+    <string name="history_binary_open">Open</string>
+    <string name="history_binary_closed">Closed</string>
+    <string name="history_binary_detected">Detected</string>
+    <string name="history_binary_clear">Clear</string>
+    <string name="history_cd_step">%1$s, %2$s, binary history</string>
 </resources>

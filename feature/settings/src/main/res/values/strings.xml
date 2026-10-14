@@ -69,4 +69,18 @@
     <string name="voice_cancel_action">Cancel</string>
     <string name="voice_permission_denied_snackbar">Microphone permission is needed for voice commands.</string>
     <string name="voice_broken_label">Broken</string>
+    <string name="presence_section_title">Presence</string>
+    <string name="presence_toggle_label">Broadcast my presence</string>
+    <string name="presence_toggle_summary">Lets Home Assistant arm or disarm your alarm when you leave or come home.</string>
+    <string name="presence_alias_label">Alias on this phone</string>
+    <string name="presence_alias_hint">Shown in Home Assistant as "Oikos &lt;alias&gt;".</string>
+    <string name="presence_use_current_location">Use my current location as home</string>
+    <string name="presence_home_set">Home set at %1$.5f, %2$.5f</string>
+    <string name="presence_home_unset">No home yet.</string>
+    <string name="presence_radius_label">Radius: %1$d m</string>
+    <string name="presence_permission_fine">Oikos needs location to detect when you leave home.</string>
+    <string name="presence_permission_background">On Android 10 and later, Oikos also needs background location to detect transitions while the app is closed.</string>
+    <string name="presence_permission_denied">Location permission denied.</string>
+    <string name="presence_grant_permission">Grant permission</string>
+    <string name="presence_location_needed">Turn on device location to pick a home.</string>
 </resources>

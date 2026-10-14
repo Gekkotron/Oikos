@@ -6,6 +6,10 @@
     <!-- Default-network changes for the route selector; no SSID, so no location permission. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Geofence-driven presence (opt-in in Settings); the UI gates FINE and then BACKGROUND. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
         android:name=".OikosApplication"
@@ -40,6 +44,11 @@
                 <data android:scheme="oikos" android:host="settings" />
             </intent-filter>
         </activity>
+
+        <!-- Geofence transitions from Play services for the Settings presence toggle. -->
+        <receiver
+            android:name=".presence.PresenceTransitionReceiver"
+            android:exported="false" />
 
         <!-- WorkManager starts on demand with PushWorkerFactory (OikosApplication.workManagerConfiguration). -->
         <provider

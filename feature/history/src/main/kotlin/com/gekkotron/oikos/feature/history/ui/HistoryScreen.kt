@@ -179,14 +179,30 @@ private fun Message(res: Int) {
 
 @Composable
 private fun LineBody(state: HistoryUi, line: ChartContent.Line, zone: ZoneId, locale: Locale) {
-    val points = remember(line) { line.series.points.map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val unit = state.unit
     val title = state.title ?: stringResource(DsR.string.energy_house)
+    val formatTime = timeFormatter(state.range, zone, locale)
+    if (state.binary) {
+        // Binary sensors chart as 0/1 steps: use max within each bucket as "was active at any point".
+        val points = remember(line) { line.series.points.map { ChartPoint(it.t, if (it.max >= 0.5) 1.0 else 0.0, 0.0, 1.0) } }
+        val on = stringResource(binaryOnLabel(state.binaryClass))
+        val off = stringResource(binaryOffLabel(state.binaryClass))
+        val description = stringResource(R.string.history_cd_step, title, stringResource(rangeDescription(state.range)))
+        HistoryLineChart(
+            points = points,
+            color = OikosTheme.colors.water,
+            formatValue = { if (it >= 0.5) on else off },
+            formatTime = formatTime,
+            contentDescription = description,
+            step = true,
+        )
+        return
+    }
+    val points = remember(line) { line.series.points.map { ChartPoint(it.t, it.mean, it.min, it.max) } }
     val description = stringResource(
         R.string.history_cd_line, title, stringResource(rangeDescription(state.range)),
         withUnit(line.min, unit, locale), withUnit(line.max, unit, locale),
     )
-    val formatTime = timeFormatter(state.range, zone, locale)
     HistoryLineChart(
         points = points,
         color = if (state.energy) OikosTheme.colors.solar else OikosTheme.colors.water,
@@ -199,6 +215,19 @@ private fun LineBody(state: HistoryUi, line: ChartContent.Line, zone: ZoneId, lo
         Stat(R.string.history_avg, withUnit(line.avg, unit, locale))
         Stat(R.string.history_max, withUnit(line.max, unit, locale))
     }
+}
+
+/** Device-class labels for binary sensors: door/window open vs. closed, motion/occupancy detected vs. clear, else on/off. */
+internal fun binaryOnLabel(deviceClass: String?): Int = when (deviceClass) {
+    "door", "window", "garage_door", "opening" -> R.string.history_binary_open
+    "motion", "occupancy", "presence", "moving" -> R.string.history_binary_detected
+    else -> R.string.history_binary_on
+}
+
+internal fun binaryOffLabel(deviceClass: String?): Int = when (deviceClass) {
+    "door", "window", "garage_door", "opening" -> R.string.history_binary_closed
+    "motion", "occupancy", "presence", "moving" -> R.string.history_binary_clear
+    else -> R.string.history_binary_off
 }
 
 @Composable

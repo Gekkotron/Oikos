@@ -14,6 +14,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -33,11 +34,12 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 
-/** Room groups spec §6: name, members, Ungroup all. [onSave] gets the typed name and the unticked member ids. */
+/** Room groups spec §6: name, favorite, members, Ungroup all. [onSave] gets the typed name, the favorite flag and the unticked member ids. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, List<String>) -> Unit, onDismiss: () -> Unit) {
+internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, Boolean, List<String>) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable(card.id) { mutableStateOf(card.name) }
+    var favorite by rememberSaveable(card.id) { mutableStateOf(card.ui.favorite) }
     // The unticked ids, not the kept ones: a member that joins while the sheet is open must not be ungrouped by Save.
     var removed by rememberSaveable(card.id) { mutableStateOf(emptyList<String>()) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -55,6 +57,13 @@ internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, List<String>) ->
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).toggleable(favorite, role = Role.Switch) { favorite = it },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.customize_favorite), style = OikosTheme.type.body, modifier = Modifier.weight(1f))
+                Switch(checked = favorite, onCheckedChange = null)
+            }
             Text(stringResource(R.string.customize_group_members), style = OikosTheme.type.label)
             for (member in card.members) {
                 val checked = member.id !in removed
@@ -68,10 +77,10 @@ internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, List<String>) ->
                 }
             }
             Button(
-                onClick = { onSave(name, card.members.map { it.id }.filter { it in removed }); onDismiss() },
+                onClick = { onSave(name, favorite, card.members.map { it.id }.filter { it in removed }); onDismiss() },
                 modifier = Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch),
             ) { Text(stringResource(R.string.customize_save)) }
-            TextButton(onClick = { onSave(card.name, card.members.map { it.id }); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = { onSave(card.name, false, card.members.map { it.id }); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.customize_ungroup_all))
             }
         }

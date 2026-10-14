@@ -41,6 +41,7 @@ class HistoryViewModelTest {
             sensor("thermo", "°C", "temperature"),
             sensor("plug_power", "W", "power"),
             sensor("plug_energy", "kWh", "energy"),
+            binary("front_door", "door", "contact"),
         ).associateBy { it.uniqueId }
         stateMap.value = mapOf("thermo" to EntityState("thermo", StateValue.Numeric(21.5)))
     }
@@ -50,6 +51,15 @@ class HistoryViewModelTest {
         capabilities = Capabilities(),
         bindings = MqttBindings(
             "sensor",
+            JsonObject(mapOf("state_topic" to JsonPrimitive("z/$id"), "value_template" to JsonPrimitive("{{ value_json.$key }}"))),
+        ),
+    )
+
+    private fun binary(id: String, deviceClass: String, key: String) = Entity(
+        uniqueId = id, deviceId = null, name = id, kind = Kind.BINARY_SENSOR, deviceClass = deviceClass, unit = null, icon = null,
+        capabilities = Capabilities(),
+        bindings = MqttBindings(
+            "binary_sensor",
             JsonObject(mapOf("state_topic" to JsonPrimitive("z/$id"), "value_template" to JsonPrimitive("{{ value_json.$key }}"))),
         ),
     )
@@ -184,6 +194,20 @@ class HistoryViewModelTest {
         vm.bind(HistoryTarget.House)
         backgroundScope.launch { vm.state.collect {} }
         vm.state.first { it.content is ChartContent.Line && it.energy && it.title == null }
+    }
+
+    @Test
+    fun `a binary sensor marks the UI as binary and keeps its device class for labelling`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("front_door"))
+        backgroundScope.launch { vm.state.collect {} }
+        val ui = vm.state.first { it.content is ChartContent.Line }
+        assertTrue(ui.binary)
+        assertEquals("door", ui.binaryClass)
+        assertFalse(ui.toggle)
+        assertFalse(ui.energy)
+        // No numeric readout for a 0/1 sensor.
+        assertNull(ui.live)
     }
 
     @Test

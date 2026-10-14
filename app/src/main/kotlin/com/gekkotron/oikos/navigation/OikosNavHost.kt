@@ -244,6 +244,7 @@ fun OikosNavHost(viewModel: AppViewModel = hiltViewModel()) {
                         customizeSheet = { id, onDismiss, onSaveFailed -> CustomizeEntitySheet(id, onDismiss, onSaveFailed) },
                         alertsSection = { RecentAlertsRoute(onOpenAll = { push(backStack, AlertsKey) }, deviceSheet = deviceSheet) },
                         alertsEffects = { snackbar -> RecentAlertsEffects(snackbar) },
+                        onOpenHistory = { openHistory(HistoryTarget.Entity(it)) },
                     )
                 }
             },

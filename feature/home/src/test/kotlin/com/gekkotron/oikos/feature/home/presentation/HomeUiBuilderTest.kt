@@ -402,4 +402,25 @@ class HomeUiBuilderTest {
         assertEquals(TapAction.NONE, card.tap)
         assertFalse(card.hasHistory)
     }
+
+    @Test
+    fun `a binary sensor opens its history when history is on`() {
+        val door = Entity(
+            "door", null, "Front door", Kind.BINARY_SENSOR, "door", null, null, Capabilities(),
+            MqttBindings(
+                "binary_sensor",
+                JsonObject(mapOf(
+                    "state_topic" to JsonPrimitive("zigbee2mqtt/door"),
+                    "value_template" to JsonPrimitive("{{ value_json.contact }}"),
+                )),
+            ),
+            ui = UiOverride(homePinned = true),
+        )
+        val on = HomeUiBuilder.build(mapOf("door" to door), emptyMap(), areas, RoomFilter.All, link, Locale.ROOT, historyEnabled = true).card("door")!!
+        assertEquals(TapAction.OPEN_HISTORY, on.tap)
+        assertTrue(on.hasHistory)
+        val off = HomeUiBuilder.build(mapOf("door" to door), emptyMap(), areas, RoomFilter.All, link, Locale.ROOT).card("door")!!
+        assertEquals(TapAction.NONE, off.tap)
+        assertFalse(off.hasHistory)
+    }
 }

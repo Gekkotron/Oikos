@@ -11,6 +11,10 @@ class OikosMessagingService : FirebaseMessagingService() {
     private val component: PushComponent get() = (applicationContext as PushComponentProvider).pushComponent()
 
     override fun onMessageReceived(message: RemoteMessage) {
+        if (message.data["cmd"] == CMD_PRESENCE_REFRESH) {
+            component.presenceRefresher.requestRefresh()
+            return
+        }
         try {
             runBlocking(Dispatchers.IO) { component.ingestor.onMessage(message.data) }
         } catch (e: Exception) {
@@ -24,5 +28,6 @@ class OikosMessagingService : FirebaseMessagingService() {
 
     private companion object {
         const val TAG = "OikosPush"
+        const val CMD_PRESENCE_REFRESH = "presence_refresh"
     }
 }

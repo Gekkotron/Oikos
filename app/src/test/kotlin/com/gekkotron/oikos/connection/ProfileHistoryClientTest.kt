@@ -60,4 +60,12 @@ class ProfileHistoryClientTest {
         assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.D7))
         assertEquals(1, urls.size)
     }
+
+    @Test
+    fun `lastChanges goes to the service for a direct profile`() = runTest {
+        val c = client()
+        states.value = ProfileState.Ready(direct)
+        c.lastChanges(listOf(HistoryRef("t", "k")))
+        assertEquals("http://192.168.1.91:8090/v1/last_change?topic=t&key=k", urls.single())
+    }
 }

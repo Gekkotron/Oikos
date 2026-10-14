@@ -50,7 +50,9 @@ object HomeUiBuilder {
         val groupable = RoomGroups.groupableIds(grid)
 
         val used = grid.mapTo(mutableSetOf()) { it.area }
-        val hasFavorites = grid.any { it.ui.favorite }
+        val groupFavorites: Map<String, Set<String>> = areas.filter { it.groupFavorites.isNotEmpty() }
+            .associate { it.id to it.groupFavorites }
+        val hasFavorites = grid.any { it.ui.favorite } || grid.any { favoriteGrouped(it, groupFavorites) }
         val chips = buildList {
             if (hasFavorites) add(ChipUi(RoomFilter.Favorites, null))
             add(ChipUi(RoomFilter.All, null))
@@ -65,7 +67,7 @@ object HomeUiBuilder {
         val shown = when {
             query.isNotBlank() -> standalone.filter { SearchMatch.matches(query, names.getValue(it.uniqueId), it.deviceName, areaNames[it.area]) }
             effective == RoomFilter.Hidden -> hidden
-            else -> grid.filter { matches(it, effective) }
+            else -> grid.filter { matches(it, effective, groupFavorites) }
         }
         val sorted = shown
             .sortedWith(
@@ -77,13 +79,13 @@ object HomeUiBuilder {
                 ),
             )
             .map { card(it, names.getValue(it.uniqueId), states[it.uniqueId], areaNames, locale, companionsOf(it), historyEnabled, it.uniqueId in groupable) }
-        // Room groups spec §2.1: groups only in All and a room, never in Favourites, Hidden or search.
-        val folds = query.isBlank() && (effective == RoomFilter.All || effective is RoomFilter.Area)
+        // Room groups spec §2.1: groups show in All, a room, and Favourites (a favorited group counts). Hidden and search stay flat.
+        val folds = query.isBlank() && effective != RoomFilter.Hidden
         val cards = if (folds) {
             // Within each area block, lift group cards above individual devices. Stable sort keeps
             // the alphabetical intra-bucket order from the per-entity sort above; the explicit ui.order
             // pin still wins since it's the first key.
-            RoomGroups.fold(sorted, areas).sortedWith(
+            RoomGroups.fold(sorted, areas, groupFavorites).sortedWith(
                 compareBy(
                     { it.ui.order ?: Int.MAX_VALUE },
                     { areaIndex[it.areaId] ?: Int.MAX_VALUE },
@@ -151,11 +153,17 @@ object HomeUiBuilder {
             .let { cards -> if (e.kind == Kind.LIGHT) cards.sortedWith(compareBy({ it.name.lowercase(locale) }, { it.id })) else cards }
     }
 
-    private fun matches(entity: Entity, filter: RoomFilter) = when (filter) {
+    private fun matches(entity: Entity, filter: RoomFilter, groupFavorites: Map<String, Set<String>>) = when (filter) {
         RoomFilter.All -> true
-        RoomFilter.Favorites -> entity.ui.favorite
+        RoomFilter.Favorites -> entity.ui.favorite || favoriteGrouped(entity, groupFavorites)
         is RoomFilter.Area -> entity.area == filter.id
         RoomFilter.Hidden -> false
+    }
+
+    /** An entity whose room has its (cover/light) group pinned to Favorites: lifts the whole group into the chip. */
+    private fun favoriteGrouped(entity: Entity, groupFavorites: Map<String, Set<String>>): Boolean {
+        if (entity.kind !in RoomGroups.GROUP_KINDS || entity.ui.ungrouped) return false
+        return RoomGroups.kindKey(entity.kind) in (groupFavorites[entity.area] ?: return false)
     }
 
     /** A name the user typed wins; otherwise a known label is translated after the device name. */
@@ -222,8 +230,7 @@ object HomeUiBuilder {
         Kind.LIGHT, Kind.SWITCH -> TapAction.TOGGLE
         Kind.BUTTON -> TapAction.PRESS
         Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM, Kind.WATER_HEATER -> TapAction.OPEN_SHEET
-        Kind.SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
-        Kind.BINARY_SENSOR -> TapAction.NONE
+        Kind.SENSOR, Kind.BINARY_SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
     }
 
     private fun forceToggleFor(entity: Entity, value: StateValue): Boolean? {

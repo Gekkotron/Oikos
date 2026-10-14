@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,11 +29,14 @@ import com.gekkotron.oikos.designsystem.icons.WindowIcon
 import com.gekkotron.oikos.feature.security.R
 import com.gekkotron.oikos.feature.security.presentation.GroupCount
 import com.gekkotron.oikos.feature.security.presentation.SensorRow
+import com.gekkotron.oikos.feature.security.presentation.SinceFormat
+import com.gekkotron.oikos.feature.security.presentation.SinceSpan
 import com.gekkotron.oikos.model.SensorGroup
+import java.time.Instant
 
 /** A half-width tile: icon and name, then room and state. Long names and rooms are cut, never the state. */
 @Composable
-internal fun SensorTile(row: SensorRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun SensorTile(row: SensorRow, now: Instant, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = activeColor(row)
     val staleText = stringResource(R.string.security_stale)
     OikosCard(
@@ -59,7 +63,21 @@ internal fun SensorTile(row: SensorRow, onClick: () -> Unit, modifier: Modifier 
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Text(stateWord(row), style = OikosTheme.type.body, color = accent ?: OikosTheme.colors.content, maxLines = 1)
+            val word = stateWord(row)
+            val span = sinceSpan(row, now)
+            if (span == null) {
+                Text(word, style = OikosTheme.type.body, color = accent ?: OikosTheme.colors.content, maxLines = 1)
+            } else {
+                // TalkBack reads "Closed for 2 hours", not "Closed dot 2 h".
+                val spoken = stringResource(R.string.security_state_for, word, sinceLong(span))
+                Text(
+                    stringResource(R.string.security_state_since, word, sinceShort(span)),
+                    style = OikosTheme.type.body,
+                    color = accent ?: OikosTheme.colors.content,
+                    maxLines = 1,
+                    modifier = Modifier.semantics { contentDescription = spoken },
+                )
+            }
         }
     }
 }
@@ -89,6 +107,13 @@ private fun glyph(group: SensorGroup): OikosGlyph = when (group) {
     SensorGroup.LEAK -> OikosGlyph.DROP
     SensorGroup.SOS -> OikosGlyph.SHIELD
     SensorGroup.OPENING, SensorGroup.VIBRATION, SensorGroup.TAMPER -> OikosGlyph.DOT
+}
+
+/** Null when there is nothing trustworthy to show: no time, unavailable, cached (stale) or no state (last-change spec §4.5). */
+internal fun sinceSpan(row: SensorRow, now: Instant): SinceSpan? {
+    val since = row.since ?: return null
+    if (!row.available || row.stale || row.active == null) return null
+    return SinceFormat.span(since, now)
 }
 
 @Composable

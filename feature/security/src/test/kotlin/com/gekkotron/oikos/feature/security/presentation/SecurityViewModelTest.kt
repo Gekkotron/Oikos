@@ -2,16 +2,23 @@ package com.gekkotron.oikos.feature.security.presentation
 
 import com.gekkotron.oikos.feature.security.action
 import com.gekkotron.oikos.feature.security.FakeEntitySource
+import com.gekkotron.oikos.feature.security.FakeHistoryClient
 import com.gekkotron.oikos.feature.security.alarm
+import com.gekkotron.oikos.feature.security.mqttSensor
 import com.gekkotron.oikos.feature.security.on
 import com.gekkotron.oikos.feature.security.panel
 import com.gekkotron.oikos.feature.security.sensor
+import com.gekkotron.oikos.history.HistoryRef
+import com.gekkotron.oikos.history.HistoryResult
+import com.gekkotron.oikos.history.LastChange
 import com.gekkotron.oikos.model.AlarmMode
 import com.gekkotron.oikos.model.AlarmState
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandFailure
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.transport.TransportMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -23,8 +30,10 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SecurityViewModelTest {
@@ -120,5 +129,75 @@ class SecurityViewModelTest {
         source.failWrites = true
         vm.setAction("siren", show = false, ask = false)
         assertEquals(listOf<SecurityEvent>(SecurityEvent.SaveFailed), events)
+    }
+
+    private val history = FakeHistoryClient()
+    private val t0 = Instant.parse("2026-10-14T06:00:00Z")
+    private val doorRef = HistoryRef("zigbee2mqtt/front", "contact")
+
+    private fun mqttSource() = FakeEntitySource().apply {
+        entities.value = listOf(mqttSensor("front", "door"), mqttSensor("hall", "motion", key = "occupancy")).associateBy { it.uniqueId }
+        stateMap.value = listOf(on("front", false), on("hall", false)).associateBy { it.uniqueId }
+    }
+
+    @Test
+    fun `last changes are fetched once per ref set and land on the rows`() = runTest(dispatcher) {
+        val src = mqttSource()
+        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
+        val vm = SecurityViewModel(src, dispatcher, history)
+        backgroundScope.launch { vm.state.collect {} }
+        assertEquals(listOf(setOf(doorRef, HistoryRef("zigbee2mqtt/hall", "occupancy"))), history.asked.map { it.toSet() })
+        assertEquals(Since.At(t0), vm.state.value.sensors.first { it.id == "front" }.since)
+        src.stateMap.value += "hall" to on("hall", true) // a state change is not a ref change
+        assertEquals(1, history.asked.size)
+    }
+
+    @Test
+    fun `refetch on reconnect and every ten minutes`() = runTest(dispatcher) {
+        val src = mqttSource()
+        val vm = SecurityViewModel(src, dispatcher, history, refresh = 10.minutes)
+        backgroundScope.launch { vm.state.collect {} }
+        assertEquals(1, history.asked.size)
+        testScheduler.advanceTimeBy(10.minutes.inWholeMilliseconds + 1)
+        assertEquals(2, history.asked.size)
+        src.link.value = LinkState.Connecting
+        src.link.value = LinkState.Connected(TransportMode.DEMO)
+        assertEquals(3, history.asked.size)
+    }
+
+    @Test
+    fun `a failed answer keeps the previous times and raises no event`() = runTest(dispatcher) {
+        val src = mqttSource()
+        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
+        val vm = SecurityViewModel(src, dispatcher, history, refresh = 10.minutes)
+        backgroundScope.launch { vm.state.collect {} }
+        val events = mutableListOf<SecurityEvent>()
+        backgroundScope.launch { vm.events.collect { events += it } }
+        history.answer = HistoryResult.NotRecorded // e.g. an OikosHistory without the endpoint
+        testScheduler.advanceTimeBy(10.minutes.inWholeMilliseconds + 1)
+        assertEquals(2, history.asked.size)
+        assertEquals(Since.At(t0), vm.state.value.sensors.first { it.id == "front" }.since)
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun `two sensors on one topic and key both get the time`() = runTest(dispatcher) {
+        val src = FakeEntitySource().apply {
+            entities.value = listOf(mqttSensor("a", "door", topic = "zigbee2mqtt/front"), mqttSensor("b", "door", topic = "zigbee2mqtt/front"))
+                .associateBy { it.uniqueId }
+        }
+        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
+        val vm = SecurityViewModel(src, dispatcher, history)
+        backgroundScope.launch { vm.state.collect {} }
+        assertEquals(listOf(Since.At(t0), Since.At(t0)), vm.state.value.sensors.map { it.since })
+    }
+
+    @Test
+    fun `nothing is asked without history`() = runTest(dispatcher) {
+        history.available.value = false
+        val vm = SecurityViewModel(mqttSource(), dispatcher, history)
+        backgroundScope.launch { vm.state.collect {} }
+        assertTrue(history.asked.isEmpty())
+        assertTrue(vm.state.value.sensors.all { it.since == null })
     }
 }

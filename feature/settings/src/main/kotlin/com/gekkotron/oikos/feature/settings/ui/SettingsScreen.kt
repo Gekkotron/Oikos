@@ -75,6 +75,7 @@ import com.gekkotron.oikos.feature.settings.presentation.SettingsViewModel
 import com.gekkotron.oikos.feature.settings.presentation.appVersion
 import com.gekkotron.oikos.transport.Route
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 @Composable
@@ -87,6 +88,7 @@ fun SettingsRoute(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
     clock: () -> Instant = Instant::now,
+    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = { info -> PresenceSettingsSlot(onInfoMessage = info) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -112,6 +114,7 @@ fun SettingsRoute(
         onRegisterAgain = viewModel::registerAgain, now = now, onSaveHistoryUrl = viewModel::setHistoryUrl, onSaveFrigate = viewModel::setFrigate,
         onOpenChannels = { openNotificationSettings(context) },
         onVoiceEnabled = viewModel::setVoiceEnabled, onDeleteShortcut = viewModel::deleteShortcut,
+        presenceSection = presenceSection,
     )
 }
 
@@ -133,6 +136,7 @@ fun SettingsScreen(
     onSaveFrigate: (url: String, user: String, password: String) -> Boolean = { _, _, _ -> true },
     onVoiceEnabled: (Boolean) -> Unit = {},
     onDeleteShortcut: (String) -> Unit = {},
+    presenceSection: @Composable (onInfo: (String) -> Unit) -> Unit = {},
 ) {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -183,6 +187,8 @@ fun SettingsScreen(
             }
             VoiceSection(state.voice, onVoiceToggle)
             VoiceShortcutsSection(state.voice.shortcuts, onDeleteShortcut)
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            presenceSection { msg -> scope.launch { snackbar.showSnackbar(msg) } }
             Section(stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.settings_version, version), style = OikosTheme.type.body)
                 Text(stringResource(R.string.settings_notice), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)

@@ -1,4 +1,4 @@
-package com.gekkotron.oikos.feature.alerts.ui
+package com.gekkotron.oikos.designsystem
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State

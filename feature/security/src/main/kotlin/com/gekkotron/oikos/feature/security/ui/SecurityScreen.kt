@@ -46,6 +46,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.rememberNow
+import java.time.Instant
 import com.gekkotron.oikos.designsystem.alarm.AlarmHero
 import com.gekkotron.oikos.designsystem.components.LinkPill
 import com.gekkotron.oikos.designsystem.components.OikosCard
@@ -71,6 +73,8 @@ fun SecurityRoute(
     alertsSection: (@Composable () -> Unit)? = null,
     /** Always composed, outside the lazy list, so effects of the alerts section run while it is scrolled out of view. */
     alertsEffects: (@Composable (snackbar: SnackbarHostState) -> Unit)? = null,
+    /** Open the entity's history screen. Null hides the sheet's history link (history off / entity not recorded). */
+    onOpenHistory: ((String) -> Unit)? = null,
     viewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -103,6 +107,7 @@ fun SecurityRoute(
         customizeSheet = customizeSheet?.let { sheet -> { id, onDismiss -> sheet(id, onDismiss, saveFailed) } },
         alertsSection = alertsSection,
         snackbarHostState = snackbar,
+        onOpenHistory = onOpenHistory,
     )
 }
 
@@ -116,6 +121,10 @@ fun SecurityScreen(
     customizeSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
     alertsSection: (@Composable () -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    /** Open the entity's history screen. Null hides the sheet's history link. */
+    onOpenHistory: ((String) -> Unit)? = null,
+    /** One minute-ticking clock for every tile and the sheet; tests pass a fixed one. */
+    now: Instant = rememberNow().value,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -211,7 +220,7 @@ fun SecurityScreen(
                         // Two tiles a row, the same height, in tab order (active first, top-left).
                         items(section.rows.chunked(2), key = { "sensors-${it.first().id}" }) { pair ->
                             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap)) {
-                                pair.forEach { row -> SensorTile(row, onClick = { sheetId = row.id }, Modifier.weight(1f).fillMaxHeight()) }
+                                pair.forEach { row -> SensorTile(row, now, onClick = { sheetId = row.id }, Modifier.weight(1f).fillMaxHeight()) }
                                 if (pair.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
@@ -227,9 +236,11 @@ fun SecurityScreen(
     if (sheetRow != null) {
         SensorSheet(
             sheetRow,
+            now,
             onHide = { onSetHidden(sheetRow.id, true); sheetId = null },
             onDismiss = { sheetId = null },
             onCustomize = customizeSheet?.let { { sheetId = null; customizeId = sheetRow.id } },
+            onOpenHistory = onOpenHistory?.let { open -> { sheetId = null; open(sheetRow.id) } },
         )
     }
     // An action that left Security closes its sheet.

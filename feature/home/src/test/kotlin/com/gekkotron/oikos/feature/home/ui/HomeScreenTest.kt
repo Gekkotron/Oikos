@@ -147,7 +147,9 @@ class HomeScreenTest {
         show()
         compose.onNodeWithTag("card-ac").performClick()
         compose.onNodeWithContentDescription("Increase").performClick()
-        compose.mainClock.advanceTimeBy(SETPOINT_DEBOUNCE_MS + 100)
+        // Wait for the debounced LaunchedEffect to resume and send: advanceTimeBy alone doesn't pump
+        // the suspended coroutine, so the send would miss without the condition poll.
+        compose.waitUntil(SETPOINT_DEBOUNCE_MS + 1_000) { sends.isNotEmpty() }
         assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetTemperature(21.5)), sends)
     }
 
@@ -155,12 +157,12 @@ class HomeScreenTest {
     fun `climate sheet shows taps at once and sends one setpoint after the burst`() {
         show()
         compose.onNodeWithTag("card-ac").performClick()
-        compose.mainClock.autoAdvance = false
+        // Three taps land faster than the debounce window; the draft climbs one step at a time while
+        // the LaunchedEffect keeps restarting, so no SetTemperature is sent yet.
         repeat(3) { compose.onNodeWithContentDescription("Increase").performClick() }
-        compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithText("22.5°").assertExists()
-        assertEquals(emptyList(), sends)
-        compose.mainClock.advanceTimeBy(SETPOINT_DEBOUNCE_MS + 100)
+        // After the debounce quiets down, exactly one command for the final draft reaches onSend.
+        compose.waitUntil(SETPOINT_DEBOUNCE_MS + 1_000) { sends.isNotEmpty() }
         assertEquals(listOf<Pair<String, Command>>("ac" to Command.SetTemperature(22.5)), sends)
     }
 

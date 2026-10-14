@@ -37,4 +37,5 @@ class ProfileHistoryClient(
     override suspend fun series(ref: HistoryRef, range: HistoryRange) = current().series(ref, range)
     override suspend fun daily(ref: HistoryRef, days: Int, scale: EnergyScale) = current().daily(ref, days, scale)
     override suspend fun today(ref: HistoryRef, scale: EnergyScale) = current().today(ref, scale)
+    override suspend fun lastChanges(refs: List<HistoryRef>) = current().lastChanges(refs)
 }

@@ -21,10 +21,24 @@ object HistoryRefs {
         val (topicKey, templateKey) = when (entity.kind) {
             Kind.SENSOR -> if (entity.unit.isNullOrBlank()) return null else "state_topic" to "value_template"
             Kind.CLIMATE -> "current_temperature_topic" to "current_temperature_template"
+            // Binary sensors chart as a step line (open/closed, on/off), not a mean of 0/1.
+            Kind.BINARY_SENSOR -> "state_topic" to "value_template"
             else -> return null
         }
         val topic = b.str(topicKey) ?: return null
         val key = jsonKey(b.str(templateKey)) ?: return null
+        return HistoryRef(topic, key)
+    }
+
+    /**
+     * A binary sensor's recorded series, read for the time of its last flip (last-change spec §4.1). Narrower
+     * than [of]: Security's "since X" line only wants binary refs, not the full chart-eligible set.
+     */
+    fun changeRef(entity: Entity): HistoryRef? {
+        if (entity.kind != Kind.BINARY_SENSOR) return null
+        val b = entity.bindings as? MqttBindings ?: return null
+        val topic = b.str("state_topic") ?: return null
+        val key = jsonKey(b.str("value_template")) ?: return null
         return HistoryRef(topic, key)
     }
 }

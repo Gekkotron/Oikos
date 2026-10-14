@@ -8,6 +8,7 @@ interface PushComponent {
     val ingestor: AlertIngestor
     val registrar: PushRegistrar
     val replies: ReplyQueue
+    val presenceRefresher: PresenceRefresher
 }
 
 interface PushComponentProvider {

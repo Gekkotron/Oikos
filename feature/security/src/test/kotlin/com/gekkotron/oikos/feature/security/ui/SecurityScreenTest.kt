@@ -27,7 +27,10 @@ import com.gekkotron.oikos.feature.security.panel
 import com.gekkotron.oikos.feature.security.sensor
 import com.gekkotron.oikos.feature.security.presentation.SecurityUi
 import com.gekkotron.oikos.feature.security.presentation.SecurityUiBuilder
+import com.gekkotron.oikos.history.LastChange
 import com.gekkotron.oikos.model.AlarmState
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import java.time.Duration
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -46,6 +49,8 @@ class SecurityScreenTest {
 
     private val hidden = mutableListOf<Pair<String, Boolean>>()
 
+    private val now = java.time.Instant.parse("2026-10-14T10:00:00Z")
+
     private fun ui(entities: List<Entity>, states: List<EntityState> = emptyList()): SecurityUi = SecurityUiBuilder.build(
         entities.associateBy { it.uniqueId }, states.associateBy { it.uniqueId }, listOf(Area("garage", "Garage")), LinkState.Connecting,
     )
@@ -53,10 +58,11 @@ class SecurityScreenTest {
     private val sent = mutableListOf<Pair<String, Command>>()
     private val actionSettings = mutableListOf<Triple<String, Boolean, Boolean>>()
 
-    private fun show(state: SecurityUi) = compose.setContent {
+    private fun show(state: SecurityUi, at: java.time.Instant = now) = compose.setContent {
         OikosTheme(ThemeChoice.NIGHT_GLASS) {
             SecurityScreen(
                 state,
+                now = at,
                 onSend = { id, c -> sent += id to c },
                 onSetHidden = { id, h -> hidden += id to h },
                 onSetAction = { id, s, a -> actionSettings += Triple(id, s, a) },
@@ -273,5 +279,56 @@ class SecurityScreenTest {
     fun `without a slot there is no alerts section`() {
         show(ui(listOf(sensor("door", "door", "Entrance")), listOf(on("door", false))))
         compose.onNodeWithText("Recent alerts").assertDoesNotExist()
+    }
+
+    private fun withSince(server: LastChange, stale: Boolean = false, available: Boolean = true) = SecurityUiBuilder.build(
+        mapOf("door" to sensor("door", "door", name = "Front door")),
+        mapOf("door" to on("door", false, available = available, stale = stale)),
+        emptyList(), LinkState.Connecting, mapOf("door" to server),
+    )
+
+    @Test
+    fun `the tile shows how long, and TalkBack reads it in words`() {
+        show(withSince(LastChange.At(now.minusSeconds(2 * 3_600 + 300))))
+        compose.onNodeWithText("Closed · 2 h", useUnmergedTree = true).assertContentDescriptionEquals("Closed for 2 hours")
+    }
+
+    @Test
+    fun `over the window reads 30+ d`() {
+        show(withSince(LastChange.OlderThan(Duration.ofDays(30))))
+        compose.onNodeWithText("Closed · 30+ d", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `no duration on a stale or unavailable tile, nor without history`() {
+        show(withSince(LastChange.At(now.minusSeconds(600)), stale = true))
+        compose.onNodeWithText("Closed", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Closed · 10 min", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `an unavailable tile shows no duration`() {
+        show(withSince(LastChange.At(now.minusSeconds(600)), available = false))
+        compose.onNodeWithText("Closed · 10 min", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a tile without since looks as before`() {
+        show(ui(listOf(sensor("door", "door", name = "Front door")), listOf(on("door", false))))
+        compose.onNodeWithText("Closed", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `the sheet gives the exact time`() {
+        show(withSince(LastChange.At(java.time.Instant.parse("2026-10-14T06:42:00Z"))))
+        compose.onNodeWithTag("sensor-door").performClick()
+        compose.onNode(hasText("Since ", substring = true)).assertExists()
+    }
+
+    @Test
+    fun `the sheet says no change in 30 days`() {
+        show(withSince(LastChange.OlderThan(Duration.ofDays(30))))
+        compose.onNodeWithTag("sensor-door").performClick()
+        compose.onNodeWithText("No change in 30 days").assertExists()
     }
 }

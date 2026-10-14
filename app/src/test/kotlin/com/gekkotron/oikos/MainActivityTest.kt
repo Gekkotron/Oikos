@@ -188,12 +188,13 @@ class MainActivityTest {
     }
 
     @Test
-    fun `the primary button of the notification step also reaches Home and registers once`() {
+    fun `with notifications already on the step is skipped, Home is reached and push registers once`() {
         org.robolectric.Shadows.shadowOf(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>())
             .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
         connectToBroker(kettle)
-        finishRooms("Skip", answer = "Turn on notifications")
+        answerRooms("Skip")
         compose.waitUntilAtLeastOneExists(hasContentDescription("Kettle", substring = true), timeoutMillis = 10_000)
+        compose.onAllNodes(hasText("Stay informed")).assertCountEquals(0)
         compose.waitUntil(10_000) { enqueued >= 1 }
         assertEquals(1, enqueued)
     }

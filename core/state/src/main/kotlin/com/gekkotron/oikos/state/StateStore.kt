@@ -152,11 +152,16 @@ class StateStore(
         if (topic in t.stateTopics) {
             when (val d = t.mapper.decode(t.bindings, topic, payload, confirmed[id] ?: StateValue.Unknown)) {
                 is Decoded.State -> {
+                    val previous = confirmed[id]
                     confirmed[id] = d.value
                     val confirmsCommand = !s.pending || confirmTopics[id]?.contains(topic) != false
                     if (confirmsCommand) {
                         confirmTopics.remove(id)
-                        s = s.copy(value = d.value, pending = false, lastUpdate = now())
+                        // Only a flip seen live from a live, known value: not the first message, nor a cache restore or the message after one.
+                        val flipped = previous != null && previous != StateValue.Unknown && previous != d.value &&
+                            !s.stale && topic !in restoredTopics
+                        val at = now()
+                        s = s.copy(value = d.value, pending = false, lastUpdate = at, changedAt = if (flipped) at else s.changedAt)
                         confirmedNow = true
                     }
                 }
