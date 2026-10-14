@@ -18,7 +18,7 @@ object TileText {
         is TileValue.Text -> value.value
         is TileValue.Contact -> context.getString(if (value.on) contactOn(value.deviceClass) else contactOff(value.deviceClass))
         is TileValue.Cover -> cover(context, value)
-        is TileValue.Climate -> value.current?.let { number(it, locale) + "°" } ?: value.mode ?: "—"
+        is TileValue.Climate -> (value.target ?: value.current)?.let { number(it, locale) + "°" } ?: value.mode ?: "—"
         is TileValue.Alarm -> context.getString(alarmLabel(value.state))
     }
 

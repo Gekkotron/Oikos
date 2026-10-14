@@ -23,7 +23,8 @@ internal fun cardValueText(value: CardValue, kind: Kind = Kind.SENSOR): String =
     is CardValue.Cover -> coverText(value)
     is CardValue.Climate ->
         if (kind == Kind.WATER_HEATER) waterHeaterSubtitle(value)
-        else listOfNotNull(value.current?.let { "$it°" }, value.mode?.let { modeLabel(it) })
+        // The setpoint is what the user controls, so it leads; the room temperature only stands in when there is none.
+        else listOfNotNull((value.target ?: value.current)?.let { "$it°" }, value.mode?.let { modeLabel(it) })
             .joinToString(" · ")
             .ifEmpty { stringResource(R.string.value_none) }
     is CardValue.Alarm -> stringResource(alarmLabel(value.state))
