@@ -66,6 +66,14 @@ class HistoryRefsTest {
     }
 
     @Test
-    fun `binary sensors still get no chart ref`() =
-        assertNull(HistoryRefs.of(entity(Kind.BINARY_SENSOR, null, "state_topic" to "t", "value_template" to "{{ value_json.contact }}")))
+    fun `a binary sensor gets a chart ref from its state topic and template`() {
+        val door = entity(Kind.BINARY_SENSOR, null, "state_topic" to "zigbee2mqtt/entrance/door", "value_template" to "{{ value_json.contact }}")
+        assertEquals(HistoryRef("zigbee2mqtt/entrance/door", "contact"), HistoryRefs.of(door))
+    }
+
+    @Test
+    fun `a binary sensor without a topic or a readable template has no chart ref`() {
+        assertNull(HistoryRefs.of(entity(Kind.BINARY_SENSOR, null, "value_template" to "{{ value_json.contact }}")))
+        assertNull(HistoryRefs.of(entity(Kind.BINARY_SENSOR, null, "state_topic" to "t", "value_template" to "{{ value }}")))
+    }
 }

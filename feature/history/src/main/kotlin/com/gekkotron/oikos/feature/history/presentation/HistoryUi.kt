@@ -32,4 +32,8 @@ data class HistoryUi(
     val mode: ChartMode = ChartMode.POWER,
     val content: ChartContent = ChartContent.Loading,
     val missing: Boolean = false, // the entity is gone or has no history ref
+    /** Binary sensor: the line draws as steps, the Y axis says Open/Closed (or On/Off), and Min/Avg/Max is hidden. */
+    val binary: Boolean = false,
+    /** Device class ("door", "motion", …) used by the binary chart to label the two steps; null falls back to on/off. */
+    val binaryClass: String? = null,
 )

@@ -13,6 +13,7 @@ import com.gekkotron.oikos.history.HistoryRefs
 import com.gekkotron.oikos.history.HistoryResult
 import com.gekkotron.oikos.history.Series
 import com.gekkotron.oikos.model.EntityState
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.source.EntitySource
@@ -64,14 +65,18 @@ class HistoryViewModel @Inject constructor(
                     HistoryUi(missing = true)
                 } else {
                     val kind = EnergyScale.of(entity.unit)?.kind
+                    val binary = entity.kind == Kind.BINARY_SENSOR
                     HistoryUi(
                         title = entity.name,
                         room = entity.area.takeIf { it != UNASSIGNED_AREA }?.let { id -> areas.firstOrNull { it.id == id }?.name },
-                        live = states[target.id]?.let(::numeric),
+                        // No numeric readout for a 0/1 sensor.
+                        live = if (binary) null else states[target.id]?.let(::numeric),
                         unit = entity.unit,
                         energy = kind != null,
                         // A kWh meter has no power line to switch to: only its index (24 h) or its daily bars exist.
                         toggle = kind == EnergyKind.POWER,
+                        binary = binary,
+                        binaryClass = entity.deviceClass.takeIf { binary },
                     )
                 }
             }

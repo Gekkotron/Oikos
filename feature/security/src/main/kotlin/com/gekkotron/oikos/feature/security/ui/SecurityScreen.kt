@@ -73,6 +73,8 @@ fun SecurityRoute(
     alertsSection: (@Composable () -> Unit)? = null,
     /** Always composed, outside the lazy list, so effects of the alerts section run while it is scrolled out of view. */
     alertsEffects: (@Composable (snackbar: SnackbarHostState) -> Unit)? = null,
+    /** Open the entity's history screen. Null hides the sheet's history link (history off / entity not recorded). */
+    onOpenHistory: ((String) -> Unit)? = null,
     viewModel: SecurityViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -105,6 +107,7 @@ fun SecurityRoute(
         customizeSheet = customizeSheet?.let { sheet -> { id, onDismiss -> sheet(id, onDismiss, saveFailed) } },
         alertsSection = alertsSection,
         snackbarHostState = snackbar,
+        onOpenHistory = onOpenHistory,
     )
 }
 
@@ -118,6 +121,8 @@ fun SecurityScreen(
     customizeSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
     alertsSection: (@Composable () -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    /** Open the entity's history screen. Null hides the sheet's history link. */
+    onOpenHistory: ((String) -> Unit)? = null,
     /** One minute-ticking clock for every tile and the sheet; tests pass a fixed one. */
     now: Instant = rememberNow().value,
 ) {
@@ -235,6 +240,7 @@ fun SecurityScreen(
             onHide = { onSetHidden(sheetRow.id, true); sheetId = null },
             onDismiss = { sheetId = null },
             onCustomize = customizeSheet?.let { { sheetId = null; customizeId = sheetRow.id } },
+            onOpenHistory = onOpenHistory?.let { open -> { sheetId = null; open(sheetRow.id) } },
         )
     }
     // An action that left Security closes its sheet.

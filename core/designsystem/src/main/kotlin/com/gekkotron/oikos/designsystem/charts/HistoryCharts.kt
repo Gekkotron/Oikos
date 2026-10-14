@@ -10,11 +10,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import android.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
@@ -65,6 +67,8 @@ fun HistoryLineChart(
     formatTime: (Long) -> String,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    /** True draws just the mean with square steps (binary sensors), no min/max shadow. */
+    step: Boolean = false,
 ) {
     val frame = modifier.fillMaxWidth().height(ChartHeight)
         .semantics { this.contentDescription = contentDescription }
@@ -78,8 +82,10 @@ fun HistoryLineChart(
         val xs = points.map { (it.t - first).toDouble() }
         producer.runTransaction {
             lineSeries {
-                series(xs, points.map { it.min })
-                series(xs, points.map { it.max })
+                if (!step) {
+                    series(xs, points.map { it.min })
+                    series(xs, points.map { it.max })
+                }
                 series(xs, points.map { it.mean })
             }
         }
@@ -87,11 +93,11 @@ fun HistoryLineChart(
     val faint = color.copy(alpha = 0.25f)
     val minLine = LineCartesianLayer.rememberLineFor(faint, 1f)
     val maxLine = LineCartesianLayer.rememberLineFor(faint, 1f)
-    val meanLine = LineCartesianLayer.rememberLineFor(color, 2f)
-    val step = remember(points) { xStep(points.map { it.t - first }) }
+    val meanLine = LineCartesianLayer.rememberLineFor(color, 2f, if (step) StepPointConnector else null)
+    val xUnit = remember(points) { xStep(points.map { it.t - first }) }
     val spacing = remember(points) {
         val span = points.last().t - first
-        maxOf(1, (span / step / AxisLabelCount).toInt())
+        maxOf(1, (span / xUnit / AxisLabelCount).toInt())
     }
     val marker = rememberDefaultCartesianMarker(
         label = rememberTextComponent(color = OikosTheme.colors.content),
@@ -106,7 +112,8 @@ fun HistoryLineChart(
     val axisLine = OikosTheme.colors.contentMuted.copy(alpha = 0.3f)
     val chart = rememberCartesianChart(
         rememberLineCartesianLayer(
-            lineProvider = LineCartesianLayer.LineProvider.series(minLine, maxLine, meanLine),
+            lineProvider = if (step) LineCartesianLayer.LineProvider.series(meanLine)
+            else LineCartesianLayer.LineProvider.series(minLine, maxLine, meanLine),
         ),
         startAxis = VerticalAxis.rememberStart(
             label = rememberAxisLabelComponent(color = OikosTheme.colors.contentMuted),
@@ -132,7 +139,7 @@ fun HistoryLineChart(
             modelProducer = producer,
             modifier = frame,
             scrollState = rememberVicoScrollState(scrollEnabled = true),
-            zoomState = rememberHistoryZoom(points.last().t - first, step),
+            zoomState = rememberHistoryZoom(points.last().t - first, xUnit),
         )
     }
 }
@@ -234,11 +241,23 @@ private fun rememberHistoryZoom(span: Long, step: Long) = rememberVicoZoomState(
 internal fun maxZoomSpan(span: Long, step: Long): Double = maxOf(span / 10.0, 4.0 * step)
 
 @Composable
-private fun LineCartesianLayer.Companion.rememberLineFor(color: Color, thicknessDp: Float) =
-    LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(fill(color)),
-        stroke = LineCartesianLayer.LineStroke.continuous(thickness = thicknessDp.dp),
-    )
+private fun LineCartesianLayer.Companion.rememberLineFor(
+    color: Color,
+    thicknessDp: Float,
+    pointConnector: LineCartesianLayer.PointConnector? = null,
+) = LineCartesianLayer.rememberLine(
+    fill = LineCartesianLayer.LineFill.single(fill(color)),
+    stroke = LineCartesianLayer.LineStroke.continuous(thickness = thicknessDp.dp),
+    pointConnector = pointConnector ?: LineCartesianLayer.PointConnector.Sharp,
+)
+
+/** Draws right-angle steps: hold the previous Y across the x-span, then jump to the new Y at the next sample. */
+object StepPointConnector : LineCartesianLayer.PointConnector {
+    override fun connect(context: CartesianDrawingContext, path: Path, x1: Float, y1: Float, x2: Float, y2: Float) {
+        path.lineTo(x2, y1)
+        path.lineTo(x2, y2)
+    }
+}
 
 /** Vico spaces x in multiples of the gcd of the deltas; labels are placed in those units. */
 private fun xStep(offsets: List<Long>): Long {

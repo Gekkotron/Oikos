@@ -222,8 +222,7 @@ object HomeUiBuilder {
         Kind.LIGHT, Kind.SWITCH -> TapAction.TOGGLE
         Kind.BUTTON -> TapAction.PRESS
         Kind.COVER, Kind.CLIMATE, Kind.NUMBER, Kind.SELECT, Kind.ALARM_PANEL, Kind.VACUUM, Kind.WATER_HEATER -> TapAction.OPEN_SHEET
-        Kind.SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
-        Kind.BINARY_SENSOR -> TapAction.NONE
+        Kind.SENSOR, Kind.BINARY_SENSOR -> if (hasHistory) TapAction.OPEN_HISTORY else TapAction.NONE
     }
 
     private fun forceToggleFor(entity: Entity, value: StateValue): Boolean? {
