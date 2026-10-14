@@ -44,6 +44,15 @@
     <string name="security_section_motion">Mouvement</string>
     <string name="security_section_other">Autres</string>
     <string name="security_section_actions">Actions</string>
+    <string name="security_label_opening">Ouverture</string>
+    <string name="security_label_motion">Détecteur de mouvement</string>
+    <string name="security_label_smoke">Détecteur de fumée</string>
+    <string name="security_label_co">Détecteur de CO</string>
+    <string name="security_label_gas">Détecteur de gaz</string>
+    <string name="security_label_leak">Détecteur de fuite</string>
+    <string name="security_label_sos">SOS</string>
+    <string name="security_label_vibration">Détecteur de vibration</string>
+    <string name="security_label_tamper">Détecteur de sabotage</string>
     <string name="security_action_on">Allumé</string>
     <string name="security_action_off">Éteint</string>
     <string name="security_action_confirm_on">Allumer %1$s ?</string>

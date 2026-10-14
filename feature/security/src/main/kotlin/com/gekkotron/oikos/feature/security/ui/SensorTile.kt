@@ -51,7 +51,7 @@ internal fun SensorTile(row: SensorRow, now: Instant, onClick: () -> Unit, modif
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SensorIcon(row, accent)
-            Text(row.name, style = OikosTheme.type.body, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(displayName(row), style = OikosTheme.type.body, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         }
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -115,6 +115,45 @@ internal fun sinceSpan(row: SensorRow, now: Instant): SinceSpan? {
     if (!row.available || row.stale || row.active == null) return null
     return SinceFormat.span(since, now)
 }
+
+/** Fall back to the group label when the entity name is the raw HA device_class (e.g. "smoke", "water_leak"). */
+@Composable
+internal fun displayName(row: SensorRow): String {
+    if (!isRawClassName(row)) return row.name
+    return stringResource(
+        when (row.group) {
+            SensorGroup.OPENING -> R.string.security_label_opening
+            SensorGroup.MOTION -> R.string.security_label_motion
+            SensorGroup.SMOKE -> R.string.security_label_smoke
+            SensorGroup.CO -> R.string.security_label_co
+            SensorGroup.GAS -> R.string.security_label_gas
+            SensorGroup.LEAK -> R.string.security_label_leak
+            SensorGroup.SOS -> R.string.security_label_sos
+            SensorGroup.VIBRATION -> R.string.security_label_vibration
+            SensorGroup.TAMPER -> R.string.security_label_tamper
+        },
+    )
+}
+
+/** HA discovery sometimes names binary_sensors by their device_class alone; those names are not human labels. */
+internal fun isRawClassName(row: SensorRow): Boolean {
+    val name = row.name.trim().lowercase()
+    if (name.isEmpty()) return true
+    if (row.deviceClass?.lowercase() == name) return true
+    return name in RAW_CLASS_NAMES
+}
+
+private val RAW_CLASS_NAMES = setOf(
+    "smoke",
+    "monoxide", "carbon_monoxide", "co",
+    "gas",
+    "moisture", "water_leak", "leak",
+    "motion", "occupancy", "presence",
+    "opening", "door", "window", "garage_door",
+    "vibration",
+    "tamper",
+    "sos", "safety", "sound", "problem",
+)
 
 @Composable
 internal fun stateWord(row: SensorRow): String {
