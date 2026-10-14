@@ -5,6 +5,7 @@ import com.gekkotron.oikos.feature.security.alarm
 import com.gekkotron.oikos.feature.security.on
 import com.gekkotron.oikos.feature.security.panel
 import com.gekkotron.oikos.feature.security.sensor
+import com.gekkotron.oikos.history.LastChange
 import com.gekkotron.oikos.model.AlarmState
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Entity
@@ -14,6 +15,8 @@ import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
+import java.time.Duration
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -163,5 +166,28 @@ class SecurityUiBuilderTest {
         assertFalse(ui.action("panic")!!.ask)
         assertFalse(ui.isEmpty)
         assertTrue(build(emptyList()).isEmpty)
+    }
+
+    private val t0 = Instant.parse("2026-10-14T06:00:00Z")
+    private val month = Duration.ofDays(30)
+
+    private fun since(server: LastChange?, local: Instant?): Since? {
+        val state = EntityState("door", StateValue.OnOff(false), changedAt = local)
+        val changes = server?.let { mapOf("door" to it) } ?: emptyMap()
+        return SecurityUiBuilder.build(mapOf("door" to sensor("door", "door")), mapOf("door" to state), areas, LinkState.Connecting, changes)
+            .sensors.single().since
+    }
+
+    @Test
+    fun `since merges the server answer with a live flip`() {
+        assertEquals(Since.At(t0), since(LastChange.At(t0), null))
+        assertEquals(Since.At(t0.plusSeconds(60)), since(LastChange.At(t0), t0.plusSeconds(60)))
+        assertEquals(Since.At(t0), since(LastChange.At(t0), t0.minusSeconds(60)))
+        assertEquals(Since.Over(month), since(LastChange.OlderThan(month), null))
+        assertEquals(Since.At(t0), since(LastChange.OlderThan(month), t0))
+        assertEquals(Since.At(t0), since(LastChange.NotRecorded, t0))
+        assertEquals(Since.At(t0), since(null, t0))
+        assertNull(since(LastChange.NotRecorded, null))
+        assertNull(since(null, null))
     }
 }

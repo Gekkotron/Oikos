@@ -1,5 +1,6 @@
 package com.gekkotron.oikos.feature.security.presentation
 
+import com.gekkotron.oikos.history.LastChange
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
@@ -9,10 +10,17 @@ import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.transport.LinkState
+import java.time.Instant
 
 /** Entities → the Security tab (security spec §4.3). Pure. */
 object SecurityUiBuilder {
-    fun build(entities: Map<String, Entity>, states: Map<String, EntityState>, areas: List<Area>, link: LinkState): SecurityUi {
+    fun build(
+        entities: Map<String, Entity>,
+        states: Map<String, EntityState>,
+        areas: List<Area>,
+        link: LinkState,
+        changes: Map<String, LastChange> = emptyMap(),
+    ): SecurityUi {
         val areaNames = areas.associate { it.id to it.name }
         // Hidden on Home still shows here: only securityHidden takes an entity off Security.
         val visible = entities.values.filter { it.partOf == null && Placement.onSecurity(it.kind, it.deviceClass, it.ui) }
@@ -36,6 +44,7 @@ object SecurityUiBuilder {
                     active = (s?.value as? StateValue.OnOff)?.on,
                     available = s?.available ?: true,
                     stale = s?.stale == true,
+                    since = since(changes[e.uniqueId], s?.changedAt),
                 )
             }
             .sortedWith(compareBy<SensorRow>({ rank(it) }, { it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))
@@ -66,5 +75,13 @@ object SecurityUiBuilder {
         row.active == true && row.group.danger -> 0
         row.active == true -> 1
         else -> 2
+    }
+
+    /** Last-change spec §4.4: the server's time, unless the app saw a later flip itself. */
+    private fun since(server: LastChange?, local: Instant?): Since? = when {
+        server is LastChange.At -> Since.At(if (local != null && local > server.at) local else server.at)
+        local != null -> Since.At(local)
+        server is LastChange.OlderThan -> Since.Over(server.window)
+        else -> null
     }
 }

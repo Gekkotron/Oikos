@@ -10,6 +10,9 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
+import com.gekkotron.oikos.state.mqtt.MqttBindings
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 object NoBindings : Bindings
 
@@ -29,3 +32,10 @@ fun alarm(id: String, state: AlarmState, stale: Boolean = false) = EntityState(i
 /** A switch (or button) opted onto Security as an action. */
 fun action(id: String, kind: Kind = Kind.SWITCH, name: String = id, area: String = UNASSIGNED_AREA, ui: UiOverride = UiOverride(securityAction = true)) =
     Entity(id, null, name, kind, null, null, null, Capabilities(), NoBindings, area, ui)
+
+/** A sensor discovered over MQTT, so HistoryRefs.changeRef finds its topic and key. */
+fun mqttSensor(id: String, deviceClass: String, topic: String = "zigbee2mqtt/$id", key: String = "contact") = Entity(
+    id, null, id, Kind.BINARY_SENSOR, deviceClass, null, null, Capabilities(),
+    MqttBindings("binary_sensor", JsonObject(mapOf("state_topic" to JsonPrimitive(topic), "value_template" to JsonPrimitive("{{ value_json.$key }}")))),
+    UNASSIGNED_AREA,
+)

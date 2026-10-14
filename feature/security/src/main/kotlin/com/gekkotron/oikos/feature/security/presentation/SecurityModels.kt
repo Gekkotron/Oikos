@@ -6,6 +6,8 @@ import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.transport.LinkState
+import java.time.Duration
+import java.time.Instant
 
 /** [state] null: nothing received yet. */
 data class PanelUi(
@@ -28,7 +30,15 @@ data class SensorRow(
     val active: Boolean?,
     val available: Boolean,
     val stale: Boolean = false,
+    /** How long the sensor has been in its state (last-change spec §4.4); null: unknown. */
+    val since: Since? = null,
 )
+
+/** [At]: the state began then. [Over]: recorded, but unchanged for longer than [Over.window]. */
+sealed interface Since {
+    data class At(val at: Instant) : Since
+    data class Over(val window: Duration) : Since
+}
 
 data class GroupCount(val group: SensorGroup, val count: Int)
 
