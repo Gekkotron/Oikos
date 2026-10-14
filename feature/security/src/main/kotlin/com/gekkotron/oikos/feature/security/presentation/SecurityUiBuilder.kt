@@ -47,7 +47,8 @@ object SecurityUiBuilder {
                     since = since(changes[e.uniqueId], s?.changedAt),
                 )
             }
-            .sortedWith(compareBy<SensorRow>({ rank(it) }, { it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))
+            // Stable order: a tile does not move when its state flips (security spec §4.3). Area then name, Unassigned last.
+            .sortedWith(compareBy<SensorRow>({ it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))
         val actions = visible.filter { Placement.actionKind(it.kind) }
             .map { e ->
                 val s = states[e.uniqueId]
@@ -67,14 +68,6 @@ object SecurityUiBuilder {
         val bySection = sensors.groupBy { SensorSection.of(it.group) }
         val sections = SensorSection.entries.mapNotNull { sec -> bySection[sec]?.let { SectionUi(sec, it) } }
         return SecurityUi(link, panels, summary, sensors, sections, actions, loading = false)
-    }
-
-    /** 0 active danger, 1 active intrusion, 2 inactive or unknown, 3 unavailable. */
-    private fun rank(row: SensorRow): Int = when {
-        !row.available -> 3
-        row.active == true && row.group.danger -> 0
-        row.active == true -> 1
-        else -> 2
     }
 
     /** Last-change spec §4.4: the server's time, unless the app saw a later flip itself. */

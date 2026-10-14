@@ -52,7 +52,7 @@ class SecurityUiBuilderTest {
     }
 
     @Test
-    fun `active danger, active intrusion, inactive, unavailable - then area and name`() {
+    fun `stable order - area then name, unassigned last - state flips do not reorder`() {
         val ui = build(
             listOf(
                 sensor("door_living", "door", "Door", area = "living"),
@@ -67,8 +67,8 @@ class SecurityUiBuilderTest {
                 on("leak", false, available = false), on("window", false),
             ),
         )
-        assertEquals(listOf("smoke", "door_garage", "door_living", "motion", "window", "leak"), ui.sensors.map { it.id })
-        assertEquals("Garage", ui.sensors[1].areaName)
+        assertEquals(listOf("door_garage", "leak", "door_living", "motion", "smoke", "window"), ui.sensors.map { it.id })
+        assertEquals("Garage", ui.sensors[0].areaName)
         assertNull(ui.sensors.single { it.id == "window" }.areaName)
     }
 
@@ -82,12 +82,12 @@ class SecurityUiBuilderTest {
     }
 
     @Test
-    fun `unknown sensors sort with inactive and are not counted`() {
+    fun `unknown sensors keep their alphabetical slot and are not counted`() {
         val ui = build(
             listOf(sensor("a", "door", "A"), sensor("b", "door", "B"), sensor("c", "door", "C")),
             listOf(on("b", true), EntityState("c", StateValue.Unknown)),
         )
-        assertEquals(listOf("b", "a", "c"), ui.sensors.map { it.id })
+        assertEquals(listOf("a", "b", "c"), ui.sensors.map { it.id })
         assertNull(ui.sensors.single { it.id == "c" }.active)
         assertNull(ui.sensors.single { it.id == "a" }.active)
         assertEquals(listOf(GroupCount(SensorGroup.OPENING, 1)), ui.summary)
@@ -135,7 +135,7 @@ class SecurityUiBuilderTest {
             listOf(SensorSection.OPENINGS, SensorSection.FIRE, SensorSection.WATER, SensorSection.OTHER),
             ui.sections.map { it.section },
         )
-        // Within a section the tab order holds: the active CO alarm comes before the calm smoke one.
+        // Stable order within a section: alphabetical by name; state flips do not reorder.
         assertEquals(listOf("co", "smoke"), ui.sections.first { it.section == SensorSection.FIRE }.rows.map { it.id })
         assertEquals(ui.sensors.toSet(), ui.sections.flatMap { it.rows }.toSet())
     }

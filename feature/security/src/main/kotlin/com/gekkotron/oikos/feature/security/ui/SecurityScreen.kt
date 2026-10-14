@@ -217,7 +217,7 @@ fun SecurityScreen(
                                 modifier = Modifier.padding(top = 8.dp).semantics { heading() },
                             )
                         }
-                        // Two tiles a row, the same height, in tab order (active first, top-left).
+                        // Two tiles a row, the same height, in a stable alphabetical order; a tile does not jump when its state flips.
                         items(section.rows.chunked(2), key = { "sensors-${it.first().id}" }) { pair ->
                             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap)) {
                                 pair.forEach { row -> SensorTile(row, now, onClick = { sheetId = row.id }, Modifier.weight(1f).fillMaxHeight()) }

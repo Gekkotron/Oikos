@@ -58,7 +58,7 @@ enum class SensorSection {
     }
 }
 
-/** [rows] keep the tab order (active first); a section is never empty. */
+/** [rows] stay in stable alphabetical order (area then name) so a tile does not jump when its state flips; a section is never empty. */
 data class SectionUi(val section: SensorSection, val rows: List<SensorRow>)
 
 /** A switch or button opted onto Security (security actions spec §3.1). [on] null: a button, or no state yet. [areaName] null: Unassigned. */
