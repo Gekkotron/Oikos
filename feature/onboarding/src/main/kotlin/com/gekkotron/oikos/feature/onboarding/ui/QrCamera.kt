@@ -2,7 +2,6 @@ package com.gekkotron.oikos.feature.onboarding.ui
 
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -23,10 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.gekkotron.oikos.designsystem.OikosTheme
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.NotFoundException
+import com.google.zxing.PlanarYUVLuminanceSource
+import com.google.zxing.common.HybridBinarizer
 import kotlinx.coroutines.awaitCancellation
 import java.util.concurrent.Executors
 
@@ -51,7 +53,6 @@ internal fun QrCamera(modifier: Modifier, onText: (String) -> Unit) {
             awaitCancellation()
         } finally {
             provider.unbind(preview, analysis)
-            analyzer.close()
             executor.shutdown()
         }
     }
@@ -60,17 +61,58 @@ internal fun QrCamera(modifier: Modifier, onText: (String) -> Unit) {
     }
 }
 
-/** ML Kit's bundled on-device model, QR only; no Play services (spec §5 step 2). Results arrive on the main thread. */
-internal class QrAnalyzer(private val onText: (String) -> Unit) : ImageAnalysis.Analyzer, AutoCloseable {
-    private val scanner = BarcodeScanning.getClient(BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build())
-
-    @ExperimentalGetImage
-    override fun analyze(image: ImageProxy) {
-        val media = image.image ?: return image.close()
-        scanner.process(InputImage.fromMediaImage(media, image.imageInfo.rotationDegrees))
-            .addOnSuccessListener { codes -> codes.firstNotNullOfOrNull { it.rawValue }?.let(onText) }
-            .addOnCompleteListener { image.close() }
+/** ZXing-core QR decoder on CameraX YUV frames. Pure-Java, ~500 KB, no native deps. */
+internal class QrAnalyzer(private val onText: (String) -> Unit) : ImageAnalysis.Analyzer {
+    private val reader = MultiFormatReader().apply {
+        setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE)))
     }
 
-    override fun close() = scanner.close()
+    override fun analyze(image: ImageProxy) {
+        try {
+            val luma = extractLuma(image) ?: return
+            val source = PlanarYUVLuminanceSource(
+                luma,
+                image.width,
+                image.height,
+                0,
+                0,
+                image.width,
+                image.height,
+                false,
+            )
+            val result = try {
+                reader.decodeWithState(BinaryBitmap(HybridBinarizer(source)))
+            } catch (_: NotFoundException) {
+                null
+            } finally {
+                reader.reset()
+            }
+            result?.text?.let(onText)
+        } finally {
+            image.close()
+        }
+    }
+
+    /** Copy plane 0 into a contiguous width×height byte array, dropping any row-stride padding. */
+    private fun extractLuma(image: ImageProxy): ByteArray? {
+        val plane = image.planes.firstOrNull() ?: return null
+        val buffer = plane.buffer
+        val width = image.width
+        val height = image.height
+        val rowStride = plane.rowStride
+        val out = ByteArray(width * height)
+        if (rowStride == width) {
+            if (buffer.remaining() < out.size) return null
+            buffer.get(out, 0, out.size)
+            return out
+        }
+        val row = ByteArray(rowStride)
+        for (y in 0 until height) {
+            val toRead = minOf(rowStride, buffer.remaining())
+            if (toRead < width) return null
+            buffer.get(row, 0, toRead)
+            System.arraycopy(row, 0, out, y * width, width)
+        }
+        return out
+    }
 }
