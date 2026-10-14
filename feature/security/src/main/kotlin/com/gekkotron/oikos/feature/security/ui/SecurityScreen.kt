@@ -46,6 +46,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.rememberNow
+import java.time.Instant
 import com.gekkotron.oikos.designsystem.alarm.AlarmHero
 import com.gekkotron.oikos.designsystem.components.LinkPill
 import com.gekkotron.oikos.designsystem.components.OikosCard
@@ -116,6 +118,8 @@ fun SecurityScreen(
     customizeSheet: (@Composable (id: String, onDismiss: () -> Unit) -> Unit)? = null,
     alertsSection: (@Composable () -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    /** One minute-ticking clock for every tile and the sheet; tests pass a fixed one. */
+    now: Instant = rememberNow().value,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -211,7 +215,7 @@ fun SecurityScreen(
                         // Two tiles a row, the same height, in tab order (active first, top-left).
                         items(section.rows.chunked(2), key = { "sensors-${it.first().id}" }) { pair ->
                             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(OikosDimens.gridGap)) {
-                                pair.forEach { row -> SensorTile(row, onClick = { sheetId = row.id }, Modifier.weight(1f).fillMaxHeight()) }
+                                pair.forEach { row -> SensorTile(row, now, onClick = { sheetId = row.id }, Modifier.weight(1f).fillMaxHeight()) }
                                 if (pair.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
@@ -227,6 +231,7 @@ fun SecurityScreen(
     if (sheetRow != null) {
         SensorSheet(
             sheetRow,
+            now,
             onHide = { onSetHidden(sheetRow.id, true); sheetId = null },
             onDismiss = { sheetId = null },
             onCustomize = customizeSheet?.let { { sheetId = null; customizeId = sheetRow.id } },
