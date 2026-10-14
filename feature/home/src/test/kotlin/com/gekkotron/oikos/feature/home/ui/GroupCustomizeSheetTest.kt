@@ -40,10 +40,10 @@ class GroupCustomizeSheetTest {
         emptyMap(), listOf(Area("living", "Living room")), RoomFilter.All, LinkState.Connecting, Locale.US,
     ).cards.single { it.isGroup }
 
-    private var saved: Pair<String, List<String>>? = null
+    private var saved: Triple<String, Boolean, List<String>>? = null
 
     private fun show() = compose.setContent {
-        OikosTheme(ThemeChoice.NIGHT_GLASS) { GroupCustomizeSheet(group, onSave = { n, r -> saved = n to r }, onDismiss = {}) }
+        OikosTheme(ThemeChoice.NIGHT_GLASS) { GroupCustomizeSheet(group, onSave = { n, f, r -> saved = Triple(n, f, r) }, onDismiss = {}) }
     }
 
     @Test
@@ -52,25 +52,33 @@ class GroupCustomizeSheetTest {
         compose.onNode(hasSetTextAction()).performTextReplacement("Baie")
         compose.onNodeWithText("Patio door").performScrollTo().performClick()
         compose.onNodeWithText("Save").performScrollTo().performClick()
-        assertEquals("Baie" to listOf("patio"), saved)
+        assertEquals(Triple("Baie", false, listOf("patio")), saved)
     }
 
     @Test
     fun `Ungroup all removes every member`() {
         show()
         compose.onNodeWithText("Ungroup all").performScrollTo().performClick()
-        assertEquals("" to listOf("bay", "patio", "side"), saved) // members are in card sort order (by name)
+        assertEquals(Triple("", false, listOf("bay", "patio", "side")), saved) // members are in card sort order (by name)
+    }
+
+    @Test
+    fun `toggling Favorite and saving reports the group as favorited`() {
+        show()
+        compose.onNodeWithText("Favourite").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performScrollTo().performClick()
+        assertEquals(Triple(group.name, true, emptyList()), saved)
     }
 
     @Test
     fun `a member that joins while the sheet is open is not ungrouped by Save`() {
         var card by mutableStateOf(group)
-        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { GroupCustomizeSheet(card, onSave = { n, r -> saved = n to r }, onDismiss = {}) } }
+        compose.setContent { OikosTheme(ThemeChoice.NIGHT_GLASS) { GroupCustomizeSheet(card, onSave = { n, f, r -> saved = Triple(n, f, r) }, onDismiss = {}) } }
         compose.onNodeWithText("Patio door").performScrollTo().performClick()
         val newcomer = group.members.first().copy(id = "garden", name = "Garden window")
         card = group.copy(members = group.members + newcomer)
         compose.waitForIdle()
         compose.onNodeWithText("Save").performScrollTo().performClick()
-        assertEquals("" to listOf("patio"), saved)
+        assertEquals(Triple("", false, listOf("patio")), saved)
     }
 }

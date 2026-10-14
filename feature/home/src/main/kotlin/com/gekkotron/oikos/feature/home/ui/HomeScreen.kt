@@ -124,7 +124,7 @@ fun HomeScreen(
     onSearch: (String) -> Unit = {},
     onOpenHistory: (String) -> Unit = {},
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
-    onCustomizeGroup: (String, String, List<String>) -> Unit = { _, _, _ -> },
+    onCustomizeGroup: (String, String, Boolean, List<String>) -> Unit = { _, _, _, _ -> },
     voiceEnabled: Boolean = false,
 ) {
     val layoutDirection = LocalLayoutDirection.current
@@ -232,7 +232,7 @@ fun HomeScreen(
         if (customizeCard.isGroup) {
             GroupCustomizeSheet(
                 customizeCard,
-                onSave = { name, removed -> onCustomizeGroup(customizeCard.id, name, removed) },
+                onSave = { name, favorite, removed -> onCustomizeGroup(customizeCard.id, name, favorite, removed) },
                 onDismiss = { customizeId = null },
             )
         } else {

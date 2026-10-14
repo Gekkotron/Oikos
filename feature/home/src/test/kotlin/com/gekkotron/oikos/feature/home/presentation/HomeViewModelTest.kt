@@ -346,7 +346,7 @@ class HomeViewModelTest {
         val src = groupSource()
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
-        vm.customizeGroup("group:living:cover", "Baie", removed = listOf("c"))
+        vm.customizeGroup("group:living:cover", "Baie", favorite = false, removed = listOf("c"))
         assertEquals(mapOf("cover" to "Baie"), src.areas.value.single().groupNames)
         assertTrue(src.overrides.getValue("c").ungrouped)
         assertEquals(listOf("a", "b"), vm.state.value.cards.single { it.isGroup }.members.map { it.id })

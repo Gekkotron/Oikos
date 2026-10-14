@@ -91,4 +91,34 @@ class OverrideEditorTest {
         assertFalse(OverrideEditor(source).setGroupName("nowhere", "cover", "X"))
         assertTrue(source.areaWrites.isEmpty())
     }
+
+    @Test
+    fun `setGroupFavorite pins the group's kind key and keeps the other rooms untouched`() = runTest {
+        val source = FakeEntitySource().apply {
+            areas.value = listOf(Area("kitchen", "Kitchen"), Area("salon", "Salon"))
+        }
+        assertTrue(OverrideEditor(source).setGroupFavorite("salon", "cover", true))
+        assertEquals(
+            listOf(Area("kitchen", "Kitchen"), Area("salon", "Salon", groupFavorites = setOf("cover"))),
+            source.areaWrites.single(),
+        )
+    }
+
+    @Test
+    fun `unpinning a group drops only its kind key`() = runTest {
+        val source = FakeEntitySource().apply {
+            areas.value = listOf(Area("salon", "Salon", groupFavorites = setOf("cover", "light")))
+        }
+        assertTrue(OverrideEditor(source).setGroupFavorite("salon", "cover", false))
+        assertEquals(setOf("light"), source.areaWrites.single().single().groupFavorites)
+    }
+
+    @Test
+    fun `setGroupFavorite is a no-op write when the state already matches`() = runTest {
+        val source = FakeEntitySource().apply {
+            areas.value = listOf(Area("salon", "Salon", groupFavorites = setOf("cover")))
+        }
+        assertTrue(OverrideEditor(source).setGroupFavorite("salon", "cover", true))
+        assertTrue(source.areaWrites.isEmpty())
+    }
 }

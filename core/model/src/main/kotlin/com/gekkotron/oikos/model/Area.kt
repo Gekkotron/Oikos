@@ -12,6 +12,8 @@ data class Area(
     val order: Int? = null,
     /** Custom group card names by kind key (`cover`, `light`); missing = the localized default (room groups spec §6). */
     val groupNames: Map<String, String> = emptyMap(),
+    /** Kind keys (`cover`, `light`) whose room group shows in the Favorites chip on Home. */
+    val groupFavorites: Set<String> = emptySet(),
 )
 
 /** Retained payload of `oikos/ui/_areas`. */

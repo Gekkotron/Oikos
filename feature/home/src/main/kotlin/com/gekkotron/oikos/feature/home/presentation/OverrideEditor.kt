@@ -52,6 +52,15 @@ class OverrideEditor(private val source: EntitySource) {
         return attempt { source.setAreas(areas.filter { it.id != UNASSIGNED_AREA }.map { if (it.id == areaId) it.copy(groupNames = names) else it }) }
     }
 
+    /** Pins / unpins a room group to Home's Favorites chip. Publishes the whole areas document. */
+    suspend fun setGroupFavorite(areaId: String, kindKey: String, favorite: Boolean): Boolean {
+        val areas = source.areas.value
+        val target = areas.firstOrNull { it.id == areaId && it.id != UNASSIGNED_AREA } ?: return false
+        val favorites = if (favorite) target.groupFavorites + kindKey else target.groupFavorites - kindKey
+        if (favorites == target.groupFavorites) return true
+        return attempt { source.setAreas(areas.filter { it.id != UNASSIGNED_AREA }.map { if (it.id == areaId) it.copy(groupFavorites = favorites) else it }) }
+    }
+
     /** Takes each device out of its room's group, keeping the rest of its override. */
     suspend fun ungroup(ids: Collection<String>): Boolean {
         for (id in ids) {

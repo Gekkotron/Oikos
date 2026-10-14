@@ -27,8 +27,11 @@ object RoomGroups {
         .values.filter { it.size >= MIN_MEMBERS }
         .flatMapTo(mutableSetOf()) { group -> group.map { it.uniqueId } }
 
-    /** [cards] are already filtered and sorted; each group takes its first member's place. */
-    fun fold(cards: List<CardUi>, areas: List<Area>): List<CardUi> {
+    /**
+     * [cards] are already filtered and sorted; each group takes its first member's place. [groupFavorites]
+     * (areaId → kind keys like "cover","light") marks the folded group as a Favorite so the chip picks it up.
+     */
+    fun fold(cards: List<CardUi>, areas: List<Area>, groupFavorites: Map<String, Set<String>> = emptyMap()): List<CardUi> {
         val members = cards
             .filter { candidate(it.areaId, it.kind) && !it.ui.ungrouped }
             .groupBy { it.areaId to it.kind }
@@ -41,12 +44,15 @@ object RoomGroups {
             for (card in cards) {
                 val key = memberOf[card.id]
                 if (key == null) { add(card); continue }
-                if (emitted.add(key)) add(group(key.first, key.second, members.getValue(key), names[key.first]?.get(kindKey(key.second))))
+                if (emitted.add(key)) {
+                    val favorite = kindKey(key.second) in (groupFavorites[key.first] ?: emptySet())
+                    add(group(key.first, key.second, members.getValue(key), names[key.first]?.get(kindKey(key.second)), favorite))
+                }
             }
         }
     }
 
-    private fun group(areaId: String, kind: Kind, members: List<CardUi>, customName: String?): CardUi {
+    private fun group(areaId: String, kind: Kind, members: List<CardUi>, customName: String?, favorite: Boolean): CardUi {
         val first = members.first()
         val value = if (kind == Kind.COVER) coverValue(members) else LightGroupValue(members)
         return CardUi(
@@ -71,7 +77,7 @@ object RoomGroups {
             hasSheet = true,
             hasHistory = false,
             areaId = areaId,
-            ui = UiOverride(),
+            ui = UiOverride(favorite = favorite),
             hidden = false,
             members = members,
         )
