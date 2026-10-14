@@ -65,6 +65,8 @@ All responses are JSON. Timestamps are unix seconds (window start). Values are f
 **`GET /v1/today?topic=&key=&kind=counter|power`**
 - kWh since local midnight, computed like one `daily` day. `200 {"kwh": 3.412, "since": t_midnight}`, `kwh: null` when there are no points today.
 
+**`GET /v1/last_change?topic=&key=[&topic=&key=…]`** — added 2026-10-14; specified in `2026-10-13-oikos-security-last-change-design.md` Appendix A (1–50 pairs, last flip per series within 30 days, items in request order).
+
 **`GET /health`** → `200 {"version": "…", "influx": "ok"|"down"}`.
 
 **Errors:** `400 {"error":"bad_request","detail":…}` for a missing or invalid parameter; `404 {"error":"not_recorded"}`; `503 {"error":"influx_unavailable"}` on Influx errors or timeout. Flux strings are built with escaped parameters only; `topic`/`key` are never interpolated unescaped.
