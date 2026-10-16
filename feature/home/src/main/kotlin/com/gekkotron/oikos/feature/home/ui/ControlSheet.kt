@@ -183,6 +183,7 @@ private fun CoverControls(card: CardUi, onSend: (Command) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     val climate = card.state as? StateValue.Climate
@@ -243,7 +244,13 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
     }
     val presets = ClimatePresets.parseOrDefault(card.ui.climatePresets).filter { it in min..max }
     if (presets.isNotEmpty()) {
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // FlowRow centered + fillMaxWidth: short rows (the default 4 chips) sit under the stepper;
+        // a very narrow screen wraps instead of forcing a horizontal scroll.
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             for (preset in presets) {
                 FilterChip(
                     selected = target == preset,
