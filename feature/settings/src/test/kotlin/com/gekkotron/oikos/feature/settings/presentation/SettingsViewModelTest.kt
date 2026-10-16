@@ -10,8 +10,11 @@ import com.gekkotron.oikos.feature.settings.FakeEntitySource
 import com.gekkotron.oikos.feature.settings.FakePushStatusSource
 import com.gekkotron.oikos.feature.voice.SpeechAvailability
 import com.gekkotron.oikos.push.PushStatus
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -36,6 +39,10 @@ class SettingsViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
 
+    // DataStore runs on its own scope, not on the test's backgroundScope: its cancellation during @After
+    // would otherwise hit Dispatchers.Main.immediate after resetMain and crash on CI runners.
+    private val storage = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+
     private object PassThrough : SecretStore {
         override fun encrypt(plain: ByteArray) = plain.copyOf()
         override fun decrypt(cipher: ByteArray) = cipher.copyOf()
@@ -45,12 +52,15 @@ class SettingsViewModelTest {
     fun setUp() = Dispatchers.setMain(dispatcher)
 
     @After
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        storage.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `state follows the theme and the profile`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), backgroundScope)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, backgroundScope)
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
         val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
@@ -61,8 +71,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `a cleared profile leaves no connection summary`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), backgroundScope)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, backgroundScope)
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile.json"), PassThrough, storage)
         val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         backgroundScope.launch { vm.state.collect {} }
         profiles.save(ConnectionProfile.Demo)
@@ -73,8 +83,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `state carries the push status and follows it`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs2.json"), backgroundScope)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile2.json"), PassThrough, backgroundScope)
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs2.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile2.json"), PassThrough, storage)
         val push = FakePushStatusSource(PushStatus.Waiting)
         val vm = SettingsViewModel(profiles, prefs, push, FakeEntitySource(), SpeechAvailability.Status.Ready)
         backgroundScope.launch { vm.state.collect {} }
@@ -85,8 +95,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `register again and refresh go to the push source`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs3.json"), backgroundScope)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile3.json"), PassThrough, backgroundScope)
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs3.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile3.json"), PassThrough, storage)
         val push = FakePushStatusSource()
         val vm = SettingsViewModel(profiles, prefs, push, FakeEntitySource(), SpeechAvailability.Status.Ready)
         vm.registerAgain()
@@ -100,8 +110,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `a valid history url is saved normalised, an invalid one is refused, blank clears`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs4.json"), backgroundScope)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile4.json"), PassThrough, backgroundScope)
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs4.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile4.json"), PassThrough, storage)
         profiles.save(ConnectionProfile.Direct(LocalBroker("h")))
         val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         assertTrue(vm.setHistoryUrl(" http://192.168.1.91:8090/ "))
@@ -117,8 +127,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `setFrigate saves, keeps the password for the same user only, and a blank url clears`() = runTest(dispatcher) {
-        val prefs = AppPreferences.create(tmp.root.resolve("prefs-f.json"), backgroundScope)
-        val profiles = ProfileRepository.create(tmp.root.resolve("profile-f.json"), PassThrough, backgroundScope)
+        val prefs = AppPreferences.create(tmp.root.resolve("prefs-f.json"), storage)
+        val profiles = ProfileRepository.create(tmp.root.resolve("profile-f.json"), PassThrough, storage)
         val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
         profiles.save(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
         profiles.state.first { it is ProfileState.Ready }
