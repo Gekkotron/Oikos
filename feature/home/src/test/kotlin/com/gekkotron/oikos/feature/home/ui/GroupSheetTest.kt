@@ -1,11 +1,10 @@
 package com.gekkotron.oikos.feature.home.ui
 
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -94,14 +93,26 @@ class GroupSheetTest {
     }
 
     @Test
-    fun `tapping a member opens its own sheet and dismissing returns to the group`() {
+    fun `tapping a member expands its inline controls while the group sheet stays open`() {
         show()
         compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onAllNodesWithTag("member-position-bay").assertCountEquals(0)
         compose.onNodeWithTag("member-bay").performClick()
-        compose.onNodeWithText("Position").assertIsDisplayed()
-        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).onFirst().performSemanticsAction(SemanticsActions.Dismiss)
-        compose.waitForIdle()
+        // The position slider only exists after the row has been expanded; the group header is still visible.
+        compose.onNodeWithTag("member-position-bay").assertExists()
         compose.onNodeWithText("Living room · 3 shutters").assertIsDisplayed()
+        // Tapping again collapses the row.
+        compose.onNodeWithTag("member-bay").performClick()
+        compose.onAllNodesWithTag("member-position-bay").assertCountEquals(0)
+    }
+
+    @Test
+    fun `long-pressing a member opens its customize sheet`() {
+        show()
+        compose.onNodeWithTag("card-group:living:cover").performClick()
+        compose.onNodeWithTag("member-bay").performTouchInput { longClick() }
+        // Customize sheet marker: the Name field label is unique to it.
+        compose.onNodeWithText("Name").assertIsDisplayed()
     }
 
     @Test

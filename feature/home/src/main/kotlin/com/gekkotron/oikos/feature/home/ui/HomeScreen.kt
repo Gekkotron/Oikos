@@ -132,8 +132,6 @@ fun HomeScreen(
     val closeSearch = { searching = false; onSearch("") }
     BackHandler(enabled = searching, onBack = closeSearch)
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
-    // The group whose sheet a member's sheet was opened from; dismissing the member returns to it (room groups spec §4).
-    var sheetParent by rememberSaveable { mutableStateOf<String?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     var linkSheet by rememberSaveable { mutableStateOf(false) }
     Scaffold(
@@ -219,11 +217,11 @@ fun HomeScreen(
             ControlSheet(
                 sheetCard,
                 onSend = onSend,
-                onCustomize = { sheetId = null; sheetParent = null; customizeId = sheetCard.id },
-                onDismiss = { sheetId = sheetParent; sheetParent = null },
-                onOpenHistory = { sheetParent = null; sheetId = null; onOpenHistory(sheetCard.id) },
+                onCustomize = { sheetId = null; customizeId = sheetCard.id },
+                onDismiss = { sheetId = null },
+                onOpenHistory = { sheetId = null; onOpenHistory(sheetCard.id) },
                 onSendGroup = onSendGroup,
-                onOpenMember = { member -> sheetParent = sheetCard.id; sheetId = member },
+                onCustomizeMember = { member -> sheetId = null; customizeId = member },
             )
         }
     }

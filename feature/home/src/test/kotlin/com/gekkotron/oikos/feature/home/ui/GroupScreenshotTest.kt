@@ -79,7 +79,7 @@ class GroupScreenshotTest {
         OikosTheme(theme) {
             OikosBackground {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    GroupControls(group(kind), onSend = { _, _ -> }, onSendGroup = { _, _ -> }, onOpenMember = {})
+                    GroupControls(group(kind), onSend = { _, _ -> }, onSendGroup = { _, _ -> }, onCustomizeMember = {})
                 }
             }
         }

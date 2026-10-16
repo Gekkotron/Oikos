@@ -72,7 +72,7 @@ internal fun ControlSheet(
     onDismiss: () -> Unit,
     onOpenHistory: (() -> Unit)? = null,
     onSendGroup: (String, Command) -> Unit = { _, _ -> },
-    onOpenMember: (String) -> Unit = {},
+    onCustomizeMember: (String) -> Unit = {},
 ) {
     val send: (Command) -> Unit = { onSend(card.id, it) }
     // Fully expanded and scrollable, so every control stays reachable at 200 % font or in landscape (spec §5.3).
@@ -83,7 +83,7 @@ internal fun ControlSheet(
         ) {
             if (card.isGroup) {
                 Text(groupName(card), style = OikosTheme.type.display.copy(fontSize = 22.sp))
-                GroupControls(card, onSend, onSendGroup, onOpenMember)
+                GroupControls(card, onSend, onSendGroup, onCustomizeMember)
             } else {
                 Text(card.name, style = OikosTheme.type.display.copy(fontSize = 22.sp))
                 // The card leads with the setpoint, which the climate controls below already show: the room temperature is more useful here.
