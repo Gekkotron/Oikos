@@ -116,9 +116,9 @@ class GroupSheetTest {
     }
 
     @Test
-    fun `long-pressing the light group opens its sheet with a master switch`() {
+    fun `tapping the light group opens its sheet with a master switch`() {
         show()
-        compose.onNodeWithTag("card-group:living:light").performTouchInput { longClick() }
+        compose.onNodeWithTag("card-group:living:light").performClick()
         compose.onNodeWithText("Living room · 2 lights").assertIsDisplayed()
         compose.onNodeWithTag("group-power-group:living:light").performClick()
         assertEquals("group:living:light" to Command.TurnOff as Command, groupSends.last())
@@ -127,7 +127,7 @@ class GroupSheetTest {
     @Test
     fun `every light switch in the group sheet is named for TalkBack`() {
         show()
-        compose.onNodeWithTag("card-group:living:light").performTouchInput { longClick() }
+        compose.onNodeWithTag("card-group:living:light").performClick()
         compose.onNode(hasContentDescription("Ceiling") and isToggleable()).assertExists()
         compose.onNode(hasContentDescription("Floor lamp") and isToggleable()).assertExists()
         compose.onNode(hasContentDescription("Power") and isToggleable()).assertExists()

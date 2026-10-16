@@ -315,7 +315,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `tapping a light group toggles every light`() = runTest(dispatcher) {
+    fun `the light group inline toggle sends to every light`() = runTest(dispatcher) {
         val src = FakeEntitySource().apply {
             entities.value = mapOf(
                 "x" to testEntity("x", Kind.LIGHT, area = "living"),
@@ -326,7 +326,8 @@ class HomeViewModelTest {
         }
         val vm = HomeViewModel(src, SavedStateHandle(), dispatcher, preferences = testPreferences())
         backgroundScope.launch { vm.state.collect {} }
-        vm.tap(vm.state.value.cards.single())
+        val group = vm.state.value.cards.single()
+        vm.sendGroup(group.id, GroupCommands.toggle(group))
         assertEquals(setOf("x" to Command.TurnOff, "y" to Command.TurnOff), src.sent.toSet())
     }
 

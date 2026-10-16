@@ -183,6 +183,8 @@
     <string name="action_group_open">Ouvrir tous les volets</string>
     <string name="action_group_stop">Arrêter tous les volets</string>
     <string name="action_group_close">Fermer tous les volets</string>
+    <string name="action_group_lights_on">Allumer toutes les lumières</string>
+    <string name="action_group_lights_off">Éteindre toutes les lumières</string>
     <string name="home_group_not_confirmed_one">%1$s n\'a pas répondu</string>
     <plurals name="home_group_not_confirmed_covers">
         <item quantity="one">%1$d volet n\'a pas répondu</item>

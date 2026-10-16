@@ -73,7 +73,7 @@ object RoomGroups {
             available = members.any { it.available },
             pending = members.any { it.pending },
             stale = members.any { it.stale },
-            tap = if (kind == Kind.COVER) TapAction.OPEN_SHEET else TapAction.TOGGLE,
+            tap = TapAction.OPEN_SHEET,
             hasSheet = true,
             hasHistory = false,
             areaId = areaId,

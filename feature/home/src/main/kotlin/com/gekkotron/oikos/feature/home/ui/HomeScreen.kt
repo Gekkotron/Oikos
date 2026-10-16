@@ -75,7 +75,6 @@ import com.gekkotron.oikos.feature.home.presentation.RoomFilter
 import com.gekkotron.oikos.feature.home.presentation.TapAction
 import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
-import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.Route
 import java.time.LocalTime
@@ -180,11 +179,11 @@ fun HomeScreen(
                         }
                     }
                     if (card.isGroup) {
-                        // Shutter group: tap opens the sheet, long-press customizes. Light group: tap toggles, long-press opens the sheet.
+                        // Group: tap opens the sheet, long-press customizes; the inline buttons drive the group directly.
                         GroupCard(
                             card,
                             onClick = onClick,
-                            onLongClick = { if (card.kind == Kind.COVER) customizeId = card.id else sheetId = card.id },
+                            onLongClick = { customizeId = card.id },
                             onSendGroup = onSendGroup,
                         )
                     } else {

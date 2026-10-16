@@ -31,9 +31,12 @@ import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.OikosCard
 import com.gekkotron.oikos.designsystem.components.PendingDot
+import com.gekkotron.oikos.designsystem.icons.OikosGlyph
+import com.gekkotron.oikos.designsystem.icons.StaticIcon
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
+import com.gekkotron.oikos.feature.home.presentation.GroupCommands
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
 
@@ -82,7 +85,11 @@ internal fun GroupCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Uni
                 Text(name, style = OikosTheme.type.cardName, color = LocalContentColor.current.copy(alpha = 0.72f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(valueText, style = OikosTheme.type.cardValue)
             }
-            if (card.kind == Kind.COVER) CoverButtons(card, onSendGroup)
+            when (card.kind) {
+                Kind.COVER -> CoverButtons(card, onSendGroup)
+                Kind.LIGHT -> LightToggleButton(card, onSendGroup)
+                else -> Unit
+            }
         }
         (card.value as? CardValue.CoverGroup)?.let { MiniBars(it.positions) }
     }
@@ -95,6 +102,17 @@ private fun CoverButtons(card: CardUi, onSendGroup: (String, Command) -> Unit) {
         GroupButton("■", stringResource(R.string.action_group_stop), "group-stop-${card.id}", card.available) { onSendGroup(card.id, Command.Stop) }
         GroupButton("▼", stringResource(R.string.action_group_close), "group-close-${card.id}", card.available) { onSendGroup(card.id, Command.Close) }
     }
+}
+
+@Composable
+private fun LightToggleButton(card: CardUi, onSendGroup: (String, Command) -> Unit) {
+    val label = stringResource(if (card.on) R.string.action_group_lights_off else R.string.action_group_lights_on)
+    val accent = if (card.on) OikosTheme.colors.warning else null
+    FilledTonalIconButton(
+        onClick = { onSendGroup(card.id, GroupCommands.toggle(card)) },
+        enabled = card.available,
+        modifier = Modifier.size(OikosDimens.minTouch).testTag("group-toggle-${card.id}").semantics { contentDescription = label },
+    ) { StaticIcon(OikosGlyph.BULB, accent) }
 }
 
 @Composable

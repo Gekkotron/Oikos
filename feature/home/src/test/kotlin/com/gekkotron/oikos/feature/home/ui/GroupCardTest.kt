@@ -78,11 +78,21 @@ class GroupCardTest {
     }
 
     @Test
-    fun `the light group card toggles on tap`() {
+    fun `the light group card opens its sheet on tap`() {
         show()
         compose.onNodeWithText("1 of 2 on").assertIsDisplayed()
         compose.onNodeWithTag("card-group:living:light").performClick()
-        assertEquals(listOf("group:living:light"), taps)
+        // Sheet marker: the per-member row for one of the lights is visible.
+        compose.onNodeWithText("Ceiling").assertIsDisplayed()
+        assertEquals(emptyList(), taps)
+    }
+
+    @Test
+    fun `the light group card toggles the whole group from its inline button`() {
+        show()
+        // One of the two lights is on, so the group reads on; the toggle turns them all off.
+        compose.onNodeWithTag("group-toggle-group:living:light").performClick()
+        assertEquals(listOf("group:living:light" to Command.TurnOff as Command), groupSends)
     }
 
     @Test

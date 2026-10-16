@@ -128,14 +128,14 @@ class RoomGroupsTest {
     }
 
     @Test
-    fun `a light group toggles on tap and counts lights on`() {
+    fun `a light group opens its sheet on tap and counts lights on`() {
         val s = build(
             light("a"), light("b", brightness = false), light("c"),
             states = mapOf("a" to EntityState("a", StateValue.Light(true, 200)), "c" to EntityState("c", StateValue.Light(false, null))),
         )
         val g = s.cards.single()
         assertEquals("group:living:light", g.id)
-        assertEquals(TapAction.TOGGLE, g.tap)
+        assertEquals(TapAction.OPEN_SHEET, g.tap)
         assertEquals(CardValue.LightGroup(onCount = 1, total = 3), g.value)
         assertTrue(g.on)
         assertTrue(g.capabilities.brightness)
