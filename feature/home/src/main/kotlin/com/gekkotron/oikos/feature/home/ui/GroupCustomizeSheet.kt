@@ -14,7 +14,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -28,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.home.R
@@ -47,7 +45,7 @@ internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, Boolean, List<St
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.customize_group_title), style = OikosTheme.type.display.copy(fontSize = 22.sp))
+            TitleWithFavorite(stringResource(R.string.customize_group_title), favorite) { favorite = it }
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -57,13 +55,6 @@ internal fun GroupCustomizeSheet(card: CardUi, onSave: (String, Boolean, List<St
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch).toggleable(favorite, role = Role.Switch) { favorite = it },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(R.string.customize_favorite), style = OikosTheme.type.body, modifier = Modifier.weight(1f))
-                Switch(checked = favorite, onCheckedChange = null)
-            }
             Text(stringResource(R.string.customize_group_members), style = OikosTheme.type.label)
             for (member in card.members) {
                 val checked = member.id !in removed

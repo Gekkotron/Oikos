@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.home.ui
 
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -65,7 +66,7 @@ class GroupCustomizeSheetTest {
     @Test
     fun `toggling Favorite and saving reports the group as favorited`() {
         show()
-        compose.onNodeWithText("Favourite").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Favourite").performClick()
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertEquals(Triple(group.name, true, emptyList()), saved)
     }

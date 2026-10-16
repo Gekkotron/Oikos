@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -32,11 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gekkotron.oikos.designsystem.OikosDimens
 import com.gekkotron.oikos.designsystem.OikosTheme
+import com.gekkotron.oikos.designsystem.icons.FavoriteStar
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.AreaNames
 import com.gekkotron.oikos.feature.home.presentation.CardUi
@@ -89,7 +94,7 @@ internal fun CustomizeSheet(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.customize_title), style = OikosTheme.type.display.copy(fontSize = 22.sp))
+            TitleWithFavorite(stringResource(R.string.customize_title), favorite) { favorite = it }
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -109,7 +114,6 @@ internal fun CustomizeSheet(
                     resolved.area.id
                 },
             )
-            SwitchRow(stringResource(R.string.customize_favorite), favorite) { favorite = it }
             if (card.protocolKind == Kind.SWITCH) SwitchRow(stringResource(R.string.customize_as_light), asLight) { asLight = it }
             if (card.groupable) {
                 SwitchRow(stringResource(if (card.kind == Kind.COVER) R.string.customize_grouped_cover else R.string.customize_grouped_light), grouped) { grouped = it }
@@ -211,6 +215,19 @@ internal fun CustomizeSheet(
                 Text(stringResource(R.string.customize_reset))
             }
         }
+    }
+}
+
+@Composable
+internal fun TitleWithFavorite(title: String, favorite: Boolean, onChange: (Boolean) -> Unit) {
+    val label = stringResource(R.string.customize_favorite)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = OikosTheme.type.display.copy(fontSize = 22.sp), modifier = Modifier.weight(1f))
+        IconToggleButton(
+            checked = favorite,
+            onCheckedChange = onChange,
+            modifier = Modifier.semantics { contentDescription = label },
+        ) { FavoriteStar(filled = favorite, accent = OikosTheme.colors.warning, modifier = Modifier.size(24.dp)) }
     }
 }
 

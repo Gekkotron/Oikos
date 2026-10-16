@@ -5,6 +5,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -64,7 +65,7 @@ class CustomizeSheetTest {
         show(card(testEntity("lamp", Kind.LIGHT, "Lamp", area = "living")))
         compose.onNode(hasSetTextAction() and hasText("Name")).performTextReplacement("Ceiling")
         compose.onNodeWithText("Kitchen").performScrollTo().performClick()
-        compose.onNodeWithText("Favourite").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Favourite").performClick()
         compose.onNodeWithText("Save").performScrollTo().performClick()
         assertEquals(listOf(UiOverride(name = "Ceiling", area = "kitchen", favorite = true)), saved)
     }
