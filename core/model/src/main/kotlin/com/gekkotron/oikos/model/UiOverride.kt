@@ -64,6 +64,9 @@ object ClimatePresets {
     /** The sheet shows at most this many chips, so a pasted number list cannot swamp the row. */
     const val MAX = 6
 
+    /** Shown when the card has no [UiOverride.climatePresets] override; the UI still clamps to [min, max]. */
+    val DEFAULTS: List<Double> = listOf(16.0, 18.0, 20.0, 22.0)
+
     /** Parses "19,21,23" (or "19 ; 21 ; 23") into targets, dropping blanks and unparseable tokens
      *  so a typo never kills the whole list. Clamped to [MAX] and de-duplicated in input order. */
     fun parse(csv: String?): List<Double> {
@@ -73,6 +76,9 @@ object ClimatePresets {
             .distinct()
             .take(MAX)
     }
+
+    /** [parse] with [DEFAULTS] as fallback when the override is empty. */
+    fun parseOrDefault(csv: String?): List<Double> = parse(csv).ifEmpty { DEFAULTS }
 }
 
 @OptIn(ExperimentalSerializationApi::class)

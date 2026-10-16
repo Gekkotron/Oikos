@@ -241,7 +241,7 @@ private fun ClimateControls(card: CardUi, onSend: (Command) -> Unit) {
             modifier = Modifier.semantics { contentDescription = increase },
         ) { Text("+", fontSize = 22.sp) }
     }
-    val presets = ClimatePresets.parse(card.ui.climatePresets).filter { it in min..max }
+    val presets = ClimatePresets.parseOrDefault(card.ui.climatePresets).filter { it in min..max }
     if (presets.isNotEmpty()) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (preset in presets) {

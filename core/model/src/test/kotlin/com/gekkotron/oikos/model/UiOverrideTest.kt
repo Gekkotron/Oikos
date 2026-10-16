@@ -166,4 +166,13 @@ class UiOverrideTest {
         assertEquals(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), ClimatePresets.parse("1,2,3,4,5,6,7,8"))
         assertEquals(listOf(1.0, 2.0), ClimatePresets.parse("1,2,1,2"))
     }
+
+    @Test
+    fun `ClimatePresets parseOrDefault falls back when the override is empty`() {
+        assertEquals(ClimatePresets.DEFAULTS, ClimatePresets.parseOrDefault(null))
+        assertEquals(ClimatePresets.DEFAULTS, ClimatePresets.parseOrDefault(""))
+        assertEquals(ClimatePresets.DEFAULTS, ClimatePresets.parseOrDefault("   "))
+        // A user-set override still wins over the defaults.
+        assertEquals(listOf(19.0, 21.0), ClimatePresets.parseOrDefault("19, 21"))
+    }
 }
