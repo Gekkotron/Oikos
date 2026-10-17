@@ -14,6 +14,8 @@ import com.gekkotron.oikos.data.normalizeHistoryUrl
 import com.gekkotron.oikos.push.PushStatus
 import com.gekkotron.oikos.push.PushStatusSource
 import com.gekkotron.oikos.feature.voice.SpeechAvailability
+import com.gekkotron.oikos.feature.voice.TtsAvailability
+import com.gekkotron.oikos.feature.voice.TtsSpeaker
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.voice.ShortcutMatcher
 import com.gekkotron.oikos.voice.VoiceCatalogBuilder
@@ -21,6 +23,7 @@ import com.gekkotron.oikos.voice.VoiceLang
 import com.gekkotron.oikos.voice.VoiceLexicon
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -43,6 +46,7 @@ class SettingsViewModel internal constructor(
     private val push: PushStatusSource,
     private val source: EntitySource,
     availability: SpeechAvailability.Status,
+    private val ttsAvailability: StateFlow<TtsAvailability> = MutableStateFlow(TtsAvailability.Unknown),
 ) : ViewModel() {
     @Inject
     constructor(
@@ -51,7 +55,8 @@ class SettingsViewModel internal constructor(
         push: PushStatusSource,
         source: EntitySource,
         @ApplicationContext context: Context,
-    ) : this(profiles, preferences, push, source, SpeechAvailability.check(context))
+        tts: TtsSpeaker,
+    ) : this(profiles, preferences, push, source, SpeechAvailability.check(context), tts.availability)
 
     private val shortcutRows = combine(source.shortcuts, source.entities, source.areas) { shortcuts, entities, areas ->
         // Broken-ness is judged against one catalog; labels use each shortcut's own language.
@@ -68,8 +73,8 @@ class SettingsViewModel internal constructor(
         }
     }
 
-    private val voiceUi = combine(preferences.voiceEnabled.map { it ?: false }, shortcutRows) { enabled, rows ->
-        VoiceSettingsUi(enabled, availability, rows)
+    private val voiceUi = combine(preferences.voiceEnabled.map { it ?: false }, shortcutRows, ttsAvailability) { enabled, rows, tts ->
+        VoiceSettingsUi(enabled, availability, rows, tts)
     }
 
     val state: StateFlow<SettingsUi> = combine(preferences.theme, profiles.state, push.status, voiceUi) { theme, profile, status, voice ->
@@ -82,7 +87,7 @@ class SettingsViewModel internal constructor(
             preferences.theme.value ?: ThemePreference.SYSTEM,
             ConnectionSummary.from(profiles.state.value),
             push.status.value,
-            VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability),
+            VoiceSettingsUi(preferences.voiceEnabled.value ?: false, availability, ttsAvailability = ttsAvailability.value),
         ),
     )
 

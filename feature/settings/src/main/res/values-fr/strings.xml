@@ -83,4 +83,9 @@
     <string name="presence_permission_denied">Autorisation de localisation refusée.</string>
     <string name="presence_grant_permission">Accorder l’autorisation</string>
     <string name="presence_location_needed">Activez la localisation pour choisir un domicile.</string>
+    <string name="settings_voice_tts_label">Voix de réponse</string>
+    <string name="settings_voice_tts_ready">disponible</string>
+    <string name="settings_voice_tts_language_missing">pack de langue manquant</string>
+    <string name="settings_voice_tts_engine_missing">moteur non installé</string>
+    <string name="settings_voice_tts_download_action">Télécharger</string>
 </resources>

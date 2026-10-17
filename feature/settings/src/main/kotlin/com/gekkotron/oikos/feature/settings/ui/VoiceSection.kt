@@ -1,5 +1,10 @@
 package com.gekkotron.oikos.feature.settings.ui
 
+import android.content.Intent
+import android.speech.tts.TextToSpeech
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +27,7 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.settings.R
 import com.gekkotron.oikos.feature.settings.presentation.VoiceSettingsUi
 import com.gekkotron.oikos.feature.voice.SpeechAvailability
+import com.gekkotron.oikos.feature.voice.TtsAvailability
 
 @Composable
 fun VoiceSection(ui: VoiceSettingsUi, onToggle: (Boolean) -> Unit) {
@@ -49,5 +55,31 @@ fun VoiceSection(ui: VoiceSettingsUi, onToggle: (Boolean) -> Unit) {
             Switch(checked = ui.enabled && ready, onCheckedChange = null, enabled = ready)
         }
         if (reason != null) Text(reason, style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
+        TtsLine(ui.ttsAvailability)
+    }
+}
+
+@Composable
+private fun TtsLine(availability: TtsAvailability) {
+    val status = when (availability) {
+        TtsAvailability.Unknown, TtsAvailability.Ready -> R.string.settings_voice_tts_ready
+        TtsAvailability.LanguageMissing -> R.string.settings_voice_tts_language_missing
+        TtsAvailability.EngineMissing -> R.string.settings_voice_tts_engine_missing
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+    Column {
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_voice_tts_label), style = OikosTheme.type.body, modifier = Modifier.weight(1f))
+            Text(stringResource(status), style = OikosTheme.type.label, color = OikosTheme.colors.contentMuted)
+        }
+        if (availability == TtsAvailability.LanguageMissing) {
+            Text(
+                stringResource(R.string.settings_voice_tts_download_action),
+                style = OikosTheme.type.body,
+                modifier = Modifier.fillMaxWidth().heightIn(min = OikosDimens.minTouch)
+                    .clickable(role = Role.Button) { launcher.launch(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)) }
+                    .padding(vertical = 12.dp),
+            )
+        }
     }
 }

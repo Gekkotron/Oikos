@@ -83,4 +83,9 @@
     <string name="presence_permission_denied">Location permission denied.</string>
     <string name="presence_grant_permission">Grant permission</string>
     <string name="presence_location_needed">Turn on device location to pick a home.</string>
+    <string name="settings_voice_tts_label">Response voice</string>
+    <string name="settings_voice_tts_ready">available</string>
+    <string name="settings_voice_tts_language_missing">language pack missing</string>
+    <string name="settings_voice_tts_engine_missing">engine not installed</string>
+    <string name="settings_voice_tts_download_action">Download</string>
 </resources>
