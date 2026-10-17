@@ -46,13 +46,14 @@ class VoiceViewModel @Inject constructor(
                     _state.value = VoiceSessionState.Error(ErrorKind.MQTT_DOWN)
                     return@launch
                 }
-                launchSession(launcherLang)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) launchSession(launcherLang)
             } finally {
                 starting = false
             }
         }
     }
 
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
     private fun launchSession(launcherLang: VoiceLang) {
         val catalog = VoiceCatalogBuilder.build(launcherLang, source.entities.value.values, source.areas.value)
         val speech = try {
