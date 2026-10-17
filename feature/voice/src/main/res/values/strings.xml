@@ -22,4 +22,10 @@
     <string name="voice_disarm">Disarm</string>
     <string name="voice_arm_away">Arm (away)</string>
     <string name="voice_arm_home">Arm (home)</string>
+    <string name="voice_picker_search_hint">Search…</string>
+    <string name="voice_picker_empty">No results</string>
+    <string name="voice_picker_back">Back</string>
+    <string name="voice_picker_remember_phrase">Remember this phrase</string>
+    <string name="voice_picker_read_value">Read value</string>
+    <string name="voice_picker_read_state">Read state</string>
 </resources>

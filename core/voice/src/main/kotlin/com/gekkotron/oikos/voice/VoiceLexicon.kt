@@ -1,5 +1,7 @@
 package com.gekkotron.oikos.voice
 
+import com.gekkotron.oikos.model.Kind
+
 /** Language-neutral vocabulary tables. All keys are accent-folded, lowercase. */
 object VoiceLexicon {
     enum class Verb { ON, OFF, OPEN, CLOSE, STOP, STOP_OR_OFF, SET, ARM, DISARM, QUERY }
@@ -228,6 +230,35 @@ object VoiceLexicon {
             VoiceAction.ARM_HOME -> "Arm (home)"
             VoiceAction.DISARM -> "Disarm"
             VoiceAction.QUERY_STATE -> "Check status"
+        }
+    }
+
+    fun kindLabel(lang: VoiceLang, kind: Kind): String = when (lang) {
+        VoiceLang.FR -> when (kind) {
+            Kind.LIGHT -> "Lumière"
+            Kind.SWITCH -> "Prise"
+            Kind.COVER -> "Volet"
+            Kind.ALARM_PANEL -> "Alarme"
+            Kind.SENSOR, Kind.BINARY_SENSOR -> "Capteur"
+            Kind.CLIMATE -> "Climatisation"
+            Kind.VACUUM -> "Aspirateur"
+            Kind.WATER_HEATER -> "Chauffe-eau"
+            Kind.NUMBER -> "Valeur"
+            Kind.SELECT -> "Sélecteur"
+            Kind.BUTTON -> "Bouton"
+        }
+        VoiceLang.EN -> when (kind) {
+            Kind.LIGHT -> "Light"
+            Kind.SWITCH -> "Switch"
+            Kind.COVER -> "Shutter"
+            Kind.ALARM_PANEL -> "Alarm"
+            Kind.SENSOR, Kind.BINARY_SENSOR -> "Sensor"
+            Kind.CLIMATE -> "Climate"
+            Kind.VACUUM -> "Vacuum"
+            Kind.WATER_HEATER -> "Water heater"
+            Kind.NUMBER -> "Value"
+            Kind.SELECT -> "Selector"
+            Kind.BUTTON -> "Button"
         }
     }
 }

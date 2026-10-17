@@ -149,4 +149,11 @@ class VoiceLexiconTest {
         assertFalse(fr.structuralQuery.any { it.containsMatchIn(prepared) })
         assertTrue(VoiceText.words(prepared).any { fr.verbs[it] == VoiceLexicon.Verb.QUERY })
     }
+
+    @Test fun `kind labels are translated`() {
+        assertEquals("Lumière", VoiceLexicon.kindLabel(VoiceLang.FR, com.gekkotron.oikos.model.Kind.LIGHT))
+        assertEquals("Capteur", VoiceLexicon.kindLabel(VoiceLang.FR, com.gekkotron.oikos.model.Kind.BINARY_SENSOR))
+        assertEquals("Water heater", VoiceLexicon.kindLabel(VoiceLang.EN, com.gekkotron.oikos.model.Kind.WATER_HEATER))
+        assertEquals("Shutter", VoiceLexicon.kindLabel(VoiceLang.EN, com.gekkotron.oikos.model.Kind.COVER))
+    }
 }
