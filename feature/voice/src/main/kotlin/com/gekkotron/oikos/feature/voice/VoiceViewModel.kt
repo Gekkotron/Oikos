@@ -8,6 +8,7 @@ import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.voice.Suggestion
 import com.gekkotron.oikos.voice.VoiceAction
+import com.gekkotron.oikos.voice.VoiceCatalog
 import com.gekkotron.oikos.voice.VoiceCatalogBuilder
 import com.gekkotron.oikos.voice.VoiceLang
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,8 @@ class VoiceViewModel @Inject constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening(""))
     val state: StateFlow<VoiceSessionState> = _state.asStateFlow()
+    private val _catalog = MutableStateFlow<VoiceCatalog?>(null)
+    val catalog: StateFlow<VoiceCatalog?> = _catalog.asStateFlow()
     private var session: VoiceSession? = null
     private var starting = false
 
@@ -58,6 +61,7 @@ class VoiceViewModel @Inject constructor(
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
     private fun launchSession(launcherLang: VoiceLang) {
         val catalog = VoiceCatalogBuilder.build(launcherLang, source.entities.value.values, source.areas.value)
+        _catalog.value = catalog
         val speech = try {
             AndroidSpeechCapture(appContext, if (launcherLang == VoiceLang.FR) "fr-FR" else "en-US")
         } catch (e: IllegalStateException) {

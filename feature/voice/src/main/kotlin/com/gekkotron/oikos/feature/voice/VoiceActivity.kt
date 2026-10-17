@@ -15,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.gekkotron.oikos.data.ThemePreference
 import com.gekkotron.oikos.designsystem.OikosTheme
@@ -58,12 +59,20 @@ class VoiceActivity : ComponentActivity() {
                 }
                 OikosTheme(theme) {
                     Surface(color = Color.Transparent) {
+                        val catalog = viewModel.catalog.collectAsStateWithLifecycle().value
                         VoiceSheet(
                             state = viewModel.state,
                             onPick = viewModel::pickSuggestion,
                             onConfirm = viewModel::confirm,
                             onCode = viewModel::provideCode,
                             onCancel = { finish() },
+                            catalog = catalog,
+                            onRepeat = viewModel::onRepeatSpoken,
+                            onPickOther = viewModel::onPickOther,
+                            onPickDevice = viewModel::onPickDevice,
+                            onPickAction = viewModel::onPickAction,
+                            onPickBack = viewModel::onPickBack,
+                            onPickFilterChange = viewModel::onPickFilterChange,
                         )
                     }
                 }

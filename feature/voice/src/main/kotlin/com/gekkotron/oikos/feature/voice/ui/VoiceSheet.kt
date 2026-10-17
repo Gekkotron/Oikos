@@ -32,16 +32,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.feature.voice.ErrorKind
+import com.gekkotron.oikos.feature.voice.PickStep
 import com.gekkotron.oikos.feature.voice.R
 import com.gekkotron.oikos.feature.voice.VoiceSessionState
+import com.gekkotron.oikos.feature.voice.autoCloseDelayMs
 import com.gekkotron.oikos.feature.voice.autoCloses
 import com.gekkotron.oikos.voice.Suggestion
+import com.gekkotron.oikos.voice.VoiceAction
+import com.gekkotron.oikos.voice.VoiceCatalog
 import com.gekkotron.oikos.voice.VoiceLang
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-
-/** How long a successful result stays up before the sheet closes by itself (spec §3: "about 2 s"). */
-private const val AUTO_CLOSE_MS = 2_000L
 
 @Composable
 internal fun rememberVoiceLang(): VoiceLang {
@@ -75,6 +76,14 @@ fun VoiceSheet(
     onConfirm: (Boolean) -> Unit,
     onCode: (String) -> Unit,
     onCancel: () -> Unit,
+    catalog: VoiceCatalog? = null,
+    stateHints: Map<String, String> = emptyMap(),
+    onRepeat: () -> Unit = {},
+    onPickOther: () -> Unit = {},
+    onPickDevice: (String) -> Unit = {},
+    onPickAction: (VoiceAction, Boolean) -> Unit = { _, _ -> },
+    onPickBack: () -> Unit = {},
+    onPickFilterChange: (String) -> Unit = {},
 ) {
     val current = state.collectAsStateWithLifecycle().value
     val c = OikosTheme.colors
@@ -82,7 +91,7 @@ fun VoiceSheet(
     var touched by remember { mutableStateOf(false) }
     if (autoCloses(current) && !touched) {
         LaunchedEffect(current) {
-            delay(AUTO_CLOSE_MS)
+            delay(autoCloseDelayMs(current))
             onCancel()
         }
     }
@@ -117,9 +126,26 @@ fun VoiceSheet(
                 is VoiceSessionState.Listening -> ListeningView(current.partial)
                 is VoiceSessionState.Executing -> UnderstoodView(executing = current, done = null, onWrong = onCancel)
                 is VoiceSessionState.Done -> UnderstoodView(executing = null, done = current, onWrong = onCancel)
-                is VoiceSessionState.NotUnderstood -> NotUnderstoodView(current.suggestions, onPick, onCancel)
+                is VoiceSessionState.NotUnderstood -> NotUnderstoodView(current.suggestions, onPick, onPickOther, onCancel)
                 is VoiceSessionState.ConfirmNeeded -> ConfirmView(current, onConfirm, onCode, onCancel)
-                is VoiceSessionState.Spoken, is VoiceSessionState.Picking -> Unit
+                is VoiceSessionState.Spoken -> SpokenView(current.text, current.speakable, onRepeat)
+                is VoiceSessionState.Picking -> when (current.step) {
+                    PickStep.Device -> if (catalog != null) {
+                        DevicePickerView(current, catalog, stateHints, onPickDevice, onPickFilterChange, onPickBack)
+                    }
+                    PickStep.Action -> {
+                        val entity = current.pickedId?.let { catalog?.entity(it) }
+                        if (entity != null) {
+                            ActionPickerView(
+                                entity,
+                                catalog?.area(entity.areaId)?.displayName.orEmpty(),
+                                current.heardText,
+                                onPickAction,
+                                onPickBack,
+                            )
+                        }
+                    }
+                }
                 is VoiceSessionState.Error -> {
                     Text(
                         stringResource(errorRes(current.kind)),

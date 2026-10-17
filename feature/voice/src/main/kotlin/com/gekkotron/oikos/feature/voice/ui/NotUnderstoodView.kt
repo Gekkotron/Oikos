@@ -12,11 +12,11 @@ import com.gekkotron.oikos.voice.Suggestion
 internal fun ColumnScope.NotUnderstoodView(
     suggestions: List<Suggestion>,
     onPick: (Suggestion) -> Unit,
+    onPickOther: () -> Unit,
     onCancel: () -> Unit,
 ) {
     Text(stringResource(R.string.voice_not_understood), style = OikosTheme.type.display, color = OikosTheme.colors.content)
     suggestions.forEach { s -> VoiceRow(s.label, onClick = { onPick(s) }) }
-    // TODO: full "Other..." picker (action, entity, value); for now it dismisses the sheet.
-    VoiceRow(stringResource(R.string.voice_other), onCancel)
+    VoiceRow(stringResource(R.string.voice_other), onPickOther)
     VoiceRow(stringResource(R.string.voice_ignore), onCancel)
 }

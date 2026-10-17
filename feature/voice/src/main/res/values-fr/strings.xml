@@ -28,4 +28,5 @@
     <string name="voice_picker_remember_phrase">Mémoriser cette phrase</string>
     <string name="voice_picker_read_value">Lire la valeur</string>
     <string name="voice_picker_read_state">Lire l\'état</string>
+    <string name="voice_repeat">Répéter</string>
 </resources>
