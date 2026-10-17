@@ -320,10 +320,42 @@ class AnswerFormatterTest {
         assertEquals(a.spoken, a.display)
     }
 
+    // FR gendered room articles (regression: feminine rooms used to say "dans le cuisine")
+    @Test fun `FR temperature in cuisine renders dans la cuisine`() =
+        assertEquals(
+            "Il fait 22° dans la cuisine",
+            one(fr, entity("t", "Temp", Kind.SENSOR, "cuisine", "temperature", unit = "°C"), num(22.0)).spoken,
+        )
+
+    @Test fun `FR temperature in chambre renders dans la chambre`() =
+        assertEquals(
+            "Il fait 20° dans la chambre",
+            one(fr, entity("t", "Temp", Kind.SENSOR, "chambre", "temperature", unit = "°C"), num(20.0)).spoken,
+        )
+
+    @Test fun `FR temperature in entree renders dans l'entree`() =
+        assertEquals(
+            "Il fait 19° dans l'entrée",
+            one(fr, entity("t", "Temp", Kind.SENSOR, "entree", "temperature", unit = "°C"), num(19.0)).spoken,
+        )
+
+    @Test fun `FR humidity in cuisine renders de la cuisine`() =
+        assertEquals(
+            "L'humidité de la cuisine est de 55 %",
+            one(fr, entity("h", "Hum", Kind.SENSOR, "cuisine", "humidity", unit = "%"), num(55.0)).spoken,
+        )
+
+    @Test fun `FR shutter in chambre uses le volet plus de la chambre`() =
+        assertEquals(
+            "Le volet de la chambre est ouvert",
+            one(fr, entity("c", "Volet", Kind.COVER, "chambre"), StateValue.Cover(CoverState.OPEN, 100)).spoken,
+        )
+
     // Fixtures
     private val areas = listOf(
         area("salon", "Salon"), area("living", "Living"), area("cuisine", "Cuisine"),
         area("bureau", "Bureau"), area("garage", "Garage"),
+        area("chambre", "Chambre"), area("entree", "Entrée"),
     )
 
     private fun num(v: Double) = StateValue.Numeric(v)

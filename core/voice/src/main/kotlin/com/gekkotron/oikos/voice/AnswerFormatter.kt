@@ -306,6 +306,26 @@ object AnswerFormatter {
         abstract fun alarm(state: AlarmState): String
     }
 
+    // Chooses the right French article for a room name based on gender and vowel-start.
+    // Each field embeds its own glue (trailing space, or none for the elided "l'" form),
+    // so templates concatenate as "${article}${room}" without adding a space.
+    private data class FrArticles(val def: String, val of: String, val inDet: String)
+
+    private val FR_FEM_ROOMS = setOf(
+        "cuisine", "chambre", "salle", "salle de bain", "salle de bains",
+        "entree", "buanderie", "cave", "piscine", "terrasse",
+    )
+
+    private fun frArticles(room: String): FrArticles {
+        val folded = fold(room)
+        val vowel = folded.firstOrNull()?.let { it in "aeiouh" } == true
+        return when {
+            vowel -> FrArticles("l'", "de l'", "dans l'")
+            folded in FR_FEM_ROOMS -> FrArticles("la ", "de la ", "dans la ")
+            else -> FrArticles("le ", "du ", "dans le ")
+        }
+    }
+
     private object FrTemplates : Templates() {
         override val colon = " :"
         override val yes = "Oui, "
@@ -373,30 +393,30 @@ object AnswerFormatter {
 
         override fun temperature(v: String, room: String?, name: String, averaged: Boolean) = when {
             room == null -> if (averaged) "Température en moyenne : $v" else "$name : $v"
-            averaged -> "Il fait $v en moyenne dans le ${room.lowercase()}"
-            else -> "Il fait $v dans le ${room.lowercase()}"
+            averaged -> "Il fait $v en moyenne ${frArticles(room).inDet}${room.lowercase()}"
+            else -> "Il fait $v ${frArticles(room).inDet}${room.lowercase()}"
         }
 
         override fun humidity(v: String, room: String?, name: String, averaged: Boolean) = when {
             room == null -> if (averaged) "Humidité en moyenne : $v" else "$name : $v"
-            averaged -> "L'humidité moyenne du ${room.lowercase()} est de $v"
-            else -> "L'humidité du ${room.lowercase()} est de $v"
+            averaged -> "L'humidité moyenne ${frArticles(room).of}${room.lowercase()} est de $v"
+            else -> "L'humidité ${frArticles(room).of}${room.lowercase()} est de $v"
         }
 
         override fun battery(name: String, v: String) = "Batterie de $name : $v"
 
         override fun averagedGeneric(noun: String, room: String?, v: String): String {
             val label = noun.replaceFirstChar { it.uppercase() }
-            return if (room == null) "$label : $v en moyenne" else "$label du ${room.lowercase()} : $v en moyenne"
+            return if (room == null) "$label : $v en moyenne" else "$label ${frArticles(room).of}${room.lowercase()} : $v en moyenne"
         }
 
         override fun opening(noun: Noun, where: String, isRoom: Boolean, state: String): String {
             val article = if (noun.fem) "La" else "Le"
-            return if (isRoom) "$article ${noun.singular} du ${where.lowercase()} est $state" else "$where est $state"
+            return if (isRoom) "$article ${noun.singular} ${frArticles(where).of}${where.lowercase()} est $state" else "$where est $state"
         }
 
         override fun light(name: String, room: String?, state: String, pct: Int?, on: Boolean): String {
-            val base = if (room != null) "La lumière du ${room.lowercase()} est $state" else "$name est $state"
+            val base = if (room != null) "La lumière ${frArticles(room).of}${room.lowercase()} est $state" else "$name est $state"
             return if (pct != null && on) "$base, luminosité $pct %" else base
         }
 
@@ -409,7 +429,7 @@ object AnswerFormatter {
                 state == CoverState.CLOSING -> "en cours de fermeture"
                 else -> "arrêté"
             }
-            return if (room != null) "Le volet du ${room.lowercase()} est $word" else "$name est $word"
+            return if (room != null) "Le volet ${frArticles(room).of}${room.lowercase()} est $word" else "$name est $word"
         }
 
         private val modes = mapOf(
