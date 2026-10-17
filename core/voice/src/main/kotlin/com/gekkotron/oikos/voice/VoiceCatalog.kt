@@ -19,6 +19,7 @@ data class VoiceEntity(
     val alarmModes: Set<AlarmMode>,
     val codeArmRequired: Boolean,
     val codeDisarmRequired: Boolean,
+    val unit: String? = null,
 )
 
 data class VoiceArea(
@@ -41,7 +42,10 @@ class VoiceCatalog(
 }
 
 object VoiceCatalogBuilder {
-    private val SUPPORTED = setOf(Kind.LIGHT, Kind.SWITCH, Kind.COVER, Kind.ALARM_PANEL)
+    private val SUPPORTED = setOf(
+        Kind.LIGHT, Kind.SWITCH, Kind.COVER, Kind.ALARM_PANEL,
+        Kind.SENSOR, Kind.BINARY_SENSOR, Kind.CLIMATE, Kind.VACUUM, Kind.WATER_HEATER, Kind.NUMBER,
+    )
     private val DIACRITICS = Regex("\\p{Mn}+")
     private val LETTERS = Regex("[a-z]+")
 
@@ -74,6 +78,7 @@ object VoiceCatalogBuilder {
                     alarmModes = e.capabilities.alarmModes,
                     codeArmRequired = e.capabilities.codeArmRequired,
                     codeDisarmRequired = e.capabilities.codeDisarmRequired,
+                    unit = e.unit,
                 )
             }
             .toList()
