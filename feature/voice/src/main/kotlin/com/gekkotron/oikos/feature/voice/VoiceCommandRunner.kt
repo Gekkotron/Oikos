@@ -17,13 +17,18 @@ interface CommandRunner {
     suspend fun run(intent: VoiceIntent, catalog: VoiceCatalog, code: String? = null, source: VoiceSource = VoiceSource.RULES): ExecutionResult
 }
 
-open class VoiceCommandRunner(private val entitySource: EntitySource) : CommandRunner {
+/**
+ * Resolves the [EntitySource] lazily on every [run] so a stale source (e.g. a surrogate built during
+ * a cold voice-first start, before the real profile loaded) is never captured for the process lifetime.
+ */
+open class VoiceCommandRunner(private val entitySource: () -> EntitySource) : CommandRunner {
     override suspend fun run(intent: VoiceIntent, catalog: VoiceCatalog, code: String?, source: VoiceSource): ExecutionResult = coroutineScope {
-        if (entitySource.link.value !is LinkState.Connected) throw MqttDownException()
+        val current = entitySource()
+        if (current.link.value !is LinkState.Connected) throw MqttDownException()
         val commands = CommandMapper.map(intent, catalog, code)
         val results = commands.map { (id, cmd) ->
             async {
-                val r = entitySource.send(id, cmd)
+                val r = current.send(id, cmd)
                 id to r
             }
         }.awaitAll()

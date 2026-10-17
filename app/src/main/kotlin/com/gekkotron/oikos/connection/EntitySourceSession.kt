@@ -54,8 +54,11 @@ class EntitySourceSession(
         if (cache != null) {
             when (profile) {
                 is ConnectionProfile.Direct -> attach(built, cache, profile.cacheKey(), child)
-                // The demo and "no profile" never show a real house: forget any cached one.
-                else -> parent.launch { cache.clear() }
+                // The demo never shows a real house: forget any cached one.
+                ConnectionProfile.Demo -> parent.launch { cache.clear() }
+                // No profile yet (cold start before DataStore resolves, or signed out): keep the cache
+                // so a real profile that follows can restore from it. setUpAgain() wipes it via reset().
+                null -> {}
             }
         }
         return built.also {

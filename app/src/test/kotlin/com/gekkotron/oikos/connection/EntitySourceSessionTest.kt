@@ -167,6 +167,27 @@ class EntitySourceSessionTest {
         session.reset()
         assertEquals(2, cache.clears)
     }
+
+    @Test
+    fun `a null profile does not clear the cache`() = runBlocking {
+        val cache = FakeEntityCache(direct.cacheKey() to mapOf(lightTopic to lightConfig))
+        val session = EntitySourceSession(transport, parent, cache = cache)
+        session.current(null)
+        delay(200)
+        assertEquals(0, cache.clears)
+        assertEquals(mapOf(lightTopic to lightConfig), cache.stored?.second)
+    }
+
+    @Test
+    fun `a direct source after a null-profile build still restores from the cache`() = runBlocking {
+        val cache = FakeEntityCache(direct.cacheKey() to mapOf(lightTopic to lightConfig))
+        transport.setLink(LinkState.Offline("test"))
+        val session = EntitySourceSession(transport, parent, cache = cache)
+        session.current(null)
+        val real = session.current(direct)
+        withTimeout(2_000) { real.entities.first { "lamp" in it } }
+        Unit
+    }
 }
 
 private class FakeEntityCache(var stored: Pair<String, Map<String, String>>? = null) : EntityCache {

@@ -7,11 +7,12 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Provider
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object VoiceProvidesModule {
     @Provides @Singleton
-    fun commandRunner(source: EntitySource): CommandRunner = VoiceCommandRunner(source)
+    fun commandRunner(source: Provider<EntitySource>): CommandRunner = VoiceCommandRunner { source.get() }
 }

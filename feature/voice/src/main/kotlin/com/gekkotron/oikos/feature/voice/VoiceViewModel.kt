@@ -29,15 +29,31 @@ class VoiceViewModel @Inject constructor(
     private val _state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening(""))
     val state: StateFlow<VoiceSessionState> = _state.asStateFlow()
     private var session: VoiceSession? = null
+    private var starting = false
 
-    val started: Boolean get() = session != null
+    val started: Boolean get() = session != null || starting
 
     fun start(launcherLang: VoiceLang) {
-        if (session != null) return
+        if (started) return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             _state.value = VoiceSessionState.Error(ErrorKind.SPEECH)
             return
         }
+        starting = true
+        viewModelScope.launch {
+            try {
+                if (!awaitVoiceSourceReady(source)) {
+                    _state.value = VoiceSessionState.Error(ErrorKind.MQTT_DOWN)
+                    return@launch
+                }
+                launchSession(launcherLang)
+            } finally {
+                starting = false
+            }
+        }
+    }
+
+    private fun launchSession(launcherLang: VoiceLang) {
         val catalog = VoiceCatalogBuilder.build(launcherLang, source.entities.value.values, source.areas.value)
         val speech = try {
             AndroidSpeechCapture(appContext, if (launcherLang == VoiceLang.FR) "fr-FR" else "en-US")
