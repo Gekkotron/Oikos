@@ -2,6 +2,7 @@ package com.gekkotron.oikos.feature.voice
 
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.model.Command
+import com.gekkotron.oikos.voice.Answer
 import com.gekkotron.oikos.voice.CommandMapper
 import com.gekkotron.oikos.voice.VoiceCatalog
 import com.gekkotron.oikos.voice.VoiceIntent
@@ -35,4 +36,6 @@ class FakeRunner(
         }
         return ExecutionResult(intent, source, succeeded, failed)
     }
+    override suspend fun query(intent: VoiceIntent, catalog: VoiceCatalog): QueryResult =
+        QueryResult(Answer("", "", speakable = false, staleIds = emptyList()))
 }

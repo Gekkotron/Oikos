@@ -3,6 +3,8 @@ package com.gekkotron.oikos.feature.voice
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.LinkState
+import com.gekkotron.oikos.voice.Answer
+import com.gekkotron.oikos.voice.AnswerFormatter
 import com.gekkotron.oikos.voice.CommandMapper
 import com.gekkotron.oikos.voice.VoiceCatalog
 import com.gekkotron.oikos.voice.VoiceIntent
@@ -10,11 +12,15 @@ import com.gekkotron.oikos.voice.VoiceSource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
+
+data class QueryResult(val answer: Answer)
 
 class MqttDownException : RuntimeException("mqtt is not connected")
 
 interface CommandRunner {
     suspend fun run(intent: VoiceIntent, catalog: VoiceCatalog, code: String? = null, source: VoiceSource = VoiceSource.RULES): ExecutionResult
+    suspend fun query(intent: VoiceIntent, catalog: VoiceCatalog): QueryResult
 }
 
 /**
@@ -35,5 +41,10 @@ open class VoiceCommandRunner(private val entitySource: () -> EntitySource) : Co
         val succeeded = results.filter { it.second is CommandResult.Accepted }.map { it.first }
         val failed = results.mapNotNull { (id, r) -> if (r is CommandResult.Rejected) id to r.reason else null }
         ExecutionResult(intent, source, succeeded, failed)
+    }
+
+    override suspend fun query(intent: VoiceIntent, catalog: VoiceCatalog): QueryResult {
+        val snapshot = entitySource().states().first()
+        return QueryResult(AnswerFormatter.format(catalog.lang, intent, snapshot, catalog))
     }
 }

@@ -121,6 +121,7 @@ class VoiceSessionTest {
             override suspend fun run(intent: VoiceIntent, catalog: VoiceCatalog, code: String?, source: VoiceSource): ExecutionResult {
                 throw RuntimeException("boom")
             }
+            override suspend fun query(intent: VoiceIntent, catalog: VoiceCatalog): QueryResult = throw RuntimeException("boom")
         }
         val session = VoiceSession(catalog(), emptyList(), FakeSpeechCapture().also { it.scheduleFinal("ouvre les volets du salon") }, runner, backgroundScope)
         session.state.test {
