@@ -60,4 +60,22 @@ class CommandMapperTest {
         val commands = CommandMapper.map(VoiceIntent(VoiceAction.OPEN, listOf("cover_pos", "ghost")), catalog)
         assertEquals(listOf("cover_pos" to Command.Open), commands)
     }
+
+    @Test fun `map returns an empty list for QUERY_STATE regardless of catalog or code`() {
+        val sensorCatalog = VoiceCatalogBuilder.build(
+            lang = VoiceLang.FR,
+            entities = listOf(entity("sensor1", "Température", Kind.SENSOR, "salon", unit = "°C")),
+            areas = listOf(area("salon", "Salon")),
+        )
+        for (code in listOf(null, "1234")) {
+            for (targetCatalog in listOf(catalog, sensorCatalog)) {
+                val intent = VoiceIntent(VoiceAction.QUERY_STATE, listOf("sensor1"))
+                assertEquals(
+                    emptyList<Pair<String, Command>>(),
+                    CommandMapper.map(intent, targetCatalog, code),
+                    "QUERY_STATE must publish nothing (code=$code)",
+                )
+            }
+        }
+    }
 }
