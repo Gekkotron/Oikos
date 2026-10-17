@@ -73,4 +73,21 @@ class ShortcutMatcherTest {
         assertNull(matcher.resolve("La fête"))
         assertTrue(matcher.status().first().broken)
     }
+
+    private fun queryShortcut(entityId: String) = VoiceShortcut(
+        id = VoiceShortcut.id(VoiceLang.FR, "la lampe"),
+        phrase = "la lampe",
+        lang = VoiceLang.FR,
+        intent = VoiceIntent(VoiceAction.QUERY_STATE, listOf(entityId)),
+    )
+
+    @Test fun `a QUERY_STATE shortcut whose entity exists resolves`() {
+        val intent = ShortcutMatcher(catalog, listOf(queryShortcut("lampe"))).resolve("la lampe")
+        assertNotNull(intent)
+        assertEquals(VoiceAction.QUERY_STATE, intent.action)
+    }
+
+    @Test fun `a QUERY_STATE shortcut whose entity disappeared resolves to null`() {
+        assertNull(ShortcutMatcher(catalog, listOf(queryShortcut("gone"))).resolve("la lampe"))
+    }
 }

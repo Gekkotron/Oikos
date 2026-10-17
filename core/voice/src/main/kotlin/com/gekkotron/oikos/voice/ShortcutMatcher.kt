@@ -20,6 +20,7 @@ class ShortcutMatcher(
     private fun isBroken(sc: VoiceShortcut): Boolean {
         val survivors = sc.intent.entityIds.filter { catalog.entity(it) != null }
         if (survivors.isEmpty()) return true
+        if (sc.intent.action == VoiceAction.QUERY_STATE) return false
         return CommandMapper.map(sc.intent.copy(entityIds = survivors), catalog).isEmpty()
     }
 }
