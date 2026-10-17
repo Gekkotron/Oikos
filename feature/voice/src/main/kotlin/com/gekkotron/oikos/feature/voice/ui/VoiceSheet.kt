@@ -119,6 +119,7 @@ fun VoiceSheet(
                 is VoiceSessionState.Done -> UnderstoodView(executing = null, done = current, onWrong = onCancel)
                 is VoiceSessionState.NotUnderstood -> NotUnderstoodView(current.suggestions, onPick, onCancel)
                 is VoiceSessionState.ConfirmNeeded -> ConfirmView(current, onConfirm, onCode, onCancel)
+                is VoiceSessionState.Spoken, is VoiceSessionState.Picking -> Unit
                 is VoiceSessionState.Error -> {
                     Text(
                         stringResource(errorRes(current.kind)),

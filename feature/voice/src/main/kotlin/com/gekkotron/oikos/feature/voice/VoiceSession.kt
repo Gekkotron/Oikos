@@ -24,11 +24,31 @@ sealed interface VoiceSessionState {
     data class Done(val result: ExecutionResult) : VoiceSessionState
     data class NotUnderstood(val suggestions: List<Suggestion>) : VoiceSessionState
     data class Error(val kind: ErrorKind) : VoiceSessionState
+    data class Spoken(val text: String, val speakable: Boolean, val staleIds: List<String>) : VoiceSessionState
+    data class Picking(
+        val step: PickStep,
+        val heardText: String,
+        val filter: String,
+        val pickedId: String? = null,
+        val suggestions: List<Suggestion>,
+    ) : VoiceSessionState
 }
 
-/** Only a command that fully ran closes the sheet by itself (spec §3); failures stay up to be read. */
-fun autoCloses(state: VoiceSessionState): Boolean =
-    state is VoiceSessionState.Done && state.result.succeeded.isNotEmpty() && state.result.failed.isEmpty()
+enum class PickStep { Device, Action }
+
+/** A fully-run command or a spoken answer closes the sheet by itself (spec §3); failures and picking stay up. */
+fun autoCloses(state: VoiceSessionState): Boolean = when (state) {
+    is VoiceSessionState.Done -> state.result.succeeded.isNotEmpty() && state.result.failed.isEmpty()
+    is VoiceSessionState.Spoken -> true
+    else -> false
+}
+
+/** Delay before the sheet closes; 0 means no auto-close. Gate on [autoCloses] first. */
+fun autoCloseDelayMs(state: VoiceSessionState): Long = when {
+    state is VoiceSessionState.Spoken -> 5000L
+    state is VoiceSessionState.Done && autoCloses(state) -> 2000L
+    else -> 0L
+}
 
 enum class ErrorKind { MQTT_DOWN, SPEECH, PERMISSION, SILENCE, UNKNOWN }
 
