@@ -10,18 +10,20 @@ import kotlin.test.assertTrue
 class TtsSpeakerTest {
 
     private class FakeTtsEngine(
-        var languageAvailable: Int = TextToSpeech.LANG_AVAILABLE,
+        var availableResult: Int = TextToSpeech.LANG_AVAILABLE,
+        var setLanguageResult: Int = TextToSpeech.LANG_AVAILABLE,
     ) : TtsEngine {
         val spoken = mutableListOf<Pair<String, Int>>()
         val languagesSet = mutableListOf<Locale>()
+        val setLanguageCalls: Int get() = languagesSet.size
         var shutdownCalls = 0
 
         override fun setLanguage(locale: Locale): Int {
             languagesSet += locale
-            return languageAvailable
+            return setLanguageResult
         }
 
-        override fun isLanguageAvailable(locale: Locale): Int = languageAvailable
+        override fun isLanguageAvailable(locale: Locale): Int = availableResult
 
         override fun speak(text: String, queueMode: Int): Int {
             spoken += text to queueMode
@@ -35,9 +37,10 @@ class TtsSpeakerTest {
 
     private class Harness(
         lang: VoiceLang = VoiceLang.FR,
-        languageAvailable: Int = TextToSpeech.LANG_AVAILABLE,
+        availableResult: Int = TextToSpeech.LANG_AVAILABLE,
+        setLanguageResult: Int = TextToSpeech.LANG_AVAILABLE,
     ) {
-        val engine = FakeTtsEngine(languageAvailable)
+        val engine = FakeTtsEngine(availableResult, setLanguageResult)
         var listener: TextToSpeech.OnInitListener? = null
         val speaker = TtsSpeaker(lang) { l ->
             listener = l
@@ -58,9 +61,30 @@ class TtsSpeakerTest {
 
     @Test
     fun `TtsSpeaker reports LanguageMissing when isLanguageAvailable is LANG_MISSING_DATA`() {
-        val h = Harness(languageAvailable = TextToSpeech.LANG_MISSING_DATA)
+        val h = Harness(availableResult = TextToSpeech.LANG_MISSING_DATA)
         h.init(TextToSpeech.SUCCESS)
         assertEquals(TtsAvailability.LanguageMissing, h.speaker.availability.value)
+    }
+
+    @Test
+    fun `TtsSpeaker reports LanguageMissing when setLanguage returns LANG_NOT_SUPPORTED`() {
+        val h = Harness(
+            availableResult = TextToSpeech.LANG_AVAILABLE,
+            setLanguageResult = TextToSpeech.LANG_NOT_SUPPORTED,
+        )
+        h.init(TextToSpeech.SUCCESS)
+        assertEquals(TtsAvailability.LanguageMissing, h.speaker.availability.value)
+    }
+
+    @Test
+    fun `init callback fired synchronously inside factory is replayed once`() {
+        val fake = FakeTtsEngine()
+        val speaker = TtsSpeaker(VoiceLang.FR) { l ->
+            l.onInit(TextToSpeech.SUCCESS)
+            fake
+        }
+        assertEquals(TtsAvailability.Ready, speaker.availability.value)
+        assertEquals(1, fake.setLanguageCalls)
     }
 
     @Test
@@ -81,7 +105,7 @@ class TtsSpeakerTest {
 
     @Test
     fun `speak is a no-op when availability is LanguageMissing or EngineMissing`() {
-        val missing = Harness(languageAvailable = TextToSpeech.LANG_NOT_SUPPORTED)
+        val missing = Harness(availableResult = TextToSpeech.LANG_NOT_SUPPORTED)
         missing.init(TextToSpeech.SUCCESS)
         missing.speaker.speak("x")
         assertTrue(missing.engine.spoken.isEmpty())
