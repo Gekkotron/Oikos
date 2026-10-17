@@ -2,7 +2,7 @@ package com.gekkotron.oikos.voice
 
 /** Language-neutral vocabulary tables. All keys are accent-folded, lowercase. */
 object VoiceLexicon {
-    enum class Verb { ON, OFF, OPEN, CLOSE, STOP, STOP_OR_OFF, SET, ARM, DISARM }
+    enum class Verb { ON, OFF, OPEN, CLOSE, STOP, STOP_OR_OFF, SET, ARM, DISARM, QUERY }
 
     data class Table(
         val verbs: Map<String, Verb>,
@@ -14,6 +14,8 @@ object VoiceLexicon {
         val alarmHomeWords: Set<String>,
         val shortcutStopWords: Set<String>,
         val phrases: List<Pair<Regex, String>>,
+        val attributes: Map<String, String>,
+        val structuralQuery: List<Regex>,
     )
 
     private val FR = Table(
@@ -28,6 +30,7 @@ object VoiceLexicon {
             add(Verb.STOP, "stop", "stoppe", "stopper", "stoppez")
             add(Verb.STOP_OR_OFF, "arrete", "arreter", "arretes", "arretez")
             add(Verb.SET, "mets", "met", "mettre", "mettez", "regle", "regler", "reglez", "passe", "passer")
+            add(Verb.QUERY, "quelle", "quel", "quels", "quelles", "combien", "affiche", "affichez", "dis", "dites", "donne", "donnez", "lit", "lis", "lire", "montre", "montrez", "verifie", "verifier")
         },
         devices = buildMap {
             fun add(c: String, vararg ws: String) = ws.forEach { put(it, c) }
@@ -84,6 +87,24 @@ object VoiceLexicon {
             Regex("""\bsalle de bains?\b""") to "bathroom",
             Regex("""\bchauffe eau\b""") to "waterheater",
         ),
+        attributes = buildMap {
+            fun add(c: String, vararg ws: String) = ws.forEach { put(it, c) }
+            add("temperature", "temperature", "temperatures")
+            add("humidity", "humidite", "humidites")
+            add("battery", "batterie", "batteries")
+            add("power", "puissance")
+            add("energy", "consommation")
+            add("voltage", "tension")
+            add("current", "courant")
+            add("illuminance", "luminosite", "lux")
+            add("pressure", "pression")
+            add("level", "niveau")
+            add("state", "etat", "statut")
+        },
+        structuralQuery = listOf(
+            Regex("""\bqu ?est ce que\b"""),
+            Regex("""\best ce qu(?:e)?\b"""),
+        ),
     )
 
     private val EN = Table(
@@ -98,6 +119,7 @@ object VoiceLexicon {
             add(Verb.STOP, "stop", "halt")
             add(Verb.STOP_OR_OFF, "end", "finish")
             add(Verb.SET, "set", "put")
+            add(Verb.QUERY, "what", "how", "show", "tell", "read", "give", "check")
         },
         devices = buildMap {
             fun add(c: String, vararg ws: String) = ws.forEach { put(it, c) }
@@ -151,6 +173,26 @@ object VoiceLexicon {
             Regex("""\bliving room\b""") to "living",
             Regex("""\bwater heater\b""") to "waterheater",
         ),
+        attributes = buildMap {
+            fun add(c: String, vararg ws: String) = ws.forEach { put(it, c) }
+            add("temperature", "temperature")
+            add("humidity", "humidity")
+            add("battery", "battery")
+            add("power", "power")
+            add("energy", "energy")
+            add("voltage", "voltage")
+            add("current", "current")
+            add("illuminance", "illuminance", "lux")
+            add("pressure", "pressure")
+            add("level", "level")
+            add("state", "state", "status")
+        },
+        structuralQuery = listOf(
+            Regex("""\bis it\b"""),
+            Regex("""\bare the\b"""),
+            Regex("""\bare there\b"""),
+            Regex("""\bwhat (?:is|are) the\b"""),
+        ),
     )
 
     fun of(lang: VoiceLang): Table = when (lang) {
@@ -170,6 +212,7 @@ object VoiceLexicon {
             VoiceAction.ARM_AWAY -> "Armer (absent)"
             VoiceAction.ARM_HOME -> "Armer (présent)"
             VoiceAction.DISARM -> "Désarmer"
+            VoiceAction.QUERY_STATE -> "Consulter l'état"
         }
         VoiceLang.EN -> when (a) {
             VoiceAction.TURN_ON -> "Turn on"
@@ -182,6 +225,7 @@ object VoiceLexicon {
             VoiceAction.ARM_AWAY -> "Arm (away)"
             VoiceAction.ARM_HOME -> "Arm (home)"
             VoiceAction.DISARM -> "Disarm"
+            VoiceAction.QUERY_STATE -> "Check status"
         }
     }
 }

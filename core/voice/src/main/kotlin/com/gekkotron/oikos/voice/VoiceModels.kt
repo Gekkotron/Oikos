@@ -1,6 +1,8 @@
 package com.gekkotron.oikos.voice
 
-enum class VoiceAction { TURN_ON, TURN_OFF, OPEN, CLOSE, STOP, SET_POSITION, SET_BRIGHTNESS, ARM_AWAY, ARM_HOME, DISARM }
+enum class VoiceAction { TURN_ON, TURN_OFF, OPEN, CLOSE, STOP, SET_POSITION, SET_BRIGHTNESS, ARM_AWAY, ARM_HOME, DISARM, QUERY_STATE }
+
+enum class QueryHint { EXPECT_ON, EXPECT_OFF, EXPECT_OPEN, EXPECT_CLOSED }
 
 enum class VoiceLang {
     FR, EN;
@@ -11,7 +13,7 @@ enum class VoiceLang {
     }
 }
 
-data class VoiceIntent(val action: VoiceAction, val entityIds: List<String>, val value: Int? = null) {
+data class VoiceIntent(val action: VoiceAction, val entityIds: List<String>, val value: Int? = null, val hint: QueryHint? = null) {
     init { require(value == null || value in 0..100) { "value must be 0..100" } }
 }
 

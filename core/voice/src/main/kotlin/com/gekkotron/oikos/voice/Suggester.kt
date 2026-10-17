@@ -20,6 +20,7 @@ private fun compatibleKinds(a: VoiceAction): Set<Kind> = when (a) {
     VoiceAction.OPEN, VoiceAction.CLOSE, VoiceAction.STOP, VoiceAction.SET_POSITION -> setOf(Kind.COVER)
     VoiceAction.SET_BRIGHTNESS -> setOf(Kind.LIGHT)
     VoiceAction.ARM_AWAY, VoiceAction.ARM_HOME, VoiceAction.DISARM -> setOf(Kind.ALARM_PANEL)
+    VoiceAction.QUERY_STATE -> emptySet()
 }
 
 private fun groupNoun(lang: VoiceLang, cls: Cls): String = when (lang) {

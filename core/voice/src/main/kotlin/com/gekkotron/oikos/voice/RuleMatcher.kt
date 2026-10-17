@@ -123,6 +123,7 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
             Verb.STOP_OR_OFF -> if (kind == Kind.COVER) VoiceAction.STOP else VoiceAction.TURN_OFF
             Verb.ARM -> VoiceAction.ARM_AWAY
             Verb.DISARM -> VoiceAction.DISARM
+            Verb.QUERY -> null
             null -> null
         }
 
@@ -218,7 +219,7 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
             Verb.STOP -> if (cover) VoiceAction.STOP else null
             Verb.OPEN -> if (cover) VoiceAction.OPEN else null
             Verb.CLOSE -> if (cover) VoiceAction.CLOSE else null
-            Verb.ARM, Verb.DISARM -> null
+            Verb.ARM, Verb.DISARM, Verb.QUERY -> null
         }
     }
 

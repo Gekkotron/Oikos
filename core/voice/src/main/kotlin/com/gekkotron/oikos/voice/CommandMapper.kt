@@ -20,5 +20,6 @@ object CommandMapper {
         VoiceAction.ARM_AWAY -> if (e.kind == Kind.ALARM_PANEL) Command.Arm(AlarmMode.AWAY, code) else null
         VoiceAction.ARM_HOME -> if (e.kind == Kind.ALARM_PANEL) Command.Arm(AlarmMode.HOME, code) else null
         VoiceAction.DISARM -> if (e.kind == Kind.ALARM_PANEL) Command.Disarm(code) else null
+        VoiceAction.QUERY_STATE -> null
     }
 }
