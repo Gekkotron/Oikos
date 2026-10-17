@@ -21,7 +21,9 @@ class FakeSpeechCapture : SpeechCapture {
 class FakeRunner(
     private val mqttDown: Boolean = false,
     private val resultByEntity: Map<String, CommandResult> = emptyMap(),
+    private val queryAnswer: Answer = Answer("", "", speakable = false, staleIds = emptyList()),
 ) : CommandRunner {
+    val queried = mutableListOf<VoiceIntent>()
     val sent = mutableListOf<Pair<String, Command>>()
     override suspend fun run(intent: VoiceIntent, catalog: VoiceCatalog, code: String?, source: VoiceSource): ExecutionResult {
         if (mqttDown) throw MqttDownException()
@@ -37,5 +39,5 @@ class FakeRunner(
         return ExecutionResult(intent, source, succeeded, failed)
     }
     override suspend fun query(intent: VoiceIntent, catalog: VoiceCatalog): QueryResult =
-        QueryResult(Answer("", "", speakable = false, staleIds = emptyList()))
+        QueryResult(queryAnswer).also { queried += intent }
 }

@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.model.Kind
+import android.speech.tts.TextToSpeech
+import com.gekkotron.oikos.voice.Answer
 import com.gekkotron.oikos.voice.VoiceAction
 import com.gekkotron.oikos.voice.VoiceCatalog
 import com.gekkotron.oikos.voice.VoiceCatalogBuilder
@@ -16,7 +18,9 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.util.Locale
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -152,5 +156,215 @@ class VoiceSessionTest {
             skipItems(1) // Executing
             assertIs<VoiceSessionState.Done>(awaitItem())
         }
+    }
+
+    private class FakeTtsEngine(private val available: Int) : TtsEngine {
+        val spoken = mutableListOf<String>()
+        override fun setLanguage(locale: Locale): Int = available
+        override fun isLanguageAvailable(locale: Locale): Int = available
+        override fun speak(text: String, queueMode: Int): Int { spoken += text; return TextToSpeech.SUCCESS }
+        override fun shutdown() {}
+    }
+
+    private fun tts(available: Int = TextToSpeech.LANG_AVAILABLE): Pair<TtsSpeaker, FakeTtsEngine> {
+        val engine = FakeTtsEngine(available)
+        var listener: TextToSpeech.OnInitListener? = null
+        val speaker = TtsSpeaker(VoiceLang.FR) { l -> listener = l; engine }
+        listener!!.onInit(TextToSpeech.SUCCESS)
+        return speaker to engine
+    }
+
+    private val answer = Answer(spoken = "Les volets sont ouverts.", display = "Volets ouverts", speakable = true, staleIds = listOf("volet_salon_1"))
+
+    private fun notUnderstoodSession(
+        runner: FakeRunner = FakeRunner(),
+        tts: TtsSpeaker? = null,
+        onLearn: suspend (VoiceShortcut) -> Unit = {},
+        scope: kotlinx.coroutines.CoroutineScope,
+    ) = VoiceSession(catalog(), emptyList(), FakeSpeechCapture().also { it.scheduleFinal("quelque chose salon") }, runner, scope, onLearn, tts)
+
+    @Test fun `a QUERY_STATE intent transitions to Spoken with the formatter sentence and speaks it once`() = runTest {
+        val (speaker, engine) = tts()
+        val runner = FakeRunner(queryAnswer = answer)
+        val session = VoiceSession(catalog(), emptyList(), FakeSpeechCapture().also { it.scheduleFinal("est-ce que les volets du salon sont fermés") }, runner, backgroundScope, tts = speaker)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            val spoken = assertIs<VoiceSessionState.Spoken>(awaitItem())
+            assertEquals("Volets ouverts", spoken.text)
+            assertTrue(spoken.speakable)
+            assertEquals(listOf("volet_salon_1"), spoken.staleIds)
+            assertTrue(runner.queried.single().entityIds.containsAll(listOf("volet_salon_1", "volet_salon_2")))
+        }
+        assertEquals(listOf("Les volets sont ouverts."), engine.spoken)
+    }
+
+    @Test fun `Spoken is skipped past speak when TTS availability is LanguageMissing`() = runTest {
+        val (speaker, engine) = tts(TextToSpeech.LANG_MISSING_DATA)
+        val runner = FakeRunner(queryAnswer = answer)
+        val session = VoiceSession(catalog(), emptyList(), FakeSpeechCapture().also { it.scheduleFinal("est-ce que les volets du salon sont fermés") }, runner, backgroundScope, tts = speaker)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            assertIs<VoiceSessionState.Spoken>(awaitItem())
+        }
+        assertTrue(engine.spoken.isEmpty())
+    }
+
+    @Test fun `onPickOther from NotUnderstood goes to Picking(Device) with the heard text as filter`() = runTest {
+        val session = notUnderstoodSession(scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            val not = assertIs<VoiceSessionState.NotUnderstood>(awaitItem())
+            session.pickOther()
+            val picking = assertIs<VoiceSessionState.Picking>(awaitItem())
+            assertEquals(PickStep.Device, picking.step)
+            assertEquals("quelque chose salon", picking.heardText)
+            assertEquals("quelque chose salon", picking.filter)
+            assertNull(picking.pickedId)
+            assertEquals(not.suggestions, picking.suggestions)
+        }
+    }
+
+    @Test fun `onPickDevice goes to Picking(Action, pickedId)`() = runTest {
+        val session = notUnderstoodSession(scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther()
+            skipItems(1)
+            session.pickDevice("volet_salon_1")
+            val picking = assertIs<VoiceSessionState.Picking>(awaitItem())
+            assertEquals(PickStep.Action, picking.step)
+            assertEquals("volet_salon_1", picking.pickedId)
+        }
+    }
+
+    @Test fun `onPickAction runs a control intent through the runner and lands in Done`() = runTest {
+        val runner = FakeRunner(resultByEntity = mapOf("volet_salon_1" to CommandResult.Accepted))
+        val session = notUnderstoodSession(runner, scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther(); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickAction(VoiceAction.OPEN, remember = false)
+            assertIs<VoiceSessionState.Executing>(awaitItem())
+            val done = assertIs<VoiceSessionState.Done>(awaitItem())
+            assertEquals(listOf("volet_salon_1"), done.result.succeeded)
+        }
+    }
+
+    @Test fun `onPickAction with QUERY_STATE goes through runner query and lands in Spoken`() = runTest {
+        val runner = FakeRunner(queryAnswer = answer)
+        val session = notUnderstoodSession(runner, scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther(); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickAction(VoiceAction.QUERY_STATE, remember = false)
+            assertIs<VoiceSessionState.Spoken>(awaitItem())
+        }
+        assertEquals(listOf(VoiceIntent(VoiceAction.QUERY_STATE, listOf("volet_salon_1"))), runner.queried)
+    }
+
+    @Test fun `onPickAction with remember=true saves a shortcut mapping heardText to the intent`() = runTest {
+        var saved: VoiceShortcut? = null
+        val runner = FakeRunner(resultByEntity = mapOf("volet_salon_1" to CommandResult.Accepted))
+        val session = notUnderstoodSession(runner, onLearn = { saved = it }, scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther(); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickAction(VoiceAction.OPEN, remember = true)
+            skipItems(1)
+            assertIs<VoiceSessionState.Done>(awaitItem())
+        }
+        val s = requireNotNull(saved)
+        assertEquals("quelque chose salon", s.phrase)
+        assertEquals(VoiceLang.FR, s.lang)
+        assertEquals(VoiceIntent(VoiceAction.OPEN, listOf("volet_salon_1")), s.intent)
+    }
+
+    @Test fun `onPickAction with remember=false does not save a shortcut`() = runTest {
+        var saved: VoiceShortcut? = null
+        val runner = FakeRunner(resultByEntity = mapOf("volet_salon_1" to CommandResult.Accepted))
+        val session = notUnderstoodSession(runner, onLearn = { saved = it }, scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther(); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickAction(VoiceAction.OPEN, remember = false)
+            skipItems(1)
+            assertIs<VoiceSessionState.Done>(awaitItem())
+        }
+        assertNull(saved)
+    }
+
+    @Test fun `onPickBack from Action returns to Picking(Device) with same filter and pickedId null`() = runTest {
+        val session = notUnderstoodSession(scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther(); skipItems(1)
+            session.pickFilterChange("volet"); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickBack()
+            val picking = assertIs<VoiceSessionState.Picking>(awaitItem())
+            assertEquals(PickStep.Device, picking.step)
+            assertEquals("volet", picking.filter)
+            assertNull(picking.pickedId)
+        }
+    }
+
+    @Test fun `onPickBack from Device returns to NotUnderstood with the original suggestions`() = runTest {
+        val session = notUnderstoodSession(scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            val not = assertIs<VoiceSessionState.NotUnderstood>(awaitItem())
+            session.pickOther(); skipItems(1)
+            session.pickBack()
+            assertEquals(not, awaitItem())
+        }
+    }
+
+    @Test fun `onPickFilterChange updates filter but keeps the step and pickedId`() = runTest {
+        val session = notUnderstoodSession(scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1)
+            session.pickOther(); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickFilterChange("alarme")
+            val picking = assertIs<VoiceSessionState.Picking>(awaitItem())
+            assertEquals("alarme", picking.filter)
+            assertEquals(PickStep.Action, picking.step)
+            assertEquals("volet_salon_1", picking.pickedId)
+        }
+    }
+
+    @Test fun `onRepeatSpoken calls TtsSpeaker speak again`() = runTest {
+        val (speaker, engine) = tts()
+        val runner = FakeRunner(queryAnswer = answer)
+        val session = VoiceSession(catalog(), emptyList(), FakeSpeechCapture().also { it.scheduleFinal("est-ce que les volets du salon sont fermés") }, runner, backgroundScope, tts = speaker)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            assertIs<VoiceSessionState.Spoken>(awaitItem())
+            session.repeatSpoken()
+        }
+        assertEquals(listOf("Les volets sont ouverts.", "Les volets sont ouverts."), engine.spoken)
     }
 }

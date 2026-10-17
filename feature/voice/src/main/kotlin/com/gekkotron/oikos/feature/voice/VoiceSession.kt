@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.voice
 import com.gekkotron.oikos.model.CodeFormat
 import com.gekkotron.oikos.voice.Confirmation
 import com.gekkotron.oikos.voice.Suggestion
+import com.gekkotron.oikos.voice.VoiceAction
 import com.gekkotron.oikos.voice.VoiceCatalog
 import com.gekkotron.oikos.voice.VoiceEngine
 import com.gekkotron.oikos.voice.VoiceIntent
@@ -66,6 +67,7 @@ class VoiceSession(
     private val runner: CommandRunner,
     private val scope: CoroutineScope,
     private val onLearn: suspend (VoiceShortcut) -> Unit = {},
+    private val tts: TtsSpeaker? = null,
 ) {
     private val _state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening(""))
     val state: StateFlow<VoiceSessionState> = _state.asStateFlow()
@@ -73,6 +75,8 @@ class VoiceSession(
     private var pendingIntent: VoiceIntent? = null
     private var pendingSource: VoiceSource = VoiceSource.RULES
     private var pendingCode: String? = null
+    private var lastSpoken: String? = null
+    private var notUnderstoodSuggestions: List<Suggestion> = emptyList()
     var lastTranscript: String? = null
         private set
 
@@ -83,7 +87,10 @@ class VoiceSession(
                 lastTranscript = text
                 when (val r = engine.resolve(text)) {
                     is VoiceResolution.Understood -> handleIntent(r.intent, r.source)
-                    is VoiceResolution.NotUnderstood -> _state.value = VoiceSessionState.NotUnderstood(r.suggestions)
+                    is VoiceResolution.NotUnderstood -> {
+                        notUnderstoodSuggestions = r.suggestions
+                        _state.value = VoiceSessionState.NotUnderstood(r.suggestions)
+                    }
                 }
             }
             override fun onError(kind: SpeechError) {
@@ -121,6 +128,68 @@ class VoiceSession(
         }
     }
 
+    fun pickOther() {
+        if (_state.value !is VoiceSessionState.NotUnderstood) return
+        val heard = lastTranscript.orEmpty()
+        _state.value = VoiceSessionState.Picking(
+            step = PickStep.Device,
+            heardText = heard,
+            filter = heard,
+            suggestions = notUnderstoodSuggestions,
+        )
+    }
+
+    fun pickDevice(uniqueId: String) {
+        val current = _state.value as? VoiceSessionState.Picking ?: return
+        _state.value = current.copy(step = PickStep.Action, pickedId = uniqueId)
+    }
+
+    fun pickBack() {
+        val current = _state.value as? VoiceSessionState.Picking ?: return
+        _state.value = when (current.step) {
+            PickStep.Action -> current.copy(step = PickStep.Device, pickedId = null)
+            PickStep.Device -> VoiceSessionState.NotUnderstood(current.suggestions)
+        }
+    }
+
+    fun pickFilterChange(filter: String) {
+        val current = _state.value as? VoiceSessionState.Picking ?: return
+        _state.value = current.copy(filter = filter)
+    }
+
+    fun pickAction(action: VoiceAction, remember: Boolean) {
+        val current = _state.value as? VoiceSessionState.Picking ?: return
+        val pickedId = current.pickedId ?: return
+        val intent = VoiceIntent(action, listOf(pickedId))
+        val teach = if (remember) {
+            suspend {
+                onLearnSafely(
+                    VoiceShortcut(
+                        id = id(catalog.lang, VoiceText.normalizeShortcut(current.heardText, catalog.lang)),
+                        phrase = current.heardText,
+                        lang = catalog.lang,
+                        intent = intent,
+                    )
+                )
+            }
+        } else null
+        handleIntent(intent, VoiceSource.RULES, teach)
+    }
+
+    fun repeatSpoken() {
+        lastSpoken?.let { tts?.speak(it) }
+    }
+
+    private suspend fun onLearnSafely(shortcut: VoiceShortcut) {
+        try {
+            onLearn(shortcut)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // learning is best-effort
+        }
+    }
+
     fun provideCode(code: String) { pendingCode = code }
 
     fun confirm(yes: Boolean) {
@@ -132,18 +201,22 @@ class VoiceSession(
         execute(intent, pendingSource, pendingCode)
     }
 
-    private fun handleIntent(intent: VoiceIntent, source: VoiceSource) {
+    private fun handleIntent(intent: VoiceIntent, source: VoiceSource, teach: (suspend () -> Unit)? = null) {
         pendingIntent = intent
         pendingSource = source
+        if (intent.action == VoiceAction.QUERY_STATE) {
+            query(intent, teach)
+            return
+        }
         if (Confirmation.needsConfirmation(intent, catalog)) {
             val format = intent.entityIds.firstNotNullOfOrNull { catalog.entity(it) }?.codeFormat
             _state.value = VoiceSessionState.ConfirmNeeded(intent, source, format)
             return
         }
-        execute(intent, source, code = null)
+        execute(intent, source, code = null, teach = teach)
     }
 
-    private fun execute(intent: VoiceIntent, source: VoiceSource, code: String?) {
+    private fun execute(intent: VoiceIntent, source: VoiceSource, code: String?, teach: (suspend () -> Unit)? = null) {
         _state.value = VoiceSessionState.Executing(intent)
         scope.launch {
             val result = try {
@@ -158,6 +231,24 @@ class VoiceSession(
                 return@launch
             }
             _state.value = VoiceSessionState.Done(result)
+            if (result.succeeded.isNotEmpty()) teach?.invoke()
+        }
+    }
+
+    private fun query(intent: VoiceIntent, teach: (suspend () -> Unit)?) {
+        scope.launch {
+            val answer = try {
+                runner.query(intent, catalog).answer
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = VoiceSessionState.Error(ErrorKind.UNKNOWN)
+                return@launch
+            }
+            lastSpoken = answer.spoken
+            _state.value = VoiceSessionState.Spoken(answer.display, answer.speakable, answer.staleIds)
+            if (answer.speakable) tts?.speak(answer.spoken)
+            if (answer.speakable) teach?.invoke()
         }
     }
 }

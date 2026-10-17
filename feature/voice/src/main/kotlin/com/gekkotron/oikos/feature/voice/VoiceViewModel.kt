@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.data.AppPreferences
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.voice.Suggestion
+import com.gekkotron.oikos.voice.VoiceAction
 import com.gekkotron.oikos.voice.VoiceCatalogBuilder
 import com.gekkotron.oikos.voice.VoiceLang
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +26,7 @@ class VoiceViewModel @Inject constructor(
     private val source: EntitySource,
     val preferences: AppPreferences,
     private val commandRunner: CommandRunner,
+    private val tts: TtsSpeaker,
 ) : ViewModel() {
     private val _state = MutableStateFlow<VoiceSessionState>(VoiceSessionState.Listening(""))
     val state: StateFlow<VoiceSessionState> = _state.asStateFlow()
@@ -69,6 +71,7 @@ class VoiceViewModel @Inject constructor(
             runner = commandRunner,
             scope = viewModelScope,
             onLearn = { source.saveShortcut(it) },
+            tts = tts,
         )
         session = s
         viewModelScope.launch { s.state.collect { _state.value = it } }
@@ -79,6 +82,18 @@ class VoiceViewModel @Inject constructor(
         val s = session ?: return
         s.pickSuggestion(suggestion, learnPhrase = s.lastTranscript.orEmpty())
     }
+
+    fun onPickOther() { session?.pickOther() }
+
+    fun onPickDevice(uniqueId: String) { session?.pickDevice(uniqueId) }
+
+    fun onPickAction(action: VoiceAction, remember: Boolean) { session?.pickAction(action, remember) }
+
+    fun onPickBack() { session?.pickBack() }
+
+    fun onPickFilterChange(filter: String) { session?.pickFilterChange(filter) }
+
+    fun onRepeatSpoken() { session?.repeatSpoken() }
 
     fun confirm(yes: Boolean) { session?.confirm(yes) }
 
