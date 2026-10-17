@@ -75,6 +75,7 @@ class VoiceSession(
     private var pendingIntent: VoiceIntent? = null
     private var pendingSource: VoiceSource = VoiceSource.RULES
     private var pendingCode: String? = null
+    private var pendingTeach: (suspend () -> Unit)? = null
     private var lastSpoken: String? = null
     private var notUnderstoodSuggestions: List<Suggestion> = emptyList()
     var lastTranscript: String? = null
@@ -195,10 +196,13 @@ class VoiceSession(
     fun confirm(yes: Boolean) {
         val intent = pendingIntent ?: return
         if (!yes) {
+            pendingTeach = null
             _state.value = VoiceSessionState.Done(ExecutionResult(intent, pendingSource, emptyList(), emptyList()))
             return
         }
-        execute(intent, pendingSource, pendingCode)
+        val capturedTeach = pendingTeach
+        pendingTeach = null
+        execute(intent, pendingSource, pendingCode, teach = capturedTeach)
     }
 
     private fun handleIntent(intent: VoiceIntent, source: VoiceSource, teach: (suspend () -> Unit)? = null) {
@@ -210,6 +214,7 @@ class VoiceSession(
         }
         if (Confirmation.needsConfirmation(intent, catalog)) {
             val format = intent.entityIds.firstNotNullOfOrNull { catalog.entity(it) }?.codeFormat
+            pendingTeach = teach
             _state.value = VoiceSessionState.ConfirmNeeded(intent, source, format)
             return
         }
@@ -248,7 +253,7 @@ class VoiceSession(
             lastSpoken = answer.spoken
             _state.value = VoiceSessionState.Spoken(answer.display, answer.speakable, answer.staleIds)
             if (answer.speakable) tts?.speak(answer.spoken)
-            if (answer.speakable) teach?.invoke()
+            teach?.invoke()
         }
     }
 }

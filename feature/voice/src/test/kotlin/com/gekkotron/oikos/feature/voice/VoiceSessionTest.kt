@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.util.Locale
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -353,6 +354,49 @@ class VoiceSessionTest {
             assertEquals(PickStep.Action, picking.step)
             assertEquals("volet_salon_1", picking.pickedId)
         }
+    }
+
+    @Test fun `pickAction with DISARM confirm-then-remember saves the shortcut`() = runTest {
+        var saved: VoiceShortcut? = null
+        val runner = FakeRunner(resultByEntity = mapOf("alarm" to CommandResult.Accepted))
+        val session = notUnderstoodSession(runner, onLearn = { saved = it }, scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1) // NotUnderstood
+            session.pickOther(); skipItems(1)
+            session.pickDevice("alarm"); skipItems(1)
+            session.pickAction(VoiceAction.DISARM, remember = true)
+            val confirm = assertIs<VoiceSessionState.ConfirmNeeded>(awaitItem())
+            assertEquals(VoiceAction.DISARM, confirm.intent.action)
+            session.provideCode("1234")
+            session.confirm(yes = true)
+            skipItems(1) // Executing
+            assertIs<VoiceSessionState.Done>(awaitItem())
+        }
+        val s = requireNotNull(saved)
+        assertEquals("quelque chose salon", s.phrase)
+        assertEquals(VoiceLang.FR, s.lang)
+        assertEquals(VoiceIntent(VoiceAction.DISARM, listOf("alarm")), s.intent)
+    }
+
+    @Test fun `onPickAction with QUERY_STATE teaches even when the answer is not speakable`() = runTest {
+        var saved: VoiceShortcut? = null
+        val runner = FakeRunner() // default queryAnswer has speakable=false (no-reading fallback)
+        val session = notUnderstoodSession(runner, onLearn = { saved = it }, scope = backgroundScope)
+        session.state.test {
+            skipItems(1)
+            session.start()
+            skipItems(1) // NotUnderstood
+            session.pickOther(); skipItems(1)
+            session.pickDevice("volet_salon_1"); skipItems(1)
+            session.pickAction(VoiceAction.QUERY_STATE, remember = true)
+            val spoken = assertIs<VoiceSessionState.Spoken>(awaitItem())
+            assertFalse(spoken.speakable)
+        }
+        val s = requireNotNull(saved)
+        assertEquals("quelque chose salon", s.phrase)
+        assertEquals(VoiceIntent(VoiceAction.QUERY_STATE, listOf("volet_salon_1")), s.intent)
     }
 
     @Test fun `onRepeatSpoken calls TtsSpeaker speak again`() = runTest {
