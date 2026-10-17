@@ -104,6 +104,8 @@ object VoiceLexicon {
         structuralQuery = listOf(
             Regex("""\bqu ?est ce que\b"""),
             Regex("""\best ce qu(?:e)?\b"""),
+            Regex("""\bsont (?:ils|elles)\b"""),
+            Regex("""\best (?:il|elle)\b"""),
         ),
     )
 

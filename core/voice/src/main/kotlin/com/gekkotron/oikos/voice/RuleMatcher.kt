@@ -8,6 +8,9 @@ private val VALUE_PCT = Regex("""(\d{1,4})\s*(?:%|pour ?cent|percent|pct)""")
 private val VALUE_A = Regex("""\ba\s+(\d{1,4})\b""")
 private val HALF = Regex("""\bmoitie\b""")
 
+/** Attribute sentinel meaning "any state"; it never narrows by device class. */
+private const val STATE_ATTR = "state"
+
 private fun lev(a: String, b: String): Int {
     var prev = IntArray(b.length + 1) { it }
     for (i in 1..a.length) {
@@ -42,6 +45,9 @@ private class Parsed(
     val mods: Set<String>,
     val alarm: Boolean,
     val alarmHome: Boolean,
+    val queryStructural: Boolean,
+    val attrs: Set<String>,
+    val verbSet: Set<Verb>,
 )
 
 /** Deterministic rule matcher: returns an intent only when the phrase is unambiguous. */
@@ -123,7 +129,7 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
             Verb.STOP_OR_OFF -> if (kind == Kind.COVER) VoiceAction.STOP else VoiceAction.TURN_OFF
             Verb.ARM -> VoiceAction.ARM_AWAY
             Verb.DISARM -> VoiceAction.DISARM
-            Verb.QUERY -> null
+            Verb.QUERY -> VoiceAction.QUERY_STATE
             null -> null
         }
 
@@ -162,6 +168,8 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
         }
 
         val alarm = ws.any(::isAlarmWord)
+        val queryStructural = table.structuralQuery.any { it.containsMatchIn(s) }
+        val attrs = mutableSetOf<String>()
         val verbs = mutableListOf<Verb>()
         val dev = mutableSetOf<String>()
         val devWords = mutableSetOf<String>()
@@ -179,6 +187,7 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
             table.verbs[w]?.let { verbs += it; continue }
             if (w in table.noise) continue
             if (alarm && w in table.alarmHomeWords) { alarmHome = true; continue }
+            lookup(table.attributes, w)?.let { attrs += it }
             val person = personTokens.entries.firstOrNull { (_, toks) -> toks.any { near(it, w) } }?.key
             if (person != null) { persons += person; continue }
             val d = lookup(table.devices, w)
@@ -197,8 +206,19 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
             lookup(table.verbs, w)?.let { verbs += it; continue }
             mods += "~$w"
         }
-        val verb = verbs.firstOrNull()?.let { if (it == Verb.SET && Verb.ON in verbs) Verb.ON else it }
-        return Parsed(verb, value, bad, all, plural, dev, devWords, rooms, persons, mods, alarm, alarmHome)
+        // A structural question phrase wins; otherwise an explicit action verb beats a bare query word.
+        val firstAction = verbs.firstOrNull { it != Verb.QUERY }
+            ?.let { if (it == Verb.SET && Verb.ON in verbs) Verb.ON else it }
+        val verb = when {
+            queryStructural -> Verb.QUERY
+            firstAction != null -> firstAction
+            Verb.QUERY in verbs -> Verb.QUERY
+            else -> null
+        }
+        return Parsed(
+            verb, value, bad, all, plural, dev, devWords, rooms, persons, mods, alarm, alarmHome,
+            queryStructural, attrs, verbs.toSet(),
+        )
     }
 
     private fun actionFor(verb: Verb, value: Int?, e: VoiceEntity): VoiceAction? {
@@ -219,7 +239,8 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
             Verb.STOP -> if (cover) VoiceAction.STOP else null
             Verb.OPEN -> if (cover) VoiceAction.OPEN else null
             Verb.CLOSE -> if (cover) VoiceAction.CLOSE else null
-            Verb.ARM, Verb.DISARM, Verb.QUERY -> null
+            Verb.ARM, Verb.DISARM -> null
+            Verb.QUERY -> VoiceAction.QUERY_STATE
         }
     }
 
@@ -260,6 +281,8 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
                 byRoom.flatten().toSet() + p.personAreas
             }
 
+        if (verb == Verb.QUERY) return resolveQuery(p, wanted)
+
         if (p.alarm && "siren" !in p.dev) return resolveAlarm(p, verb, wanted)
 
         if (p.dev.isEmpty() && p.mods.isEmpty()) return null
@@ -299,6 +322,39 @@ class RuleMatcher(private val catalog: VoiceCatalog) {
                 }
             }
         return VoiceIntent(actions.first(), chosen.map { it.e.uniqueId }, p.value)
+    }
+
+    /**
+     * Queries return every matching entity: asking "quelle temperature" means every room.
+     * An attribute word narrows by device class and beats the device word, which only breaks ties.
+     * Modifiers are soft: filler words such as "est" parse as the modifier "east", so they only break ties.
+     */
+    private fun resolveQuery(p: Parsed, wanted: Set<String>?): VoiceIntent? {
+        val attrClasses = p.attrs - STATE_ATTR
+        val mods = p.mods.filterNot { it.startsWith("~") }
+        val inRoom = ents.filter { wanted == null || it.e.areaId in wanted }
+        val cands: List<Ent> = when {
+            attrClasses.isNotEmpty() -> {
+                val byAttr = inRoom.filter { it.e.deviceClass in attrClasses }
+                val byDev = if (p.dev.isEmpty()) byAttr else byAttr.filter { kindMatches(it, p.dev) }.ifEmpty { byAttr }
+                byDev.filter { en -> mods.all { hasMod(en, it) } }.ifEmpty { byDev }
+            }
+            p.dev.isNotEmpty() -> {
+                val byDev = inRoom.filter { kindMatches(it, p.dev) }
+                byDev.filter { en -> mods.all { hasMod(en, it) } }.ifEmpty { byDev }
+            }
+            else -> emptyList()
+        }
+        if (cands.isEmpty()) return null
+        return VoiceIntent(VoiceAction.QUERY_STATE, cands.map { it.e.uniqueId }, null, queryHint(p.verbSet))
+    }
+
+    private fun queryHint(verbs: Set<Verb>): QueryHint? = when {
+        Verb.CLOSE in verbs -> QueryHint.EXPECT_CLOSED
+        Verb.OPEN in verbs -> QueryHint.EXPECT_OPEN
+        Verb.ON in verbs -> QueryHint.EXPECT_ON
+        Verb.OFF in verbs -> QueryHint.EXPECT_OFF
+        else -> null
     }
 
     private fun resolveAlarm(p: Parsed, verb: Verb, wanted: Set<String>?): VoiceIntent? {
