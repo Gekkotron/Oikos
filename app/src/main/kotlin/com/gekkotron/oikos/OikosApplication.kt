@@ -1,6 +1,7 @@
 package com.gekkotron.oikos
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -12,6 +13,7 @@ import coil3.SingletonImageLoader
 import com.gekkotron.oikos.connection.HistoryWiring
 import com.gekkotron.oikos.connection.PushWiring
 import com.gekkotron.oikos.connection.WidgetMirror
+import com.gekkotron.oikos.shared.OikosShared
 import com.gekkotron.oikos.feature.widget.WidgetComponent
 import com.gekkotron.oikos.feature.widget.WidgetComponentProvider
 import com.gekkotron.oikos.feature.widget.work.WidgetWorkerFactory
@@ -78,6 +80,7 @@ class OikosApplication : Application(), PushComponentProvider, WidgetComponentPr
 
     override fun onCreate() {
         super.onCreate()
+        Log.i("OikosApplication", "KMP shared ${OikosShared.VERSION}")
         channels.ensure()
         pushWiring.start()
         historyWiring.start()
