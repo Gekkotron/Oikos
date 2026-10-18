@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Oikos"
 
+include(":shared")
 include(":core:model")
 include(":core:crypto")
 include(":core:transport")

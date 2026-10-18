@@ -11,6 +11,7 @@ tasks.register("increaseBuildNumber") {
 }
 
 dependencies {
+    kover(project(":shared"))
     kover(project(":core:model"))
     kover(project(":core:crypto"))
     kover(project(":core:transport"))

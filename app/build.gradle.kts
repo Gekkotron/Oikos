@@ -74,6 +74,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(project(":core:source"))
     implementation(project(":core:demo"))
     implementation(project(":core:designsystem"))
