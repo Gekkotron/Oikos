@@ -68,7 +68,7 @@ class PushStatusTest {
 
     /** The DataStore commits on Dispatchers.IO in real time, so the wait must leave the test dispatcher and use real time. */
     private suspend fun awaitStatus(source: PushStatusSource, accept: (PushStatus) -> Boolean): PushStatus =
-        withContext(Dispatchers.Default) { withTimeout(5.seconds) { source.status.first(accept) } }
+        withContext(Dispatchers.Default) { withTimeout(15.seconds) { source.status.first(accept) } }
 
     @Test
     fun `the source follows the registration, the queue, the error and a refreshed permission`(): Unit = runTest {

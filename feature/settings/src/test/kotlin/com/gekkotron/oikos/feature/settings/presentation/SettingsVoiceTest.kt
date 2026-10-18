@@ -13,10 +13,12 @@ import com.gekkotron.oikos.voice.VoiceShortcut
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -50,7 +52,10 @@ class SettingsVoiceTest {
 
     @After
     fun tearDown() {
-        storage.cancel()
+        // cancel() alone is non-blocking: DataStore writes that resume AFTER resetMain() lose both the
+        // test dispatcher and (because Robolectric is tearing down) the Android Looper fallback, which
+        // crashes with "Dispatchers.Main was accessed when the platform dispatcher was absent".
+        runBlocking { storage.coroutineContext[Job]!!.cancelAndJoin() }
         Dispatchers.resetMain()
     }
 
