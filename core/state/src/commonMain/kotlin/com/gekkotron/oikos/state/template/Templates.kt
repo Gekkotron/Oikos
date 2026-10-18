@@ -1,5 +1,7 @@
 package com.gekkotron.oikos.state.template
 
+import kotlin.math.floor
+import kotlin.math.pow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -9,8 +11,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 sealed interface TemplateResult {
     /** String, Long, Double, Boolean, JsonObject/JsonArray, or null (undefined / none). */
@@ -156,11 +156,20 @@ private fun applyFilter(name: String, v: Any?, args: List<Any?>): Any? = when (n
             is Double -> v
             else -> throw TemplateEvalError("round expects a number")
         }
-        if (d.isNaN() || d.isInfinite()) d else BigDecimal.valueOf(d).setScale(precision, RoundingMode.HALF_UP).toDouble()
+        if (d.isNaN() || d.isInfinite()) d else roundHalfUp(d, precision)
     }
     "lower" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").lowercase()
     "upper" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").uppercase()
     else -> throw TemplateEvalError("unknown filter '$name'")
+}
+
+// Pure-Kotlin HALF_UP (away from zero) to the given decimal precision; matches
+// BigDecimal.setScale(_, HALF_UP) for finite doubles across the range templates emit.
+private fun roundHalfUp(d: Double, precision: Int): Double {
+    val factor = 10.0.pow(precision)
+    val scaled = d * factor
+    val rounded = if (scaled >= 0.0) floor(scaled + 0.5) else -floor(-scaled + 0.5)
+    return rounded / factor
 }
 
 /** Jinja `truncate(length=255, killwords=False, end='...', leeway=5)`. */

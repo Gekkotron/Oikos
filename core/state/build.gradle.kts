@@ -1,8 +1,12 @@
 plugins {
-    id("oikos.jvm.library")
+    id("oikos.kmp.jvm.library")
 }
 
-dependencies {
-    api(project(":core:model"))
-    api(libs.kotlinx.coroutines.core)
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(project(":core:model"))
+            api(libs.kotlinx.coroutines.core)
+        }
+    }
 }
