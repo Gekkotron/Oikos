@@ -3,10 +3,12 @@ plugins {
 }
 
 tasks.register("increaseBuildNumber") {
-    val versionCode: String by project
+    val versionCodeProvider = providers.gradleProperty("versionCode")
+    val versionFile = file("app/version.properties")
     doFirst {
+        val versionCode = versionCodeProvider.get()
         println("Set app version : ($versionCode)")
-        file("app/version.properties").writeText("VERSION_CODE=$versionCode\n")
+        versionFile.writeText("VERSION_CODE=$versionCode\n")
     }
 }
 
