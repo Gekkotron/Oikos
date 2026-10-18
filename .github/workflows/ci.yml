@@ -19,6 +19,9 @@ jobs:
         group:
           - name: core
             # KMP (oikos.kmp.jvm.library) modules use :jvmTest; Android library modules use :test.
+            # Per-module koverXmlReport (not the root one) keeps the job scoped to :core:*;
+            # the root koverXmlReport aggregates ALL subprojects and dragged :app and :feature:*
+            # test tasks into this job, causing cross-module flakes.
             tasks: >-
               :core:model:jvmTest
               :core:crypto:test
@@ -32,8 +35,18 @@ jobs:
               :core:push:test
               :core:demo:test
               :core:designsystem:test
-              koverXmlReport
-              -x :app:koverXmlReport
+              :core:model:koverXmlReport
+              :core:crypto:koverXmlReport
+              :core:transport:koverXmlReport
+              :core:state:koverXmlReport
+              :core:source:koverXmlReport
+              :core:voice:koverXmlReport
+              :core:data:koverXmlReport
+              :core:alerts:koverXmlReport
+              :core:history:koverXmlReport
+              :core:push:koverXmlReport
+              :core:demo:koverXmlReport
+              :core:designsystem:koverXmlReport
           - name: feature
             tasks: >-
               :feature:home:test
@@ -77,7 +90,9 @@ jobs:
         if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: build/reports/kover/report.xml
+          # core job writes per-module XMLs under core/*/build/reports/kover/report.xml;
+          # feature + app jobs still produce the root-aggregated report.
+          files: ${{ matrix.group.name == 'core' && 'core/model/build/reports/kover/report.xml,core/crypto/build/reports/kover/report.xml,core/transport/build/reports/kover/report.xml,core/state/build/reports/kover/report.xml,core/source/build/reports/kover/report.xml,core/voice/build/reports/kover/report.xml,core/data/build/reports/kover/report.xml,core/alerts/build/reports/kover/report.xml,core/history/build/reports/kover/report.xml,core/push/build/reports/kover/report.xml,core/demo/build/reports/kover/report.xml,core/designsystem/build/reports/kover/report.xml' || 'build/reports/kover/report.xml' }}
           flags: ${{ matrix.group.name }}
           fail_ci_if_error: false
       - name: Upload debug APK
