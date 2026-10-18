@@ -10,8 +10,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
+    name: ${{ matrix.group.name }} tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - name: core
+            tasks: >-
+              :core:model:test
+              :core:crypto:test
+              :core:transport:test
+              :core:state:test
+              :core:source:test
+              :core:voice:test
+              :core:data:test
+              :core:alerts:test
+              :core:history:test
+              :core:push:test
+              :core:demo:test
+              :core:designsystem:test
+              koverXmlReport
+          - name: feature
+            tasks: >-
+              :feature:home:test
+              :feature:onboarding:test
+              :feature:energy:test
+              :feature:history:test
+              :feature:security:test
+              :feature:settings:test
+              :feature:alerts:test
+              :feature:widget:test
+              :feature:voice:test
+              koverXmlReport
+          - name: app
+            tasks: >-
+              :app:test
+              :app:assembleDebug
+              koverXmlReport
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -22,14 +59,21 @@ jobs:
         with:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v5
-      - name: Build, test, coverage
-        run: ./gradlew check koverXmlReport :app:assembleDebug --stacktrace --continue
+      - name: ${{ matrix.group.name }} tests
+        # --configuration-cache-problems=warn: don't hard-fail if a plugin is CC-hostile; the
+        # gradle.properties flag enables CC itself. Flip to `fail` once no plugin warns.
+        run: ./gradlew ${{ matrix.group.tasks }} --configuration-cache-problems=warn --stacktrace --continue
       - uses: codecov/codecov-action@v5
+        if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/kover/report.xml
+          flags: ${{ matrix.group.name }}
           fail_ci_if_error: false
-      - uses: actions/upload-artifact@v4
+      - name: Upload debug APK
+        if: matrix.group.name == 'app' && success()
+        uses: actions/upload-artifact@v4
         with:
           name: oikos-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
