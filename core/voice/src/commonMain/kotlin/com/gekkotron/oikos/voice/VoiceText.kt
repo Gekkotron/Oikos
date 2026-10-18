@@ -1,16 +1,13 @@
 package com.gekkotron.oikos.voice
 
-import java.text.Normalizer
-
 object VoiceText {
-    private val DIACRITICS = Regex("\\p{Mn}+")
     private val NON_TEXT = Regex("[^a-z0-9%\\s]")
     private val LETTERS = Regex("[a-z]+")
     private val POLITE_FR = Regex("""\bs il (?:te|vous) plait\b""")
     private val POLITE_EN = Regex("""\bplease\b""")
 
     fun prepare(text: String, lang: VoiceLang): String {
-        var s = Normalizer.normalize(text.lowercase(), Normalizer.Form.NFD).replace(DIACRITICS, "")
+        var s = stripDiacritics(text.lowercase())
         s = s.replace(NON_TEXT, " ")
         for ((re, to) in VoiceLexicon.of(lang).phrases) s = re.replace(s, to)
         return s.trim()
@@ -22,8 +19,7 @@ object VoiceText {
     /** Normalized shortcut key: no accents, no punctuation, no filler words. */
     fun normalizeShortcut(text: String, lang: VoiceLang): String {
         val table = VoiceLexicon.of(lang)
-        val folded = Normalizer.normalize(text.lowercase(), Normalizer.Form.NFD)
-            .replace(DIACRITICS, "")
+        val folded = stripDiacritics(text.lowercase())
             .replace(Regex("[^a-z0-9 ]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
