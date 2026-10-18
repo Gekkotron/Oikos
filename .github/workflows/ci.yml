@@ -60,9 +60,12 @@ jobs:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v5
       - name: ${{ matrix.group.name }} tests
-        # --configuration-cache-problems=warn: don't hard-fail if a plugin is CC-hostile; the
-        # gradle.properties flag enables CC itself. Flip to `fail` once no plugin warns.
-        run: ./gradlew ${{ matrix.group.tasks }} --configuration-cache-problems=warn --stacktrace --continue
+        # Configuration cache is enabled in gradle.properties for local dev speed, but we
+        # disable it on CI with -Dorg.gradle.configuration-cache=false: the :app job's
+        # Hilt KSP + Compose UI + Robolectric combo hangs the invocation under CC in CI
+        # even though it stores a cache entry cleanly on a dev machine. Revisit when AGP /
+        # Hilt / KSP CC compatibility improves.
+        run: ./gradlew ${{ matrix.group.tasks }} -Dorg.gradle.configuration-cache=false --stacktrace --continue
       - uses: codecov/codecov-action@v5
         if: always()
         with:
