@@ -5,7 +5,6 @@ import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.CodeFormat
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.Kind
-import java.text.Normalizer
 
 data class VoiceEntity(
     val uniqueId: String,
@@ -46,11 +45,9 @@ object VoiceCatalogBuilder {
         Kind.LIGHT, Kind.SWITCH, Kind.COVER, Kind.ALARM_PANEL,
         Kind.SENSOR, Kind.BINARY_SENSOR, Kind.CLIMATE, Kind.VACUUM, Kind.WATER_HEATER, Kind.NUMBER,
     )
-    private val DIACRITICS = Regex("\\p{Mn}+")
     private val LETTERS = Regex("[a-z]+")
 
-    private fun fold(s: String): String =
-        Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(DIACRITICS, "")
+    private fun fold(s: String): String = stripDiacritics(s.lowercase())
 
     private fun tokens(s: String): List<String> =
         LETTERS.findAll(fold(s)).map { it.value }.filter { it.length >= 2 }.toList()
