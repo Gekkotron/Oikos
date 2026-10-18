@@ -18,16 +18,17 @@ jobs:
       matrix:
         group:
           - name: core
+            # KMP (oikos.kmp.jvm.library) modules use :jvmTest; Android library modules use :test.
             tasks: >-
-              :core:model:test
+              :core:model:jvmTest
               :core:crypto:test
               :core:transport:test
-              :core:state:test
-              :core:source:test
-              :core:voice:test
+              :core:state:jvmTest
+              :core:source:jvmTest
+              :core:voice:jvmTest
               :core:data:test
               :core:alerts:test
-              :core:history:test
+              :core:history:jvmTest
               :core:push:test
               :core:demo:test
               :core:designsystem:test
