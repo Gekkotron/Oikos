@@ -1,11 +1,16 @@
 plugins {
-    id("oikos.jvm.library")
-    id("oikos.serialization")
+    id("oikos.kmp.jvm.library")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-dependencies {
-    // Entity, MqttBindings (the discovery wiring a ref is read from).
-    api(project(":core:state"))
-    // HttpGetResult: what LanOrGatewayGet answers.
-    api(project(":core:transport"))
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(project(":core:state"))
+            api(libs.kotlinx.serialization.json)
+        }
+        jvmMain.dependencies {
+            api(project(":core:transport"))
+        }
+    }
 }
