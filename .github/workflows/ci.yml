@@ -32,6 +32,7 @@ jobs:
               :core:demo:test
               :core:designsystem:test
               koverXmlReport
+              -x :app:koverXmlReport
           - name: feature
             tasks: >-
               :feature:home:test
@@ -44,6 +45,7 @@ jobs:
               :feature:widget:test
               :feature:voice:test
               koverXmlReport
+              -x :app:koverXmlReport
           - name: app
             tasks: >-
               :app:test
@@ -65,6 +67,10 @@ jobs:
         # Hilt KSP + Compose UI + Robolectric combo hangs the invocation under CC in CI
         # even though it stores a cache entry cleanly on a dev machine. Revisit when AGP /
         # Hilt / KSP CC compatibility improves.
+        # :core and :feature jobs pass -x :app:koverXmlReport so Gradle doesn't drag
+        # :app:testDebugUnitTest in through koverXmlReport's cross-module aggregation —
+        # that task deadlocks when co-scheduled with the parallel :feature:*:test tasks.
+        # :app coverage is uploaded by the dedicated :app matrix job.
         run: ./gradlew ${{ matrix.group.tasks }} -Dorg.gradle.configuration-cache=false --stacktrace --continue
       - uses: codecov/codecov-action@v5
         if: always()
