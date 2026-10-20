@@ -44,11 +44,16 @@ class HomeUiBuilderWaterHeaterTest {
     }
 
     @Test
-    fun `on is true only in performance`() {
+    fun `on follows heating`() {
         assertTrue(build("performance").on)
-        assertEquals(false, build("eco").on)
+        assertTrue(build("eco").on)
         assertEquals(false, build("off").on)
         assertEquals(false, build(null).on)
+    }
+
+    @Test
+    fun `card carries the heater view`() {
+        assertEquals(HeaterChip.Mode("eco"), build("eco").heater?.chip)
     }
 
     @Test
@@ -57,6 +62,7 @@ class HomeUiBuilderWaterHeaterTest {
         assertEquals(true, build("performance").forceToggle)
         assertNull(build("eco", modes = listOf("off", "electric", "gas")).forceToggle)
         assertNull(build("eco", modes = listOf("eco")).forceToggle)
+        assertNull(build("heat", modes = emptyList()).forceToggle)
     }
 
     @Test
