@@ -561,14 +561,14 @@ class MqttDiscoverySourceTest {
     }
 
     @Test
-    fun `a switch with asLight is a light that still speaks switch payloads`() = runTest {
+    fun `a switch with showAs light is a light that still speaks switch payloads`() = runTest {
         val h = start()
         h.transport.deliver("homeassistant/switch/a/config", switchConfig("a", ""","payload_on":"1","payload_off":"0""""))
         runCurrent()
         settle()
         assertEquals(Kind.SWITCH, h.source.entities.value.getValue("a").kind)
 
-        h.transport.deliver("oikos/ui/a", """{"asLight":true}""")
+        h.transport.deliver("oikos/ui/a", """{"showAs":"light"}""")
         runCurrent()
         val e = h.source.entities.value.getValue("a")
         assertEquals(Kind.LIGHT, e.kind)
@@ -586,10 +586,37 @@ class MqttDiscoverySourceTest {
     }
 
     @Test
-    fun `asLight leaves a real light alone`() = runTest {
+    fun `legacy asLight on a switch still promotes to light`() = runTest {
+        val h = start()
+        h.transport.deliver("homeassistant/switch/a/config", switchConfig("a"))
+        runCurrent()
+        settle()
+        h.transport.deliver("oikos/ui/a", """{"asLight":true}""")
+        runCurrent()
+        val e = h.source.entities.value.getValue("a")
+        assertEquals(Kind.LIGHT, e.kind)
+        assertEquals(Kind.SWITCH, e.protocolKind)
+        assertEquals("light", e.ui.showAs)
+    }
+
+    @Test
+    fun `showAs door keeps a switch as switch`() = runTest {
+        val h = start()
+        h.transport.deliver("homeassistant/switch/a/config", switchConfig("a"))
+        runCurrent()
+        settle()
+        h.transport.deliver("oikos/ui/a", """{"showAs":"door"}""")
+        runCurrent()
+        val e = h.source.entities.value.getValue("a")
+        assertEquals(Kind.SWITCH, e.kind)
+        assertEquals("door", e.ui.showAs)
+    }
+
+    @Test
+    fun `showAs leaves a real light alone`() = runTest {
         val h = start()
         h.transport.deliver(lightTopic, lightConfig)
-        h.transport.deliver("oikos/ui/$lightId", """{"asLight":true}""")
+        h.transport.deliver("oikos/ui/$lightId", """{"showAs":"light"}""")
         runCurrent()
         val e = h.source.entities.value.getValue(lightId)
         assertEquals(Kind.LIGHT, e.kind)
