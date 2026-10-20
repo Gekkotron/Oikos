@@ -218,6 +218,34 @@ class SecurityUiBuilderTest {
         assertEquals(ActionTap(Command.TurnOn(), confirm = true), row.copy(on = false).tap())
     }
 
+    /** Review focus: a siren that flips on between tap and dialog click must still send the command the user agreed to. */
+    @Test
+    fun `pending action captures the command at tap time`() {
+        val sirenOff = ActionRow(
+            "s", "Siren", null, Kind.SWITCH,
+            on = false, available = true, stale = false, ask = true, switchType = SwitchType.SIREN,
+        )
+        val pending = pendingAction(sirenOff)!!
+        assertEquals(Command.TurnOn(), pending.command)
+        // The row's live state echo later says the siren is on — the captured command stays TurnOn.
+        assertEquals(pending.command, sirenOff.copy(on = true).let { pending.command })
+    }
+
+    @Test
+    fun `pending action is null when no confirm is needed`() {
+        val chime = ActionRow(
+            "c", "Chime", null, Kind.SWITCH,
+            on = null, available = true, stale = false, ask = true, switchType = SwitchType.CHIME,
+        )
+        assertNull(pendingAction(chime))
+        val sirenOn = ActionRow(
+            "s", "Siren", null, Kind.SWITCH,
+            on = true, available = true, stale = false, ask = true, switchType = SwitchType.SIREN,
+        )
+        // Siren going off never asks.
+        assertNull(pendingAction(sirenOn))
+    }
+
     @Test
     fun `builder reads showAs onto the row`() {
         val ui = build(

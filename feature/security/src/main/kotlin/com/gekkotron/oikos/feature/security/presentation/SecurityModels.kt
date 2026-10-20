@@ -79,6 +79,21 @@ data class ActionRow(
 /** What a tap on an action does, and whether it asks first (security actions spec §3.3). */
 data class ActionTap(val command: Command, val confirm: Boolean)
 
+/** Captured at tap time so a later state echo cannot change what the user agreed to (device sheet spec §5.3). */
+data class PendingAction(
+    val id: String,
+    val command: Command,
+    val switchType: SwitchType?,
+    val kind: Kind,
+    val name: String,
+)
+
+/** The dialog that should open for this tap, or null when no confirmation is needed. */
+fun pendingAction(row: ActionRow): PendingAction? {
+    val tap = row.tap()
+    return if (tap.confirm) PendingAction(row.id, tap.command, row.switchType, row.kind, row.name) else null
+}
+
 fun ActionRow.tap(): ActionTap = when {
     kind == Kind.BUTTON -> ActionTap(Command.Press, confirm = ask)
     switchType == SwitchType.DOOR -> ActionTap(Command.TurnOn(), confirm = ask)

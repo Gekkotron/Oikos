@@ -52,10 +52,12 @@ import com.gekkotron.oikos.designsystem.alarm.AlarmHero
 import com.gekkotron.oikos.designsystem.components.LinkPill
 import com.gekkotron.oikos.designsystem.components.OikosCard
 import com.gekkotron.oikos.feature.security.R
+import com.gekkotron.oikos.feature.security.presentation.PendingAction
 import com.gekkotron.oikos.feature.security.presentation.SecurityEvent
 import com.gekkotron.oikos.feature.security.presentation.SecurityUi
 import com.gekkotron.oikos.feature.security.presentation.SecurityViewModel
 import com.gekkotron.oikos.feature.security.presentation.SensorSection
+import com.gekkotron.oikos.feature.security.presentation.pendingAction
 import com.gekkotron.oikos.feature.security.presentation.tap
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
@@ -130,7 +132,9 @@ fun SecurityScreen(
     val layoutDirection = LocalLayoutDirection.current
     var sheetId by rememberSaveable { mutableStateOf<String?>(null) }
     var actionSheetId by rememberSaveable { mutableStateOf<String?>(null) }
-    var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Captured at tap time so a later state echo cannot change the command the user agreed to. Not saved across
+    // process death on purpose: a half-answered confirm shouldn't survive a kill.
+    var confirmPending by remember { mutableStateOf<PendingAction?>(null) }
     var customizeId by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
         containerColor = Color.Transparent,
@@ -186,9 +190,9 @@ fun SecurityScreen(
                                     ActionTile(
                                         row,
                                         onClick = {
-                                            val tap = row.tap()
                                             // A stale action can't send: let the view model say so now, not after asking.
-                                            if (tap.confirm && !row.stale) confirmId = row.id else onSend(row.id, tap.command)
+                                            val pending = if (row.stale) null else pendingAction(row)
+                                            if (pending != null) confirmPending = pending else onSend(row.id, row.tap().command)
                                         },
                                         onLongClick = { actionSheetId = row.id },
                                         Modifier.weight(1f).fillMaxHeight(),
@@ -255,33 +259,34 @@ fun SecurityScreen(
         )
     }
     customizeId?.let { id -> customizeSheet?.invoke(id) { customizeId = null } }
-    // Asked at tap time; an action that left Security or went unavailable meanwhile closes the dialog unsent.
-    val confirmRow = confirmId?.let { state.action(it) }?.takeIf { it.available }
-    if (confirmId != null && confirmRow == null) LaunchedEffect(confirmId) { confirmId = null }
-    if (confirmRow != null) {
-        val button = confirmRow.kind == Kind.BUTTON
-        val tap = confirmRow.tap()
+    // The dialog answers for the captured command, not for whatever the row now reports. An action that left
+    // Security or went unavailable meanwhile closes the dialog unsent.
+    val pendingLiveAvailable = confirmPending?.let { state.action(it.id)?.available == true } == true
+    if (confirmPending != null && !pendingLiveAvailable) LaunchedEffect(confirmPending) { confirmPending = null }
+    val pending = confirmPending
+    if (pending != null && pendingLiveAvailable) {
+        val button = pending.kind == Kind.BUTTON
         val titleRes = when {
             button -> R.string.security_action_confirm_press
-            confirmRow.switchType == SwitchType.DOOR -> R.string.security_action_confirm_open
-            confirmRow.switchType == SwitchType.SIREN -> R.string.security_action_confirm_ring
+            pending.switchType == SwitchType.DOOR -> R.string.security_action_confirm_open
+            pending.switchType == SwitchType.SIREN -> R.string.security_action_confirm_ring
             else -> R.string.security_action_confirm_on
         }
         val actionLabelRes = when {
             button -> R.string.security_action_press
-            confirmRow.switchType == SwitchType.DOOR -> R.string.security_action_open
-            confirmRow.switchType == SwitchType.SIREN -> R.string.security_action_ring
+            pending.switchType == SwitchType.DOOR -> R.string.security_action_open
+            pending.switchType == SwitchType.SIREN -> R.string.security_action_ring
             else -> R.string.security_action_turn_on
         }
         AlertDialog(
-            onDismissRequest = { confirmId = null },
-            title = { Text(stringResource(titleRes, confirmRow.name)) },
+            onDismissRequest = { confirmPending = null },
+            title = { Text(stringResource(titleRes, pending.name)) },
             confirmButton = {
-                TextButton(onClick = { confirmId = null; onSend(confirmRow.id, tap.command) }) {
+                TextButton(onClick = { confirmPending = null; onSend(pending.id, pending.command) }) {
                     Text(stringResource(actionLabelRes))
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmId = null }) { Text(stringResource(R.string.security_cancel)) } },
+            dismissButton = { TextButton(onClick = { confirmPending = null }) { Text(stringResource(R.string.security_cancel)) } },
         )
     }
 }
