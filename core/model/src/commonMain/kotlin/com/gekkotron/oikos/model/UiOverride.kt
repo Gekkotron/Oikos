@@ -4,6 +4,12 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Retained JSON on `oikos/ui/<unique_id>`. */
 @Serializable
@@ -32,8 +38,9 @@ data class UiOverride(
     val securityAsk: Boolean = true,
     /** Keeps this cover or light out of its room's group card (room groups spec §6). */
     val ungrouped: Boolean = false,
-    /** Shows this switch as an on/off light (switch-as-light). */
-    val asLight: Boolean = false,
+    /** Switch presentation type — one of [SHOW_AS], or null for a plain switch. Only read when `protocolKind == Kind.SWITCH` (device sheet spec §5.1).
+     *  An unknown value round-trips but is treated as a plain switch. */
+    val showAs: String? = null,
     /** When set and the user taps a light's tile to turn it on, send this preset's brightness and
      *  colour instead of a bare `on`, so the strip comes back the way the user wants rather than
      *  the state another command (scene, voice…) last left it in. One of [LightOnPreset.key] or null. */
@@ -45,6 +52,33 @@ data class UiOverride(
      *  Blank or null = no chips; invalid entries drop silently so a typo cannot break the sheet. */
     val climatePresets: String? = null,
 )
+
+/** Known values for [UiOverride.showAs]; absent means a plain switch. Mirrors the hub's `SHOW_AS`. */
+val SHOW_AS: List<String> = listOf("light", "door", "siren", "chime", "plug")
+
+/** The user-pickable presentation of a Z2M switch (device sheet spec §5.1). Only meaningful when `protocolKind == Kind.SWITCH`. */
+enum class SwitchType(val key: String?) {
+    SWITCH(null),
+    LIGHT("light"),
+    DOOR("door"),
+    SIREN("siren"),
+    CHIME("chime"),
+    PLUG("plug"),
+    ;
+
+    companion object {
+        /** The entity's type, or null for a non-switch. An unknown [UiOverride.showAs] reads as [SWITCH]. */
+        fun of(protocolKind: Kind, ui: UiOverride): SwitchType? {
+            if (protocolKind != Kind.SWITCH) return null
+            val key = ui.showAs ?: return SWITCH
+            return entries.firstOrNull { it.key == key } ?: SWITCH
+        }
+    }
+}
+
+/** The kind the house should treat this entity as. Promotes `Kind.SWITCH + showAs = "light"` to `Kind.LIGHT`; everything else keeps its protocol kind. */
+fun effectiveKind(protocolKind: Kind, ui: UiOverride): Kind =
+    if (protocolKind == Kind.SWITCH && SwitchType.of(protocolKind, ui) == SwitchType.LIGHT) Kind.LIGHT else protocolKind
 
 /** Named defaults for [UiOverride.lightOnPreset]. Kept small on purpose: a free picker belongs in the light sheet, not the override. */
 enum class LightOnPreset(val key: String, val brightness: Int, val color: Hs) {
@@ -119,8 +153,25 @@ enum class ConsumerIcon(val key: String) {
 }
 
 object UiOverrides {
-    fun decode(payload: String): UiOverride? =
-        runCatching { OikosJson.decodeFromString(UiOverride.serializer(), payload) }.getOrNull()
+    /** Reads a retained UI override, folding a legacy `asLight: true` into `showAs: "light"` so the house's existing payloads boot the right type. */
+    fun decode(payload: String): UiOverride? = runCatching {
+        val element = OikosJson.parseToJsonElement(payload)
+        val obj = element as? JsonObject ?: return@runCatching null
+        val normalized = absorbLegacyAsLight(obj)
+        OikosJson.decodeFromJsonElement(UiOverride.serializer(), normalized)
+    }.getOrNull()
 
     fun encode(override: UiOverride): String = OikosJson.encodeToString(UiOverride.serializer(), override)
+
+    /** Drops `asLight` from the JSON and injects `showAs: "light"` when it was `true` and nothing newer is already there. */
+    private fun absorbLegacyAsLight(obj: JsonObject): JsonObject {
+        val asLight = obj["asLight"]
+        if (asLight == null) return obj
+        val legacyOn = (asLight as? JsonPrimitive)?.booleanOrNull == true
+        val next = obj.toMutableMap().apply {
+            remove("asLight")
+            if (legacyOn && !containsKey("showAs")) put("showAs", JsonPrimitive("light"))
+        }
+        return JsonObject(next)
+    }
 }

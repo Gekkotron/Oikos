@@ -26,8 +26,8 @@ data class OverrideDraft(
     val securityAsk: Boolean = true,
     /** Off = this cover or light leaves its room's group (room groups spec §6). */
     val grouped: Boolean = true,
-    /** On = this switch is shown as a light (switch-as-light). */
-    val asLight: Boolean = false,
+    /** The switch's presentation type (device sheet spec §5.1). One of [com.gekkotron.oikos.model.SHOW_AS], or null for a plain switch. */
+    val showAs: String? = null,
     /** A named preset the tile uses when turning the light on, or null to resume the last state. */
     val lightOnPreset: String? = null,
     /** Overrides the preset's baked brightness (1..255); null keeps the preset default. */
@@ -61,7 +61,7 @@ data class OverrideDraft(
             securityAction = securityAction,
             securityAsk = securityAsk,
             ungrouped = !grouped,
-            asLight = asLight,
+            showAs = showAs,
             lightOnPreset = lightOnPreset?.takeIf { LightOnPreset.of(it) != null },
             lightOnBrightness = lightOnBrightness?.takeIf { lightOnPreset != null && it in 1..255 },
             climatePresets = climatePresets.trim().takeIf { it.isNotEmpty() },
@@ -85,7 +85,7 @@ data class OverrideDraft(
             securityAction = card.ui.securityAction,
             securityAsk = card.ui.securityAsk,
             grouped = !card.ui.ungrouped,
-            asLight = card.ui.asLight,
+            showAs = card.ui.showAs,
             lightOnPreset = card.ui.lightOnPreset,
             lightOnBrightness = card.ui.lightOnBrightness,
             climatePresets = card.ui.climatePresets.orEmpty(),

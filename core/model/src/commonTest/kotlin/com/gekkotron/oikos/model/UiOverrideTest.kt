@@ -168,6 +168,42 @@ class UiOverrideTest {
     }
 
     @Test
+    fun `legacy as_light reads as light type`() {
+        val ui = UiOverrides.decode("""{"name":"Lumiere tv","asLight":true}""")!!
+        assertEquals("light", ui.showAs)
+        assertEquals("Lumiere tv", ui.name)
+
+        val off = UiOverrides.decode("""{"asLight":false}""")!!
+        assertNull(off.showAs)
+        assertEquals(UiOverride(), off)
+
+        val both = UiOverrides.decode("""{"asLight":true,"showAs":"siren"}""")!!
+        assertEquals("siren", both.showAs)
+    }
+
+    @Test
+    fun `encode never writes as_light`() {
+        val light = UiOverride(showAs = "light")
+        val wire = UiOverrides.encode(light)
+        assertFalse(wire.contains("asLight"))
+        assertTrue(wire.contains("\"showAs\":\"light\""))
+    }
+
+    @Test
+    fun `unknown show_as round trips but reads as switch`() {
+        val ui = UiOverrides.decode("""{"showAs":"fan"}""")!!
+        assertEquals("fan", ui.showAs)
+        val wire = UiOverrides.encode(ui)
+        assertTrue(wire.contains("\"showAs\":\"fan\""))
+    }
+
+    @Test
+    fun `absent showAs is null and omitted`() {
+        assertNull(UiOverrides.decode("{}")!!.showAs)
+        assertFalse(UiOverrides.encode(UiOverride()).contains("showAs"))
+    }
+
+    @Test
     fun `ClimatePresets parseOrDefault falls back when the override is empty`() {
         assertEquals(ClimatePresets.DEFAULTS, ClimatePresets.parseOrDefault(null))
         assertEquals(ClimatePresets.DEFAULTS, ClimatePresets.parseOrDefault(""))

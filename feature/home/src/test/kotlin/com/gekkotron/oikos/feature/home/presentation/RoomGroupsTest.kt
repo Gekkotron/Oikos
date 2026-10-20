@@ -179,7 +179,7 @@ class RoomGroupsTest {
 
     @Test
     fun `a switch shown as a light joins its room's light group`() {
-        val lamp = testEntity("plug", Kind.LIGHT, "plug", area = "living", ui = UiOverride(asLight = true)).copy(protocolKind = Kind.SWITCH)
+        val lamp = testEntity("plug", Kind.LIGHT, "plug", area = "living", ui = UiOverride(showAs = "light")).copy(protocolKind = Kind.SWITCH)
         val s = build(lamp, light("lamp"))
         val group = s.cards.single { it.isGroup }
         assertEquals("group:living:light", group.id)

@@ -16,6 +16,7 @@ import com.gekkotron.oikos.model.StateValue
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.model.UiOverrides
+import com.gekkotron.oikos.model.effectiveKind
 import com.gekkotron.oikos.source.discovery.DiscoveredEntity
 import com.gekkotron.oikos.source.discovery.DiscoveryParser
 import com.gekkotron.oikos.source.discovery.DiscoveryResult
@@ -408,7 +409,7 @@ class MqttDiscoverySource(
             val entities = raws.associate { (d, ui, raw) ->
                 val area = canonical[raw.lowercase(Locale.ROOT)]?.takeIf { raw !in declaredIds } ?: raw
                 val named = d.entity.copy(name = ui.name ?: d.entity.name, area = area, ui = ui)
-                d.entity.uniqueId to if (d.entity.kind == Kind.SWITCH && ui.asLight) named.copy(kind = Kind.LIGHT) else named
+                d.entity.uniqueId to named.copy(kind = effectiveKind(d.entity.protocolKind, ui))
             }
             // Recomputed from scratch every time, so it stays correct regardless of the order the cover
             // and its "Moving" sensor arrive in, and clears when either is removed.

@@ -123,12 +123,28 @@ class OverrideDraftTest {
 
     @Test
     fun `showing a switch as a light round-trips and keeps the protocol kind`() {
-        val asLight = testEntity("lamp", Kind.LIGHT, "Lamp", ui = UiOverride(asLight = true)).copy(protocolKind = Kind.SWITCH)
+        val asLight = testEntity("lamp", Kind.LIGHT, "Lamp", ui = UiOverride(showAs = "light")).copy(protocolKind = Kind.SWITCH)
         val card = card(asLight)
         assertEquals(Kind.SWITCH, card.protocolKind)
         val draft = OverrideDraft.from(card)
-        assertTrue(draft.asLight)
-        assertEquals(UiOverride(asLight = true), draft.applyTo(card))
-        assertFalse(draft.copy(asLight = false).applyTo(card).asLight)
+        assertEquals("light", draft.showAs)
+        assertEquals(UiOverride(showAs = "light"), draft.applyTo(card))
+        assertEquals(null, draft.copy(showAs = null).applyTo(card).showAs)
+    }
+
+    @Test
+    fun `type round trip is clean`() {
+        val plain = testEntity("sw", Kind.SWITCH, "Switch").copy(protocolKind = Kind.SWITCH)
+        val c = card(plain)
+        val draft = OverrideDraft.from(c).copy(showAs = "door").copy(showAs = null)
+        assertEquals(UiOverride(), draft.applyTo(c))
+    }
+
+    @Test
+    fun `picking light clears a leftover security action`() {
+        val action = testEntity("sw", Kind.SWITCH, "Switch", ui = UiOverride(securityAction = true)).copy(protocolKind = Kind.SWITCH)
+        val c = card(action)
+        val draft = OverrideDraft.from(c).copy(showAs = "light", securityAction = false)
+        assertEquals(UiOverride(showAs = "light"), draft.applyTo(c))
     }
 }
