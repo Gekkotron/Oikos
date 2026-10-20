@@ -121,4 +121,36 @@ class WaterHeaterMapperTest {
             WaterHeaterMapper.feedbackTopics(jeedom, Command.SetTemperature(58.0)),
         )
     }
+
+    // The heater component of the WaterHeaterController discovery (water heater view spec, Appendix A), expanded.
+    private val controller = bindings(
+        "water_heater",
+        """{"modes":[],
+           "current_temperature_topic":"water-heater/data",
+           "current_temperature_template":"{{ (80 + (0.35 - value_json.adc_result_mv / 1000) * 86.67) | round(1) }}",
+           "mode_state_topic":"water-heater/data",
+           "mode_state_template":"{{ \"heat\" if (value_json.triac_0_power + value_json.triac_1_power + value_json.triac_2_power) > 0 else \"off\" }}"}""",
+    )
+
+    private fun data(vararg powers: Int) =
+        """{"adc_result_mv":604,"triac_0_power":${powers[0]},"triac_1_power":${powers[1]},"triac_2_power":${powers[2]},"temp_0":17.94}"""
+
+    @Test
+    fun `empty modes keep the reported mode`() {
+        assertEquals(Decoded.State(Climate("heat", null, 58.0)), WaterHeaterMapper.decode(controller, "water-heater/data", data(40, 45, 44), Unknown))
+        assertEquals(Decoded.State(Climate("off", null, 58.0)), WaterHeaterMapper.decode(controller, "water-heater/data", data(0, 0, 0), Unknown))
+    }
+
+    @Test
+    fun `empty modes cannot be commanded`() {
+        assertIs<Encoded.NotSupported>(WaterHeaterMapper.encode(controller, Command.SetHvacMode("heat"), Unknown))
+        assertIs<Encoded.NotSupported>(WaterHeaterMapper.encode(controller, Command.TurnOff, Unknown))
+    }
+
+    @Test
+    fun `absent modes still filter against the defaults`() {
+        val noModes = bindings("water_heater", """{"mode_state_topic":"m","mode_state_template":"{{ value }}"}""")
+        assertEquals(Decoded.State(Climate("eco", null, null)), WaterHeaterMapper.decode(noModes, "m", "eco", Unknown))
+        assertEquals(Decoded.Ignored, WaterHeaterMapper.decode(noModes, "m", "heat", Unknown))
+    }
 }

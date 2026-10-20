@@ -19,13 +19,13 @@ internal object ThermostatBase {
         b.str("mode_state_topic"),
     )
 
-    /** Decodes the three climate topics onto [previous]'s [StateValue.Climate]; keeps `fanMode` as it was. */
+    /** Decodes the three climate topics onto [previous]'s [StateValue.Climate]; keeps `fanMode` as it was. Null [modes] accepts any non-blank mode. */
     fun decode(
         b: MqttBindings,
         topic: String,
         payload: String,
         previous: StateValue,
-        modes: List<String>,
+        modes: List<String>?,
     ): Decoded {
         var climate = previous as? StateValue.Climate ?: StateValue.Climate(null, null, null)
         val parts = PartialDecode()
@@ -45,7 +45,7 @@ internal object ThermostatBase {
         }
         if (topic == b.str("mode_state_topic")) {
             parts.part(renderIncoming(b, "mode_state_template", payload)) { v ->
-                val mode = v.asPayloadString()?.takeIf { it in modes } ?: return@part false
+                val mode = v.asPayloadString()?.takeIf { if (modes == null) it.isNotBlank() else it in modes } ?: return@part false
                 climate = climate.copy(mode = mode)
                 true
             }

@@ -114,6 +114,32 @@ class DiscoveryParserTest {
     }
 
     @Test
+    fun `WaterHeaterController device discovery parses into one device`() {
+        val r = DiscoveryParser.parse(prefix, "homeassistant/device/water_heater/config", fixture("water_heater_controller.json"))
+        assertIs<DiscoveryResult.Entities>(r)
+        // Diagnostic entities stay hidden, as for every other device.
+        assertEquals(listOf("temp_1", "frequency", "frequency_error"), r.skipped.map { it.substringBefore(':') })
+        val byId = r.items.associateBy { it.entity.uniqueId }
+        assertEquals(
+            mapOf(
+                "water_heater" to Kind.WATER_HEATER,
+                "water_heater_tank_temp" to Kind.SENSOR,
+                "water_heater_power_0" to Kind.NUMBER,
+                "water_heater_power_1" to Kind.NUMBER,
+                "water_heater_power_2" to Kind.NUMBER,
+                "water_heater_temp_0" to Kind.SENSOR,
+            ),
+            byId.mapValues { it.value.entity.kind },
+        )
+        assertEquals(setOf("water_heater_controller"), r.items.map { it.entity.deviceId }.toSet())
+        val heater = byId.getValue("water_heater")
+        assertEquals(emptyList(), heater.entity.capabilities.hvacModes)
+        assertEquals("water-heater/data", heater.b.str("json_attributes_topic"))
+        assertTrue(heater.b.str("json_attributes_template").orEmpty().contains("tojson"))
+        assertEquals("water-heater/data", heater.b.str("mode_state_topic"))
+    }
+
+    @Test
     fun `device-based discovery reports bad components but keeps good ones`() {
         val r = DiscoveryParser.parse(
             prefix, "homeassistant/device/d1/config",
