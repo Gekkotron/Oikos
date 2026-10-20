@@ -283,14 +283,15 @@ internal fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSend
     val min = caps.minTemp ?: 43.0
     val max = caps.maxTemp ?: 60.0
     val step = caps.tempStep ?: 1.0
-    val target = climate?.target ?: ((min + max) / 2)
     val locale = LocalConfiguration.current.locales[0]
     val decrease = stringResource(R.string.sheet_decrease)
     val increase = stringResource(R.string.sheet_increase)
 
     // Mode chips: every discovered mode except "off"; "eco" and "performance" get the Éco / Force labels.
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (mode in caps.hvacModes.filter { it != "off" }) {
+    // None at all (the WaterHeaterController only reports heat/off) means no row.
+    val modes = caps.hvacModes.filter { it != "off" }
+    if (modes.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (mode in modes) {
             FilterChip(
                 selected = climate?.mode == mode,
                 onClick = { onSend(Command.SetHvacMode(mode)) },
@@ -300,19 +301,23 @@ internal fun WaterHeaterControls(card: CardUi, onSend: (Command) -> Unit, onSend
         }
     }
 
-    Text(stringResource(R.string.sheet_target))
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-        FilledTonalIconButton(
-            onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, -step, min, max))) },
-            enabled = card.available && target > min,
-            modifier = Modifier.semantics { contentDescription = decrease },
-        ) { Text("−", fontSize = 22.sp) }
-        Text(CardFormatter.number(target, locale) + "°", style = OikosTheme.type.display)
-        FilledTonalIconButton(
-            onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, step, min, max))) },
-            enabled = card.available && target < max,
-            modifier = Modifier.semantics { contentDescription = increase },
-        ) { Text("+", fontSize = 22.sp) }
+    // The stepper only appears with a target to step from, as in Oikos-os.
+    val target = climate?.target
+    if (target != null) {
+        Text(stringResource(R.string.sheet_target))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            FilledTonalIconButton(
+                onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, -step, min, max))) },
+                enabled = card.available && target > min,
+                modifier = Modifier.semantics { contentDescription = decrease },
+            ) { Text("−", fontSize = 22.sp) }
+            Text(CardFormatter.number(target, locale) + "°", style = OikosTheme.type.display)
+            FilledTonalIconButton(
+                onClick = { onSend(Command.SetTemperature(StepMath.stepTemperature(target, step, min, max))) },
+                enabled = card.available && target < max,
+                modifier = Modifier.semantics { contentDescription = increase },
+            ) { Text("+", fontSize = 22.sp) }
+        }
     }
 
     // Same-device Kind.NUMBER companions (e.g. Force power); each still has its own standalone card.
