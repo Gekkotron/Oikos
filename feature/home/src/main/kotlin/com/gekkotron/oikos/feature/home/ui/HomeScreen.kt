@@ -67,8 +67,11 @@ import com.gekkotron.oikos.designsystem.OikosTheme
 import com.gekkotron.oikos.designsystem.components.ChipItem
 import com.gekkotron.oikos.designsystem.components.LinkPill
 import com.gekkotron.oikos.designsystem.components.RoomChips
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
+import com.gekkotron.oikos.feature.home.presentation.HomeEvent
 import com.gekkotron.oikos.feature.home.presentation.HomeUiState
 import com.gekkotron.oikos.feature.home.presentation.HomeViewModel
 import com.gekkotron.oikos.feature.home.presentation.RoomFilter
@@ -91,7 +94,35 @@ fun HomeRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val voiceEnabled by viewModel.voiceEnabled.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    HomeEventsEffect(viewModel.events, snackbar, onRetry = viewModel::send, onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids) })
+    var ask by rememberSaveable { mutableStateOf<HomeEvent.AskBeforeAction?>(null) }
+    HomeEventsEffect(
+        viewModel.events, snackbar,
+        onRetry = viewModel::send,
+        onRetryGroup = { g, c, ids -> viewModel.sendGroup(g, c, ids) },
+        onAsk = { ask = it },
+    )
+    val askRow = ask?.let { event -> state.card(event.id) }
+    // The entity may have left Home while the dialog was queued (removed, hidden, kind changed): close silently.
+    if (ask != null && askRow == null) LaunchedEffect(ask) { ask = null }
+    val currentAsk = ask
+    if (currentAsk != null && askRow != null) {
+        val open = currentAsk.labelResId == R.string.card_confirm_open
+        AlertDialog(
+            onDismissRequest = { ask = null },
+            title = { Text(stringResource(currentAsk.labelResId, askRow.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = currentAsk.id
+                    val cmd = currentAsk.command
+                    ask = null
+                    viewModel.send(id, cmd)
+                }) {
+                    Text(stringResource(if (open) R.string.card_action_open else R.string.card_action_ring))
+                }
+            },
+            dismissButton = { TextButton(onClick = { ask = null }) { Text(stringResource(R.string.card_cancel)) } },
+        )
+    }
     HomeScreen(
         state, viewModel::select, viewModel::tap, viewModel::send, snackbar,
         onCustomize = viewModel::customize,

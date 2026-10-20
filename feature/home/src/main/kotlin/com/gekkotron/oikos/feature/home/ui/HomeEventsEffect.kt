@@ -21,13 +21,16 @@ fun HomeEventsEffect(
     snackbar: SnackbarHostState,
     onRetry: (String, Command) -> Unit,
     onRetryGroup: (String, Command, List<String>) -> Unit = { _, _, _ -> },
+    onAsk: (HomeEvent.AskBeforeAction) -> Unit = {},
 ) {
     val resources = LocalContext.current.resources
     val retry by rememberUpdatedState(onRetry)
     val retryGroup by rememberUpdatedState(onRetryGroup)
+    val ask by rememberUpdatedState(onAsk)
     LaunchedEffect(events, snackbar) {
         events.collect { event ->
             when (event) {
+                is HomeEvent.AskBeforeAction -> ask(event)
                 is HomeEvent.NotConfirmed -> {
                     val result = snackbar.showSnackbar(
                         message = resources.getString(R.string.home_not_confirmed),

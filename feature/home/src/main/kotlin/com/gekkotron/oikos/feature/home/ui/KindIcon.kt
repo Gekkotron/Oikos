@@ -34,6 +34,7 @@ import com.gekkotron.oikos.feature.home.presentation.CardValue
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.model.SwitchType
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -67,7 +68,7 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
         ?.let { IconSpec.Swing(it, if (card.available) (card.value as? CardValue.Contact)?.on else null) }
         ?: IconSpec.Static(binaryGlyph(card.deviceClass), on = false)
     Kind.LIGHT -> IconSpec.Static(OikosGlyph.BULB, card.on)
-    Kind.SWITCH -> IconSpec.Static(OikosGlyph.PLUG, card.on)
+    Kind.SWITCH -> switchIconSpec(card)
     Kind.WATER_HEATER -> IconSpec.Static(OikosGlyph.WATER_HEATER, card.on)
     Kind.CLIMATE -> IconSpec.Climate(running = card.available && card.on, fanMode = (card.state as? StateValue.Climate)?.fanMode)
     Kind.SENSOR -> IconSpec.Static(sensorGlyph(card.deviceClass), on = false)
@@ -78,6 +79,20 @@ internal fun iconSpec(card: CardUi): IconSpec = when (card.kind) {
     Kind.VACUUM -> (card.state as? StateValue.Vacuum).let { s ->
         IconSpec.Vacuum(motion = vacuumMotion(s?.state), fanSpeed = s?.fanSpeed)
     }
+}
+
+/** Device sheet spec §5.3: a Z2M switch wears the glyph of its presentation type. */
+private fun switchIconSpec(card: CardUi): IconSpec = when (SwitchType.of(card.protocolKind, card.ui)) {
+    // The Door opener card reuses the binary sensor's door swing: open while the relay reads on.
+    SwitchType.DOOR -> IconSpec.Swing(SwingShape.DOOR, open = if (card.available) card.on else null)
+    // Siren is deferred to BOLT until a dedicated glyph lands; it already reads as "going off".
+    SwitchType.SIREN -> IconSpec.Static(OikosGlyph.BOLT, card.on)
+    // Chime reuses PLAY (the Button glyph) — a tap sends a one-shot.
+    SwitchType.CHIME -> IconSpec.Static(OikosGlyph.PLAY, on = false)
+    // Plug and plain switch keep today's PLUG.
+    SwitchType.PLUG, SwitchType.SWITCH, null -> IconSpec.Static(OikosGlyph.PLUG, card.on)
+    // Promoted to Kind.LIGHT upstream; this branch is unreachable in practice.
+    SwitchType.LIGHT -> IconSpec.Static(OikosGlyph.BULB, card.on)
 }
 
 private fun vacuumMotion(state: String?): VacuumMotion = when (state) {

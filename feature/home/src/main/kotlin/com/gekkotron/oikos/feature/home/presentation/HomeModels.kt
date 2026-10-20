@@ -135,6 +135,9 @@ sealed interface HomeEvent {
     data object SaveFailed : HomeEvent
     data object WaitingForConnection : HomeEvent
 
+    /** Device sheet spec §5.3: a Door opener or Siren wants the user to confirm the tap. */
+    data class AskBeforeAction(val id: String, val labelResId: Int, val command: Command) : HomeEvent
+
     /** Members of one group send that were not confirmed, merged (room groups spec §5). */
     data class GroupNotConfirmed(
         val groupId: String,

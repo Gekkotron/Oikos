@@ -9,6 +9,7 @@ import com.gekkotron.oikos.model.Area
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.CommandResult
 import com.gekkotron.oikos.model.LightOnPreset
+import com.gekkotron.oikos.model.SwitchType
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.source.EntitySource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -129,15 +130,26 @@ class HomeViewModel @Inject constructor(
 
     fun tap(card: CardUi) {
         when (card.tap) {
-            TapAction.TOGGLE ->
-                if (card.isGroup) {
-                    sendGroup(card.id, GroupCommands.toggle(card))
-                } else {
-                    // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
-                    send(card.id, if (card.on) Command.TurnOff else turnOnFor(card))
-                }
+            TapAction.TOGGLE -> when {
+                card.isGroup -> sendGroup(card.id, GroupCommands.toggle(card))
+                card.kind == Kind.SWITCH -> dispatchSwitchTap(card)
+                // Absolute, so "Retry" after a late confirmation repeats the intent instead of flipping it back.
+                else -> send(card.id, if (card.on) Command.TurnOff else turnOnFor(card))
+            }
             TapAction.PRESS -> send(card.id, Command.Press)
             TapAction.OPEN_SHEET, TapAction.OPEN_HISTORY, TapAction.NONE -> Unit
+        }
+    }
+
+    /** A `Kind.SWITCH` card's tap goes through [cardTap], so Door opener / Siren / Chime speak their own command. */
+    private fun dispatchSwitchTap(card: CardUi) {
+        val type = SwitchType.of(card.protocolKind, card.ui)
+        when (val tap = cardTap(type, card.on, card.ui.securityAsk)) {
+            is CardTap.Send -> send(card.id, tap.command)
+            is CardTap.Confirm -> viewModelScope.launch {
+                _events.send(HomeEvent.AskBeforeAction(card.id, tap.labelResId, tap.command))
+            }
+            CardTap.None -> Unit
         }
     }
 

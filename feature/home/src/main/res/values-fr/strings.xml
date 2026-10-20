@@ -218,6 +218,11 @@
     <string name="customize_show_as_siren">Sirène</string>
     <string name="customize_show_as_chime">Carillon</string>
     <string name="customize_show_as_plug">Prise</string>
+    <string name="card_confirm_open">Ouvrir %1$s ?</string>
+    <string name="card_confirm_ring">Faire sonner %1$s ?</string>
+    <string name="card_action_open">Ouvrir</string>
+    <string name="card_action_ring">Sonner</string>
+    <string name="card_cancel">Annuler</string>
     <string name="customize_light_on_default">Allumer en</string>
     <string name="customize_light_on_resume">Dernier état</string>
     <string name="customize_light_on_white">Blanc</string>

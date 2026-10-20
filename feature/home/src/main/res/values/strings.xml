@@ -218,6 +218,11 @@
     <string name="customize_show_as_siren">Siren</string>
     <string name="customize_show_as_chime">Chime</string>
     <string name="customize_show_as_plug">Plug</string>
+    <string name="card_confirm_open">Open %1$s?</string>
+    <string name="card_confirm_ring">Ring %1$s?</string>
+    <string name="card_action_open">Open</string>
+    <string name="card_action_ring">Ring</string>
+    <string name="card_cancel">Cancel</string>
     <string name="customize_light_on_default">Turn on in</string>
     <string name="customize_light_on_resume">Last state</string>
     <string name="customize_light_on_white">White</string>
