@@ -398,37 +398,58 @@ class DemoHouse(private val random: Random = Random(7)) {
         }
     }
 
-    /** HA water_heater on the `Water heater` device, with a Force power number companion on the same device. */
+    /**
+     * The WaterHeaterController as Oikos-os discovers it (water heater view spec, Appendix A): one firmware JSON
+     * topic, a `water_heater` with no modes whose tank temperature, heat/off mode and power/inlet attributes are
+     * all templated from it, and three triac power numbers.
+     */
     private fun waterHeater(id: String, device: String, area: String, topic: String) {
-        val modes = listOf("off", "eco", "performance")
+        val tank = "{{ (80 + (0.35 - value_json.adc_result_mv / 1000) * 86.67) | round(1) }}"
+        val triacs = "value_json.triac_0_power + value_json.triac_1_power + value_json.triac_2_power"
         config("water_heater", id, device, null, area) {
-            putJsonArray("modes") { modes.forEach { add(it) } }
-            put("min_temp", 40)
-            put("max_temp", 65)
-            put("precision", 1.0)
+            putJsonArray("modes") { }
+            put("unit_of_measurement", "°C")
             put("current_temperature_topic", topic)
-            put("current_temperature_template", "{{ value_json.current }}")
+            put("current_temperature_template", tank)
             put("mode_state_topic", topic)
-            put("mode_state_template", "{{ value_json.mode }}")
-            put("temperature_state_topic", topic)
-            put("temperature_state_template", "{{ value_json.target }}")
-            put("mode_command_topic", "$topic/mode/set")
-            put("temperature_command_topic", "$topic/temperature/set")
+            put("mode_state_template", "{{ \"heat\" if ($triacs) > 0 else \"off\" }}")
+            put("json_attributes_topic", topic)
+            put(
+                "json_attributes_template",
+                "{{ {\"inlet_temperature\": value_json.temp_0 | round(1), \"power\": (($triacs) / 3) | round | int} | tojson }}",
+            )
         }
-        config("number", "${id}_force_power", device, "Force power", area) {
+        config("sensor", "${id}_tank", device, "Tank temperature", area) {
             put("state_topic", topic)
-            put("value_template", "{{ value_json.force_power }}")
-            put("command_topic", "$topic/force_power/set")
-            put("min", 0)
-            put("max", 100)
-            put("step", 10)
-            put("unit_of_measurement", "%")
+            put("value_template", tank)
+            put("device_class", "temperature")
+            put("unit_of_measurement", "°C")
         }
-        doc(topic, obj("current" to 52.0, "target" to 60.0, "mode" to "eco", "force_power" to 60))
-        echo("$topic/mode/set", topic) { p -> if (p in modes) obj("mode" to p) else null }
-        echo("$topic/temperature/set", topic) { p -> p.toDoubleOrNull()?.let { obj("target" to it) } }
-        echo("$topic/force_power/set", topic) { p ->
-            p.toDoubleOrNull()?.roundToInt()?.coerceIn(0, 100)?.let { obj("force_power" to it) }
+        config("sensor", "${id}_inlet", device, "Cold water inlet temperature", area) {
+            put("state_topic", topic)
+            put("value_template", "{{ value_json.temp_0 | round(1) }}")
+            put("device_class", "temperature")
+            put("unit_of_measurement", "°C")
+        }
+        for (i in 0..2) {
+            config("number", "${id}_triac_$i", device, "Power ${i + 1}", area) {
+                put("state_topic", topic)
+                put("value_template", "{{ value_json.triac_${i}_power }}")
+                put("command_topic", "$topic/control")
+                put("command_template", "{\"power$i\": {{ value | int }}}")
+                put("min", 0)
+                put("max", 100)
+                put("step", 1)
+                put("unit_of_measurement", "%")
+            }
+        }
+        // Spec Appendix B: a 58 °C tank heating at 43 % on average, 17.9 °C at the inlet.
+        doc(topic, obj("adc_result_mv" to 604, "triac_0_power" to 40, "triac_1_power" to 45, "triac_2_power" to 44, "temp_0" to 17.94))
+        echo("$topic/control", topic) { p ->
+            val command = runCatching { Json.parseToJsonElement(p).jsonObject }.getOrNull() ?: return@echo null
+            val i = (0..2).firstOrNull { "power$it" in command } ?: return@echo null
+            val power = (command["power$i"] as? JsonPrimitive)?.doubleOrNull?.roundToInt()?.coerceIn(0, 100) ?: return@echo null
+            obj("triac_${i}_power" to power)
         }
     }
 

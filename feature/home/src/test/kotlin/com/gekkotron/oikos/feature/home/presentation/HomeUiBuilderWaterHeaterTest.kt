@@ -82,4 +82,19 @@ class HomeUiBuilderWaterHeaterTest {
         val card = build("eco", companions = listOf("force_power" to "wh_device", "other" to "another_device"))
         assertEquals(listOf("force_power"), card.companions.map { it.id })
     }
+
+    @Test
+    fun `a heater named after its device is titled once and its power numbers by their own name`() {
+        // As DiscoveryParser names the WaterHeaterController: heater `name: null`, numbers "Power N".
+        val wh = testEntity("wh", Kind.WATER_HEATER, "Water heater", deviceId = "dev").copy(deviceName = "Water heater")
+        val power = testEntity("p0", Kind.NUMBER, "Water heater Power 1", deviceId = "dev", capabilities = Capabilities(min = 0.0, max = 100.0))
+            .copy(deviceName = "Water heater", label = "Power 1")
+        val ui = HomeUiBuilder.build(
+            mapOf("wh" to wh, "p0" to power), emptyMap(), emptyList(), RoomFilter.All,
+            LinkState.Connected(TransportMode.DEMO), Locale.US,
+        )
+        val card = ui.card("wh")!!
+        assertEquals("Water heater", card.name)
+        assertEquals(listOf("Power 1"), card.companions.map { it.name })
+    }
 }
