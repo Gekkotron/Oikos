@@ -59,6 +59,7 @@ import com.gekkotron.oikos.feature.security.presentation.SensorSection
 import com.gekkotron.oikos.feature.security.presentation.tap
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.SwitchType
 import kotlinx.coroutines.launch
 
 /**
@@ -259,12 +260,25 @@ fun SecurityScreen(
     if (confirmId != null && confirmRow == null) LaunchedEffect(confirmId) { confirmId = null }
     if (confirmRow != null) {
         val button = confirmRow.kind == Kind.BUTTON
+        val tap = confirmRow.tap()
+        val titleRes = when {
+            button -> R.string.security_action_confirm_press
+            confirmRow.switchType == SwitchType.DOOR -> R.string.security_action_confirm_open
+            confirmRow.switchType == SwitchType.SIREN -> R.string.security_action_confirm_ring
+            else -> R.string.security_action_confirm_on
+        }
+        val actionLabelRes = when {
+            button -> R.string.security_action_press
+            confirmRow.switchType == SwitchType.DOOR -> R.string.security_action_open
+            confirmRow.switchType == SwitchType.SIREN -> R.string.security_action_ring
+            else -> R.string.security_action_turn_on
+        }
         AlertDialog(
             onDismissRequest = { confirmId = null },
-            title = { Text(stringResource(if (button) R.string.security_action_confirm_press else R.string.security_action_confirm_on, confirmRow.name)) },
+            title = { Text(stringResource(titleRes, confirmRow.name)) },
             confirmButton = {
-                TextButton(onClick = { confirmId = null; onSend(confirmRow.id, if (button) Command.Press else Command.TurnOn()) }) {
-                    Text(stringResource(if (button) R.string.security_action_press else R.string.security_action_turn_on))
+                TextButton(onClick = { confirmId = null; onSend(confirmRow.id, tap.command) }) {
+                    Text(stringResource(actionLabelRes))
                 }
             },
             dismissButton = { TextButton(onClick = { confirmId = null }) { Text(stringResource(R.string.security_cancel)) } },

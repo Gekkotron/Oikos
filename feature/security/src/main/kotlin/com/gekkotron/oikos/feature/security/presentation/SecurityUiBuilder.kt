@@ -8,6 +8,7 @@ import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.model.SwitchType
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.transport.LinkState
 import java.time.Instant
@@ -60,6 +61,7 @@ object SecurityUiBuilder {
                     available = s?.available ?: true,
                     stale = s?.stale == true,
                     ask = e.ui.securityAsk,
+                    switchType = SwitchType.of(e.protocolKind, e.ui),
                 )
             }
             .sortedWith(compareBy<ActionRow>({ it.areaName == null }, { it.areaName?.lowercase() }, { it.name.lowercase() }, { it.id }))

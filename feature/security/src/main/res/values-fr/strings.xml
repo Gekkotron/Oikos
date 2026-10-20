@@ -57,8 +57,12 @@
     <string name="security_action_off">Éteint</string>
     <string name="security_action_confirm_on">Allumer %1$s ?</string>
     <string name="security_action_confirm_press">Déclencher %1$s ?</string>
+    <string name="security_action_confirm_open">Ouvrir %1$s ?</string>
+    <string name="security_action_confirm_ring">Faire sonner %1$s ?</string>
     <string name="security_action_turn_on">Allumer</string>
     <string name="security_action_press">Déclencher</string>
+    <string name="security_action_open">Ouvrir</string>
+    <string name="security_action_ring">Sonner</string>
     <string name="security_action_ask">Demander avant d\'allumer</string>
     <string name="security_action_settings">Réglages</string>
     <string name="security_cancel">Annuler</string>

@@ -5,6 +5,7 @@ import com.gekkotron.oikos.model.Capabilities
 import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.SensorGroup
+import com.gekkotron.oikos.model.SwitchType
 import com.gekkotron.oikos.transport.LinkState
 import java.time.Duration
 import java.time.Instant
@@ -71,15 +72,21 @@ data class ActionRow(
     val available: Boolean,
     val stale: Boolean,
     val ask: Boolean,
+    /** The switch's presentation type (device sheet spec §5.3); null for a Button. */
+    val switchType: SwitchType? = null,
 )
 
 /** What a tap on an action does, and whether it asks first (security actions spec §3.3). */
 data class ActionTap(val command: Command, val confirm: Boolean)
 
 fun ActionRow.tap(): ActionTap = when {
-    kind == Kind.SWITCH && on == true -> ActionTap(Command.TurnOff, confirm = false)
-    kind == Kind.SWITCH -> ActionTap(Command.TurnOn(), confirm = ask)
-    else -> ActionTap(Command.Press, confirm = ask)
+    kind == Kind.BUTTON -> ActionTap(Command.Press, confirm = ask)
+    switchType == SwitchType.DOOR -> ActionTap(Command.TurnOn(), confirm = ask)
+    switchType == SwitchType.SIREN && on == true -> ActionTap(Command.TurnOff, confirm = false)
+    switchType == SwitchType.SIREN -> ActionTap(Command.TurnOn(), confirm = ask)
+    switchType == SwitchType.CHIME -> ActionTap(Command.TurnOn(), confirm = false)
+    on == true -> ActionTap(Command.TurnOff, confirm = false)
+    else -> ActionTap(Command.TurnOn(), confirm = ask)
 }
 
 /** [loading] is true only before the first build, so the empty state never flashes. */

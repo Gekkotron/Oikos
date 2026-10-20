@@ -24,6 +24,7 @@ import com.gekkotron.oikos.designsystem.icons.StaticIcon
 import com.gekkotron.oikos.feature.security.R
 import com.gekkotron.oikos.feature.security.presentation.ActionRow
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.SwitchType
 
 /** A half-width action tile, laid out like [SensorTile]: glyph and name, then room and state (security actions spec §3.2). */
 @Composable
@@ -46,7 +47,7 @@ internal fun ActionTile(row: ActionRow, onClick: () -> Unit, onLongClick: () -> 
         minHeight = 0.dp,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StaticIcon(if (row.kind == Kind.BUTTON) OikosGlyph.PLAY else OikosGlyph.PLUG, glyphTint, Modifier.size(22.dp))
+            StaticIcon(glyphFor(row), glyphTint, Modifier.size(22.dp))
             Text(row.name, style = OikosTheme.type.body, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         }
         Spacer(Modifier.height(4.dp))
@@ -62,6 +63,15 @@ internal fun ActionTile(row: ActionRow, onClick: () -> Unit, onLongClick: () -> 
             actionStateWord(row)?.let { Text(it, style = OikosTheme.type.body, maxLines = 1) }
         }
     }
+}
+
+/** Device sheet spec §5.3: a Security Actions tile wears the switch's type glyph. */
+private fun glyphFor(row: ActionRow): OikosGlyph = when {
+    row.kind == Kind.BUTTON -> OikosGlyph.PLAY
+    row.switchType == SwitchType.CHIME -> OikosGlyph.PLAY
+    row.switchType == SwitchType.SIREN -> OikosGlyph.BOLT
+    // Door opener keeps the plug tile until a dedicated glyph lands; the sheet's wording speaks the type.
+    else -> OikosGlyph.PLUG
 }
 
 /** "On" / "Off" / "Unavailable"; null for an available button (it has no state). */

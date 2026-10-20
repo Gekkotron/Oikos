@@ -8,11 +8,13 @@ import com.gekkotron.oikos.feature.security.sensor
 import com.gekkotron.oikos.history.LastChange
 import com.gekkotron.oikos.model.AlarmState
 import com.gekkotron.oikos.model.Area
+import com.gekkotron.oikos.model.Command
 import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.EntityState
 import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.SensorGroup
 import com.gekkotron.oikos.model.StateValue
+import com.gekkotron.oikos.model.SwitchType
 import com.gekkotron.oikos.model.UiOverride
 import com.gekkotron.oikos.transport.LinkState
 import java.time.Duration
@@ -154,7 +156,13 @@ class SecurityUiBuilderTest {
         )
         assertEquals(listOf("flood", "siren", "hidden_sw", "panic"), ui.actions.map { it.id })
         val siren = ui.action("siren")!!
-        assertEquals(ActionRow("siren", "Siren", "Living room", Kind.SWITCH, on = true, available = true, stale = false, ask = true), siren)
+        assertEquals(
+            ActionRow(
+                "siren", "Siren", "Living room", Kind.SWITCH,
+                on = true, available = true, stale = false, ask = true, switchType = SwitchType.SWITCH,
+            ),
+            siren,
+        )
         assertNull(ui.action("panic")!!.on)
         assertFalse(ui.action("flood")!!.available)
         assertTrue(ui.sensors.isEmpty())
@@ -166,6 +174,60 @@ class SecurityUiBuilderTest {
         assertFalse(ui.action("panic")!!.ask)
         assertFalse(ui.isEmpty)
         assertTrue(build(emptyList()).isEmpty)
+    }
+
+    /** Device sheet spec §5.3: a door opener always sends Open; asks when securityAsk is on. */
+    @Test
+    fun `door action tap is always open`() {
+        val row = ActionRow(
+            "d", "Gate", "Garage", Kind.SWITCH,
+            on = true, available = true, stale = false, ask = true, switchType = SwitchType.DOOR,
+        )
+        assertEquals(ActionTap(Command.TurnOn(), confirm = true), row.tap())
+        assertEquals(ActionTap(Command.TurnOn(), confirm = false), row.copy(ask = false).tap())
+    }
+
+    @Test
+    fun `siren action tap toggles`() {
+        val on = ActionRow(
+            "s", "Siren", null, Kind.SWITCH,
+            on = true, available = true, stale = false, ask = true, switchType = SwitchType.SIREN,
+        )
+        assertEquals(ActionTap(Command.TurnOff, confirm = false), on.tap())
+        val off = on.copy(on = false)
+        assertEquals(ActionTap(Command.TurnOn(), confirm = true), off.tap())
+        assertEquals(ActionTap(Command.TurnOn(), confirm = false), off.copy(ask = false).tap())
+    }
+
+    @Test
+    fun `chime action always plays and never asks`() {
+        val row = ActionRow(
+            "c", "Chime", null, Kind.SWITCH,
+            on = null, available = true, stale = false, ask = true, switchType = SwitchType.CHIME,
+        )
+        assertEquals(ActionTap(Command.TurnOn(), confirm = false), row.tap())
+    }
+
+    @Test
+    fun `plain switch keeps today's toggle`() {
+        val row = ActionRow(
+            "p", "Plug", null, Kind.SWITCH,
+            on = true, available = true, stale = false, ask = true, switchType = SwitchType.SWITCH,
+        )
+        assertEquals(ActionTap(Command.TurnOff, confirm = false), row.tap())
+        assertEquals(ActionTap(Command.TurnOn(), confirm = true), row.copy(on = false).tap())
+    }
+
+    @Test
+    fun `builder reads showAs onto the row`() {
+        val ui = build(
+            listOf(
+                action("gate", name = "Gate", ui = UiOverride(securityAction = true, showAs = "door")),
+                action("chime", name = "Chime", ui = UiOverride(securityAction = true, showAs = "chime")),
+            ),
+        )
+        assertEquals(SwitchType.DOOR, ui.action("gate")!!.switchType)
+        assertEquals(SwitchType.CHIME, ui.action("chime")!!.switchType)
     }
 
     private val t0 = Instant.parse("2026-10-14T06:00:00Z")

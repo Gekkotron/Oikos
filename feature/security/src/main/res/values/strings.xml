@@ -57,8 +57,12 @@
     <string name="security_action_off">Off</string>
     <string name="security_action_confirm_on">Turn on %1$s?</string>
     <string name="security_action_confirm_press">Press %1$s?</string>
+    <string name="security_action_confirm_open">Open %1$s?</string>
+    <string name="security_action_confirm_ring">Ring %1$s?</string>
     <string name="security_action_turn_on">Turn on</string>
     <string name="security_action_press">Press</string>
+    <string name="security_action_open">Open</string>
+    <string name="security_action_ring">Ring</string>
     <string name="security_action_ask">Ask before turning on</string>
     <string name="security_action_settings">Settings</string>
     <string name="security_cancel">Cancel</string>
