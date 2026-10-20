@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Night sky behind the house: moon, a few stars and the hill it stands on.
+     Kept on the background layer so launchers give it parallax. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M0,0 H108 V108 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="18"
+                android:gradientRadius="96">
+                <item android:offset="0" android:color="#FF2C4386" />
+                <item android:offset="0.5" android:color="#FF141D42" />
+                <item android:offset="1" android:color="#FF0B1020" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- stars -->
+    <path android:fillColor="#E6FFF4DC" android:pathData="M30.1,31 a0.9,0.9 0 1,0 1.8,0 a0.9,0.9 0 1,0 -1.8,0 Z" />
+    <path android:fillColor="#99FFF4DC" android:pathData="M39.4,22 a0.6,0.6 0 1,0 1.2,0 a0.6,0.6 0 1,0 -1.2,0 Z" />
+    <path android:fillColor="#80FFF4DC" android:pathData="M23.4,44 a0.6,0.6 0 1,0 1.2,0 a0.6,0.6 0 1,0 -1.2,0 Z" />
+    <path android:fillColor="#B3FFF4DC" android:pathData="M83.2,44 a0.8,0.8 0 1,0 1.6,0 a0.8,0.8 0 1,0 -1.6,0 Z" />
+    <path android:fillColor="#80FFF4DC" android:pathData="M59.5,21 a0.5,0.5 0 1,0 1,0 a0.5,0.5 0 1,0 -1,0 Z" />
+    <path android:fillColor="#66FFF4DC" android:pathData="M86.5,62 a0.5,0.5 0 1,0 1,0 a0.5,0.5 0 1,0 -1,0 Z" />
+    <path android:fillColor="#73FFF4DC" android:pathData="M20.3,64 a0.7,0.7 0 1,0 1.4,0 a0.7,0.7 0 1,0 -1.4,0 Z" />
+    <!-- crescent moon -->
+    <path android:fillColor="#F2FFF4DC" android:pathData="M77,27 A6,6 0 1,0 82.6,36.2 A4.8,4.8 0 1,1 77,27 Z" />
+    <!-- hill -->
+    <path android:fillColor="#FF101936" android:pathData="M0,82 Q30,72 54,74 Q80,76 108,70 V108 H0 Z" />
+    <path
+        android:pathData="M0,82 Q30,72 54,74 Q80,76 108,70"
+        android:strokeWidth="0.6"
+        android:strokeColor="#802C4386" />
+</vector>

@@ -1,9 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The house with its lit window. Look closely: the cat is home too. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#FFC457"
-        android:pathData="M54,34 L78,54 L72,54 L72,76 L60,76 L60,62 L48,62 L48,76 L36,76 L36,54 L30,54 Z" />
+    <!-- warm glow around the house -->
+    <path android:pathData="M20,64 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="64"
+                android:gradientRadius="34">
+                <item android:offset="0" android:color="#6BFFC457" />
+                <item android:offset="0.55" android:color="#1FFFC457" />
+                <item android:offset="1" android:color="#00FFC457" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group
+        android:pivotX="54"
+        android:pivotY="56"
+        android:scaleX="0.84"
+        android:scaleY="0.84">
+        <!-- chimney -->
+        <path android:fillColor="#FFD9573C" android:pathData="M64,36.5 Q64,35 65.5,35 H69.5 Q71,35 71,36.5 V48 H64 Z" />
+        <!-- walls -->
+        <path android:pathData="M35,49 H73 V76 Q73,79 70,79 H38 Q35,79 35,76 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="48"
+                    android:endX="0"
+                    android:endY="80">
+                    <item android:offset="0" android:color="#FFFFD27A" />
+                    <item android:offset="1" android:color="#FFF3A23E" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- eave shadow -->
+        <path android:fillColor="#59C9702E" android:pathData="M35,49 H73 V53.5 L54,52 L35,53.5 Z" />
+        <!-- roof -->
+        <path
+            android:pathData="M29.5,52.5 L54,32.5 L78.5,52.5"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round">
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="30"
+                    android:startY="33"
+                    android:endX="78"
+                    android:endY="53">
+                    <item android:offset="0" android:color="#FFFF9A6A" />
+                    <item android:offset="1" android:color="#FFE2583C" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- lit window -->
+        <path android:pathData="M47.2,56 H60.8 Q63,56 63,58.2 V68.8 Q63,71 60.8,71 H47.2 Q45,71 45,68.8 V58.2 Q45,56 47.2,56 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="radial"
+                    android:centerX="54"
+                    android:centerY="62"
+                    android:gradientRadius="13">
+                    <item android:offset="0" android:color="#FFFFFAF0" />
+                    <item android:offset="0.6" android:color="#FFFFE7A8" />
+                    <item android:offset="1" android:color="#FFFFC457" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- the cat, watching the night from the window -->
+        <group
+            android:pivotX="51"
+            android:pivotY="71"
+            android:scaleX="0.78"
+            android:scaleY="0.78">
+            <path android:fillColor="#FF2A1F2E" android:pathData="M48.6,71 C47.6,68.4 47.9,65.8 49.1,64.4 L48.7,61.6 L50.3,63 Q51,62.8 51.7,63 L53.1,61.6 L52.9,64.4 C54,65.7 54.1,68.5 53.3,71 Z" />
+            <path
+                android:pathData="M53.1,70.6 Q55.6,70.4 55.4,67.6"
+                android:strokeWidth="0.9"
+                android:strokeColor="#FF2A1F2E"
+                android:strokeLineCap="round" />
+        </group>
+        <!-- window frame and bars -->
+        <path
+            android:pathData="M54,56 V71 M45,63.5 H63 M47.2,56 H60.8 Q63,56 63,58.2 V68.8 Q63,71 60.8,71 H47.2 Q45,71 45,68.8 V58.2 Q45,56 47.2,56 Z"
+            android:strokeWidth="1.4"
+            android:strokeColor="#FFC97A2C" />
+        <!-- sill -->
+        <path android:fillColor="#FFE08A36" android:pathData="M44.5,70.6 H63.5 Q64.5,70.6 64.5,71.6 Q64.5,72.6 63.5,72.6 H44.5 Q43.5,72.6 43.5,71.6 Q43.5,70.6 44.5,70.6 Z" />
+    </group>
 </vector>
