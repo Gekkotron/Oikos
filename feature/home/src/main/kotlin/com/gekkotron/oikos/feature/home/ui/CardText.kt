@@ -132,6 +132,6 @@ internal fun waterHeaterModeLabel(mode: String): String = when (mode) {
 internal fun heaterChipText(chip: HeaterChip): String = when (chip) {
     is HeaterChip.Heating -> stringResource(R.string.water_heater_heating_power, chip.power)
     HeaterChip.Idle -> stringResource(R.string.water_heater_idle)
-    HeaterChip.Off -> stringResource(R.string.value_off)
+    HeaterChip.Off -> stringResource(R.string.mode_off)
     is HeaterChip.Mode -> waterHeaterModeLabel(chip.mode)
 }
