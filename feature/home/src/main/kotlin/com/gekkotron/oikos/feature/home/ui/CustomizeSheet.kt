@@ -54,6 +54,7 @@ import com.gekkotron.oikos.model.PowerUnits
 import com.gekkotron.oikos.model.Placement
 import com.gekkotron.oikos.designsystem.R as DsR
 import com.gekkotron.oikos.model.Kind
+import com.gekkotron.oikos.model.SwitchType
 import com.gekkotron.oikos.model.UiOverride
 import kotlin.math.roundToInt
 
@@ -114,7 +115,23 @@ internal fun CustomizeSheet(
                     resolved.area.id
                 },
             )
-            if (card.protocolKind == Kind.SWITCH) SwitchRow(stringResource(R.string.customize_as_light), showAs == "light") { showAs = if (it) "light" else null }
+            if (card.protocolKind == Kind.SWITCH) {
+                Text(stringResource(R.string.customize_show_as), style = OikosTheme.type.label)
+                ChipRow {
+                    SwitchType.entries.forEach { type ->
+                        FilterChip(
+                            selected = showAs == type.key,
+                            onClick = {
+                                val next = pickType(draft, type)
+                                showAs = next.showAs
+                                securityAction = next.securityAction
+                                securityAsk = next.securityAsk
+                            },
+                            label = { Text(stringResource(switchTypeLabel(type))) },
+                        )
+                    }
+                }
+            }
             if (card.groupable) {
                 SwitchRow(stringResource(if (card.kind == Kind.COVER) R.string.customize_grouped_cover else R.string.customize_grouped_light), grouped) { grouped = it }
             }
@@ -131,7 +148,9 @@ internal fun CustomizeSheet(
             }
             if (Placement.actionKind(card.kind)) {
                 SwitchRow(stringResource(R.string.customize_show_on_security), securityAction) { securityAction = it }
-                if (securityAction) SwitchRow(stringResource(R.string.customize_ask_before), securityAsk) { securityAsk = it }
+                // Door opener and Siren ask before acting on Home too; for the others, Ask only matters while Security Action is on.
+                val askByType = showAs == "door" || showAs == "siren"
+                if (securityAction || askByType) SwitchRow(stringResource(R.string.customize_ask_before), securityAsk) { securityAsk = it }
             }
             OutlinedTextField(
                 value = order,
@@ -253,6 +272,23 @@ private fun presetLabel(preset: LightOnPreset): Int = when (preset) {
     LightOnPreset.RED -> R.string.customize_light_on_red
     LightOnPreset.GREEN -> R.string.customize_light_on_green
     LightOnPreset.BLUE -> R.string.customize_light_on_blue
+}
+
+/** The chip row's state transition (device sheet spec §5.1). Pure, so it's covered by a native test. */
+internal fun pickType(draft: OverrideDraft, type: SwitchType): OverrideDraft = when (type) {
+    // Light is not a Security action; keep that in sync so the choice does not linger invisibly.
+    SwitchType.LIGHT -> draft.copy(showAs = "light", securityAction = false)
+    SwitchType.SWITCH -> draft.copy(showAs = null)
+    else -> draft.copy(showAs = type.key)
+}
+
+private fun switchTypeLabel(type: SwitchType): Int = when (type) {
+    SwitchType.SWITCH -> R.string.customize_show_as_switch
+    SwitchType.LIGHT -> R.string.customize_show_as_light
+    SwitchType.DOOR -> R.string.customize_show_as_door
+    SwitchType.SIREN -> R.string.customize_show_as_siren
+    SwitchType.CHIME -> R.string.customize_show_as_chime
+    SwitchType.PLUG -> R.string.customize_show_as_plug
 }
 
 @Composable

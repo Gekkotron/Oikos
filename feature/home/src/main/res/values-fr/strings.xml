@@ -210,8 +210,14 @@
     <string name="customize_group_members">Appareils du groupe</string>
     <string name="customize_ungroup_all">Tout dégrouper</string>
     <string name="customize_grouped_cover">Grouper avec les autres volets de la pièce</string>
-    <string name="customize_as_light">Afficher comme une lumière</string>
     <string name="customize_grouped_light">Grouper avec les autres lumières de la pièce</string>
+    <string name="customize_show_as">Afficher comme</string>
+    <string name="customize_show_as_switch">Interrupteur</string>
+    <string name="customize_show_as_light">Lumière</string>
+    <string name="customize_show_as_door">Ouvre-porte</string>
+    <string name="customize_show_as_siren">Sirène</string>
+    <string name="customize_show_as_chime">Carillon</string>
+    <string name="customize_show_as_plug">Prise</string>
     <string name="customize_light_on_default">Allumer en</string>
     <string name="customize_light_on_resume">Dernier état</string>
     <string name="customize_light_on_white">Blanc</string>

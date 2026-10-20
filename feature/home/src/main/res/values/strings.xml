@@ -210,8 +210,14 @@
     <string name="customize_group_members">Devices in this group</string>
     <string name="customize_ungroup_all">Ungroup all</string>
     <string name="customize_grouped_cover">Group with the other shutters in this room</string>
-    <string name="customize_as_light">Show as a light</string>
     <string name="customize_grouped_light">Group with the other lights in this room</string>
+    <string name="customize_show_as">Show as</string>
+    <string name="customize_show_as_switch">Switch</string>
+    <string name="customize_show_as_light">Light</string>
+    <string name="customize_show_as_door">Door opener</string>
+    <string name="customize_show_as_siren">Siren</string>
+    <string name="customize_show_as_chime">Chime</string>
+    <string name="customize_show_as_plug">Plug</string>
     <string name="customize_light_on_default">Turn on in</string>
     <string name="customize_light_on_resume">Last state</string>
     <string name="customize_light_on_white">White</string>
