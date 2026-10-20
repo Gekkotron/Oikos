@@ -111,6 +111,8 @@ private fun eval(e: Expression, vars: Map<String, Any?>): Any? = when (e) {
         } != e.negated
     }
     is Expression.Eq -> equalsValue(eval(e.left, vars), eval(e.right, vars))
+    is Expression.Compare -> compare(e.op, eval(e.left, vars), eval(e.right, vars))
+    is Expression.Arithmetic -> arithmetic(e.op, eval(e.left, vars), eval(e.right, vars))
     is Expression.In -> containsKey(e.key, eval(e.target, vars))
 }
 
@@ -122,6 +124,65 @@ private fun equalsValue(a: Any?, b: Any?): Boolean {
         a is Number && b is Number -> a.toDouble() == b.toDouble()
         else -> false
     }
+}
+
+/** `> < >= <=`: numbers with numbers, strings with strings; anything else is an error, as in Jinja. */
+private fun compare(op: String, a: Any?, b: Any?): Boolean {
+    val order = when {
+        a is String && b is String -> a.compareTo(b)
+        else -> {
+            val x = strictNumber(a) ?: throw TemplateEvalError("cannot compare ${describe(a)} with '$op'")
+            val y = strictNumber(b) ?: throw TemplateEvalError("cannot compare ${describe(b)} with '$op'")
+            x.toDouble().compareTo(y.toDouble())
+        }
+    }
+    return when (op) {
+        ">" -> order > 0
+        "<" -> order < 0
+        ">=" -> order >= 0
+        else -> order <= 0
+    }
+}
+
+/** `+ - * /` on numbers (Long stays Long except for `/`), and `+` on two strings. */
+private fun arithmetic(op: Char, a: Any?, b: Any?): Any {
+    if (op == '+' && a is String && b is String) return a + b
+    val x = strictNumber(a) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(a)}")
+    val y = strictNumber(b) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(b)}")
+    if (op == '/') {
+        if (y.toDouble() == 0.0) throw TemplateEvalError("division by zero")
+        return x.toDouble() / y.toDouble()
+    }
+    if (x is Long && y is Long) {
+        return when (op) {
+            '+' -> x + y
+            '-' -> x - y
+            else -> x * y
+        }
+    }
+    val dx = x.toDouble()
+    val dy = y.toDouble()
+    return when (op) {
+        '+' -> dx + dy
+        '-' -> dx - dy
+        else -> dx * dy
+    }
+}
+
+/** Numbers only (booleans count, as in Python); strings are not coerced, unlike [looseNumber]. */
+private fun strictNumber(v: Any?): Number? = when (v) {
+    is Long -> v
+    is Int -> v.toLong()
+    is Double -> v
+    is Boolean -> if (v) 1L else 0L
+    else -> null
+}
+
+private fun describe(v: Any?): String = when (v) {
+    Undefined -> "an undefined value"
+    null -> "none"
+    is String -> "a string"
+    else -> "a ${v::class.simpleName}"
 }
 
 /** `<literal> in <expr>`: key membership, false unless the target is a JSON object. */

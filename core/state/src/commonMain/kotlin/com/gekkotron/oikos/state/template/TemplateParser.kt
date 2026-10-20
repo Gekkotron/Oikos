@@ -25,6 +25,12 @@ internal sealed interface Expression {
     /** `target is [not] none|defined|undefined`. */
     data class Test(val target: Expression, val name: String, val negated: Boolean) : Expression
     data class Eq(val left: Expression, val right: Expression) : Expression
+
+    /** `> < >= <=` between two numbers or two strings. */
+    data class Compare(val left: Expression, val op: String, val right: Expression) : Expression
+
+    /** Binary `+ - * /`; `/` is true division. */
+    data class Arithmetic(val left: Expression, val op: Char, val right: Expression) : Expression
     data class In(val key: String, val target: Expression) : Expression
 }
 
@@ -128,7 +134,7 @@ internal object TemplateParser {
                     while (i < src.length && (src[i].isLetterOrDigit() || src[i] == '_')) i++
                     out += Token.Ident(src.substring(start, i))
                 }
-                c.isDigit() || (c == '-' && i + 1 < src.length && src[i + 1].isDigit()) -> {
+                c.isDigit() || (c == '-' && i + 1 < src.length && src[i + 1].isDigit() && expectsOperand(out.lastOrNull())) -> {
                     val start = i
                     i++
                     while (i < src.length && src[i].isDigit()) i++
@@ -169,10 +175,29 @@ internal object TemplateParser {
                     out += Token.Op("$c=")
                     i += 2
                 }
+                c == '<' || c == '>' -> {
+                    val orEqual = i + 1 < src.length && src[i + 1] == '='
+                    out += Token.Op(if (orEqual) "$c=" else "$c")
+                    i += if (orEqual) 2 else 1
+                }
+                c in "+-*/" -> {
+                    out += Token.Op("$c")
+                    i++
+                }
                 else -> throw UnsupportedTemplate("unsupported syntax '$c'")
             }
         }
         return out
+    }
+
+    private val OPERAND_KEYWORDS = setOf("if", "else", "and", "or", "not", "in", "is")
+
+    /** A `-` before a digit is a negative literal only where an operand is expected, else it subtracts. */
+    private fun expectsOperand(previous: Token?): Boolean = when (previous) {
+        null, is Token.Op -> true
+        is Token.Sym -> previous.c in "(,[|:"
+        is Token.Ident -> previous.name in OPERAND_KEYWORDS
+        else -> false
     }
 }
 
@@ -186,7 +211,7 @@ private class ExpressionParser(private val tokens: List<Token>) {
         if ((next() as? Token.Sym)?.c != c) throw UnsupportedTemplate("expected '$c'")
     }
 
-    /** Full expression grammar: inline if-else < or < and < not < comparison < filter < postfix. */
+    /** Full expression grammar: inline if-else < or < and < not < comparison < additive < multiplicative < filter < postfix. */
     fun parseAll(): Expression {
         if (tokens.isEmpty()) throw UnsupportedTemplate("empty expression")
         val expr = parseInlineIf()
@@ -235,22 +260,27 @@ private class ExpressionParser(private val tokens: List<Token>) {
     }
 
     private fun parseComparison(): Expression {
-        val left = parseFiltered()
+        val left = parseAdditive()
+        val op = (peek() as? Token.Op)?.op
         return when {
-            (peek() as? Token.Op)?.op == "==" -> {
+            op == "==" -> {
                 next()
-                Expression.Eq(left, parseFiltered())
+                Expression.Eq(left, parseAdditive())
             }
-            (peek() as? Token.Op)?.op == "!=" -> {
+            op == "!=" -> {
                 next()
-                Expression.Not(Expression.Eq(left, parseFiltered()))
+                Expression.Not(Expression.Eq(left, parseAdditive()))
+            }
+            op in ORDERING -> {
+                next()
+                Expression.Compare(left, op!!, parseAdditive())
             }
             isIdent("in") -> {
                 next()
                 if (left !is Expression.Literal || left.value !is String) {
                     throw UnsupportedTemplate("'in' requires a string literal on its left")
                 }
-                Expression.In(left.value, parseFiltered())
+                Expression.In(left.value, parseAdditive())
             }
             isIdent("is") -> {
                 next()
@@ -260,6 +290,24 @@ private class ExpressionParser(private val tokens: List<Token>) {
                 Expression.Test(left, name!!, negated)
             }
             else -> left
+        }
+    }
+
+    private fun parseAdditive(): Expression {
+        var expr = parseMultiplicative()
+        while (true) {
+            val op = (peek() as? Token.Op)?.op?.takeIf { it == "+" || it == "-" } ?: return expr
+            next()
+            expr = Expression.Arithmetic(expr, op[0], parseMultiplicative())
+        }
+    }
+
+    private fun parseMultiplicative(): Expression {
+        var expr = parseFiltered()
+        while (true) {
+            val op = (peek() as? Token.Op)?.op?.takeIf { it == "*" || it == "/" } ?: return expr
+            next()
+            expr = Expression.Arithmetic(expr, op[0], parseFiltered())
         }
     }
 
@@ -334,6 +382,10 @@ private class ExpressionParser(private val tokens: List<Token>) {
     }
 
     private class Keyword(val value: Any?)
+
+    private companion object {
+        val ORDERING = setOf(">", "<", ">=", "<=")
+    }
 
     private fun keywordLiteral(name: String): Keyword? = when (name) {
         "true", "True" -> Keyword(true)
