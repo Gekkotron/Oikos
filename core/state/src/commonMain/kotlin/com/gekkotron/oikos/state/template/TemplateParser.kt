@@ -32,6 +32,9 @@ internal sealed interface Expression {
     /** Binary `+ - * /`; `/` is true division. */
     data class Arithmetic(val left: Expression, val op: Char, val right: Expression) : Expression
     data class In(val key: String, val target: Expression) : Expression
+
+    /** `{"key": expr, …}` with string-literal keys, in source order. */
+    data class DictLiteral(val entries: List<Pair<String, Expression>>) : Expression
 }
 
 internal sealed interface Segment {
@@ -52,7 +55,7 @@ internal sealed interface Token {
 
 internal object TemplateParser {
     val TESTS = setOf("none", "defined", "undefined")
-    val FILTERS = setOf("int", "float", "round", "lower", "upper", "default", "string", "truncate")
+    val FILTERS = setOf("int", "float", "round", "lower", "upper", "default", "string", "truncate", "tojson")
 
     fun parse(template: String): List<Segment> {
         if ("{#" in template) throw UnsupportedTemplate("comments are not supported")
@@ -68,7 +71,7 @@ internal object TemplateParser {
             }
             if (next > i) out(Segment.Text(template.substring(i, next)))
             val isStatement = template[next + 1] == '%'
-            val close = template.indexOf(if (isStatement) "%}" else "}}", next + 2)
+            val close = closingIndex(template, next + 2, isStatement)
             if (close < 0) throw UnsupportedTemplate("unclosed '${template.substring(next, next + 2)}'")
             val body = template.substring(next + 2, close)
             if (!isStatement) {
@@ -99,6 +102,29 @@ internal object TemplateParser {
         }
         if (open.isNotEmpty()) throw UnsupportedTemplate("missing 'endif'")
         return segments
+    }
+
+    /**
+     * Where the `{{`/`{%` opened before [from] closes: the first `}}` (or `%}`) outside string literals and,
+     * for expressions, outside dict-literal braces, so `{{ {"a": {"b": 1}} | tojson }}` closes at the end.
+     */
+    private fun closingIndex(template: String, from: Int, isStatement: Boolean): Int {
+        var depth = 0
+        var quote: Char? = null
+        var i = from
+        while (i < template.length) {
+            val c = template[i]
+            when {
+                quote != null -> if (c == '\\') i++ else if (c == quote) quote = null
+                c == '\'' || c == '"' -> quote = c
+                isStatement -> if (c == '%' && template.getOrNull(i + 1) == '}') return i
+                c == '{' -> depth++
+                c == '}' && depth > 0 -> depth--
+                c == '}' && template.getOrNull(i + 1) == '}' -> return i
+            }
+            i++
+        }
+        return -1
     }
 
     /** One open `{% if %}`, its `{% elif %}` branches in order, and an optional `{% else %}` tail. */
@@ -167,7 +193,7 @@ internal object TemplateParser {
                     }
                     out += Token.Str(sb.toString())
                 }
-                c in ".[]|()," -> {
+                c in ".[]|(),{}:" -> {
                     out += Token.Sym(c)
                     i++
                 }
@@ -338,12 +364,27 @@ private class ExpressionParser(private val tokens: List<Token>) {
         is Token.Ident -> keywordLiteral(t.name)?.let { Expression.Literal(it.value) } ?: Expression.Variable(t.name)
         is Token.Num -> Expression.Literal(t.value)
         is Token.Str -> Expression.Literal(t.value)
-        is Token.Sym -> if (t.c == '(') {
-            parseInlineIf().also { expectSym(')') }
-        } else {
-            throw UnsupportedTemplate("unexpected '${t.c}'")
+        is Token.Sym -> when (t.c) {
+            '(' -> parseInlineIf().also { expectSym(')') }
+            '{' -> parseDict()
+            else -> throw UnsupportedTemplate("unexpected '${t.c}'")
         }
         is Token.Op -> throw UnsupportedTemplate("unexpected '${t.op}'")
+    }
+
+    /** After the opening `{`: `"key": expr` entries separated by commas, then `}`. */
+    private fun parseDict(): Expression {
+        val entries = mutableListOf<Pair<String, Expression>>()
+        if (!isSym('}')) {
+            do {
+                if (entries.isNotEmpty()) next()
+                val key = (next() as? Token.Str)?.value ?: throw UnsupportedTemplate("dict keys must be string literals")
+                expectSym(':')
+                entries += key to parseInlineIf()
+            } while (isSym(','))
+        }
+        expectSym('}')
+        return Expression.DictLiteral(entries)
     }
 
     private fun parsePostfix(start: Expression): Expression {

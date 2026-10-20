@@ -151,7 +151,7 @@ class TemplatesTest {
             "{{ 2 ** 3 }}",
             "{# comment #}",
             "{{ now() }}",
-            "{{ value | tojson }}",
+            "{{ value | sum }}",
             "{{ value",
             "{{ 7 % 2 }}",
             "{{ }}",
@@ -326,5 +326,50 @@ class TemplatesTest {
     fun `arithmetic on non-numbers is an error`() {
         assertIs<TemplateResult.Error>(Templates.renderValue("{{ value_json.s * 2 }}", """{"s":"x"}"""))
         assertIs<TemplateResult.Error>(Templates.renderValue("{{ value_json.nope + 1 }}", "{}"))
+    }
+    @Test
+    fun `dict literal with tojson`() {
+        assertEquals("""{"a":1,"b":"x"}""", v("""{{ {"a": 1, "b": "x"} | tojson }}""", "{}"))
+        assertEquals(
+            """{"t":17.9,"p":43}""",
+            v("""{{ {"t": value_json.t | round(1), "p": (value_json.p / 3) | round | int} | tojson }}""", """{"t":17.94,"p":129}"""),
+        )
+    }
+
+    @Test
+    fun `tojson serializes scalars, null and booleans`() {
+        assertEquals("\"a\"", v("{{ 'a' | tojson }}", "{}"))
+        assertEquals("1.5", v("{{ 1.5 | tojson }}", "{}"))
+        assertEquals("true", v("{{ true | tojson }}", "{}"))
+        assertEquals("null", v("{{ none | tojson }}", "{}"))
+        assertIs<TemplateResult.Error>(Templates.renderValue("{{ value_json.nope | tojson }}", "{}"))
+    }
+
+    @Test
+    fun `nested dicts close before the expression does`() {
+        assertEquals("""{"a":{"b":1}}""", v("""{{ {"a": {"b": 1}} | tojson }}""", "{}"))
+        assertEquals("""{"a":{"b":1}}""", v("""{{ {"a": {"b": 1}}|tojson}}""", "{}"))
+        assertEquals("""x}}y""", v("""{{ "x}}y" }}""", "{}"))
+    }
+
+    // Spec Appendix B payload; the templates are spec Appendix A verbatim.
+    private val heaterData =
+        """{"adc_result_mv":604,"triac_0_power":40,"triac_1_power":45,"triac_2_power":44,"temp_0":17.94,"temp_1":41.2,"measuredFrequency":50.02,"frequencyError":0}"""
+
+    @Test
+    fun `WaterHeaterController templates render`() {
+        assertEquals(58.0, v("{{ (80 + (0.35 - value_json.adc_result_mv / 1000) * 86.67) | round(1) }}", heaterData))
+        assertEquals(
+            "heat",
+            v("""{{ "heat" if (value_json.triac_0_power + value_json.triac_1_power + value_json.triac_2_power) > 0 else "off" }}""", heaterData),
+        )
+        assertEquals(
+            """{"inlet_temperature":17.9,"power":43}""",
+            v(
+                """{{ {"inlet_temperature": value_json.temp_0 | round(1), "power": ((value_json.triac_0_power + value_json.triac_1_power + value_json.triac_2_power) / 3) | round | int} | tojson }}""",
+                heaterData,
+            ),
+        )
+        assertEquals("""{"power0": 40}""", v("""{"power0": {{ value | int }}}""", "40"))
     }
 }

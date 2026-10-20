@@ -74,7 +74,7 @@ class StateStoreTest {
 
     @Test
     fun `unsupported template shows Unsupported and is reported once`() {
-        val weird = testEntity("w", Kind.SENSOR, "sensor", """{"state_topic":"w","value_template":"{{ value | tojson }}"}""")
+        val weird = testEntity("w", Kind.SENSOR, "sensor", """{"state_topic":"w","value_template":"{{ value | sum }}"}""")
         store.setEntities(listOf(weird))
         store.onMessage("w", "1")
         store.onMessage("w", "2")

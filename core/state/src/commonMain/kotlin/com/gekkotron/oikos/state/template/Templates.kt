@@ -5,6 +5,7 @@ import kotlin.math.pow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -75,6 +76,7 @@ private fun truthy(v: Any?): Boolean = when (v) {
     is String -> v.isNotEmpty()
     is JsonObject -> v.isNotEmpty()
     is JsonArray -> v.isNotEmpty()
+    is Map<*, *> -> v.isNotEmpty()
     else -> true
 }
 
@@ -114,6 +116,7 @@ private fun eval(e: Expression, vars: Map<String, Any?>): Any? = when (e) {
     is Expression.Compare -> compare(e.op, eval(e.left, vars), eval(e.right, vars))
     is Expression.Arithmetic -> arithmetic(e.op, eval(e.left, vars), eval(e.right, vars))
     is Expression.In -> containsKey(e.key, eval(e.target, vars))
+    is Expression.DictLiteral -> e.entries.associate { (key, value) -> key to eval(value, vars) }
 }
 
 /** `==`: strings compare to strings, numbers to numbers (0 == 0.0); undefined never equals anything. */
@@ -221,7 +224,21 @@ private fun applyFilter(name: String, v: Any?, args: List<Any?>): Any? = when (n
     }
     "lower" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").lowercase()
     "upper" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").uppercase()
+    "tojson" -> toJson(v).toString()
     else -> throw TemplateEvalError("unknown filter '$name'")
+}
+
+/** Compact JSON for `tojson`; an undefined value anywhere is an error, as in Jinja. */
+private fun toJson(v: Any?): JsonElement = when (v) {
+    Undefined -> throw TemplateEvalError("tojson of an undefined value")
+    null -> JsonNull
+    is JsonElement -> v
+    is String -> JsonPrimitive(v)
+    is Boolean -> JsonPrimitive(v)
+    is Number -> JsonPrimitive(v)
+    is Map<*, *> -> JsonObject(v.entries.associate { (key, value) -> key.toString() to toJson(value) })
+    is List<*> -> JsonArray(v.map(::toJson))
+    else -> throw TemplateEvalError("tojson cannot serialize ${v::class.simpleName}")
 }
 
 // Pure-Kotlin HALF_UP (away from zero) to the given decimal precision; matches
