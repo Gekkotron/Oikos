@@ -36,4 +36,10 @@ class NumberSelectMapperTest {
         assertIs<Encoded.NotSupported>(SelectMapper.encode(select, Command.SelectOption("boost"), Unknown))
         assertEquals(StateValue.Text("eco"), SelectMapper.predict(Command.SelectOption("eco"), Unknown))
     }
+
+    @Test
+    fun `command template can do arithmetic on the commanded value`() {
+        val tenths = bindings("number", """{"state_topic":"n","command_topic":"n/set","command_template":"{{ value * 10 }}","min":10,"max":60}""")
+        assertEquals(Encoded.Publish(listOf(Outgoing("n/set", "215.0", false, 0))), NumberMapper.encode(tenths, Command.SetNumber(21.5), Unknown))
+    }
 }

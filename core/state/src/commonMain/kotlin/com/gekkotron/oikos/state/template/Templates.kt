@@ -134,8 +134,8 @@ private fun compare(op: String, a: Any?, b: Any?): Boolean {
     val order = when {
         a is String && b is String -> a.compareTo(b)
         else -> {
-            val x = strictNumber(a) ?: throw TemplateEvalError("cannot compare ${describe(a)} with '$op'")
-            val y = strictNumber(b) ?: throw TemplateEvalError("cannot compare ${describe(b)} with '$op'")
+            val x = looseNumber(a) ?: throw TemplateEvalError("cannot compare ${describe(a)} with '$op'")
+            val y = looseNumber(b) ?: throw TemplateEvalError("cannot compare ${describe(b)} with '$op'")
             x.toDouble().compareTo(y.toDouble())
         }
     }
@@ -147,11 +147,14 @@ private fun compare(op: String, a: Any?, b: Any?): Boolean {
     }
 }
 
-/** `+ - * /` on numbers (Long stays Long except for `/`), and `+` on two strings. */
+/**
+ * `+ - * /` on numbers (Long stays Long except for `/`), and `+` on two strings. Numeric strings count as
+ * numbers: command templates get `value` as text, where HA passes a number.
+ */
 private fun arithmetic(op: Char, a: Any?, b: Any?): Any {
     if (op == '+' && a is String && b is String) return a + b
-    val x = strictNumber(a) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(a)}")
-    val y = strictNumber(b) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(b)}")
+    val x = looseNumber(a) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(a)}")
+    val y = looseNumber(b) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(b)}")
     if (op == '/') {
         if (y.toDouble() == 0.0) throw TemplateEvalError("division by zero")
         return x.toDouble() / y.toDouble()
@@ -170,15 +173,6 @@ private fun arithmetic(op: Char, a: Any?, b: Any?): Any {
         '-' -> dx - dy
         else -> dx * dy
     }
-}
-
-/** Numbers only (booleans count, as in Python); strings are not coerced, unlike [looseNumber]. */
-private fun strictNumber(v: Any?): Number? = when (v) {
-    is Long -> v
-    is Int -> v.toLong()
-    is Double -> v
-    is Boolean -> if (v) 1L else 0L
-    else -> null
 }
 
 private fun describe(v: Any?): String = when (v) {

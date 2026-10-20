@@ -323,6 +323,14 @@ class TemplatesTest {
     }
 
     @Test
+    fun `numeric strings take part in arithmetic and ordering`() {
+        assertEquals(215.0, (Templates.render("{{ value * 10 }}", mapOf("value" to "21.5")) as TemplateResult.Value).value)
+        assertEquals(true, (Templates.render("{{ value > 20 }}", mapOf("value" to "21.5")) as TemplateResult.Value).value)
+        assertEquals("ab", v("{{ 'a' + 'b' }}", "{}"))
+        assertEquals(true, v("{{ 'b' > 'a' }}", "{}"))
+    }
+
+    @Test
     fun `arithmetic on non-numbers is an error`() {
         assertIs<TemplateResult.Error>(Templates.renderValue("{{ value_json.s * 2 }}", """{"s":"x"}"""))
         assertIs<TemplateResult.Error>(Templates.renderValue("{{ value_json.nope + 1 }}", "{}"))
