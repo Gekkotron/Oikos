@@ -62,10 +62,12 @@ internal fun WaterHeaterDetails(card: CardUi, heater: HeaterView, valueText: Str
 @Composable
 private fun HeaterChipPill(text: String, heating: Boolean) {
     val c = OikosTheme.colors
+    val content = LocalContentColor.current
     Surface(
         shape = RoundedCornerShape(50),
-        color = if (heating) c.chipSelected else c.chip,
-        contentColor = if (heating) c.chipSelectedContent else LocalContentColor.current,
+        // A heating card is "on": tint from its own content colour, which contrasts with the on-card fill in every theme.
+        color = if (heating) content.copy(alpha = 0.18f) else c.chip,
+        contentColor = content,
         border = if (heating) null else BorderStroke(1.dp, c.chipBorder),
     ) {
         Text(
