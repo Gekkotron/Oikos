@@ -7,6 +7,7 @@ import com.gekkotron.oikos.designsystem.alarm.alarmLabel
 import com.gekkotron.oikos.feature.home.R
 import com.gekkotron.oikos.feature.home.presentation.CardUi
 import com.gekkotron.oikos.feature.home.presentation.CardValue
+import com.gekkotron.oikos.feature.home.presentation.HeaterChip
 import com.gekkotron.oikos.model.CoverState
 import com.gekkotron.oikos.model.Kind
 
@@ -22,7 +23,8 @@ internal fun cardValueText(value: CardValue, kind: Kind = Kind.SENSOR): String =
     is CardValue.Text -> value.value
     is CardValue.Cover -> coverText(value)
     is CardValue.Climate ->
-        if (kind == Kind.WATER_HEATER) waterHeaterSubtitle(value)
+        // A water heater card leads with the tank temperature; its chip and inlet line say the rest.
+        if (kind == Kind.WATER_HEATER) value.current?.let { "$it°" } ?: stringResource(R.string.value_none)
         // The setpoint is what the user controls, so it leads; the room temperature only stands in when there is none.
         else listOfNotNull((value.target ?: value.current)?.let { "$it°" }, value.mode?.let { modeLabel(it) })
             .joinToString(" · ")
@@ -114,31 +116,22 @@ internal fun vacuumActionLabel(action: String): Int = when (action) {
 }
 
 @Composable
-private fun waterHeaterSubtitle(value: CardValue.Climate): String {
-    val target = value.target
-    return when (val mode = value.mode) {
-        "performance" -> if (target != null) stringResource(R.string.water_heater_forced_to, target)
-                        else stringResource(R.string.water_heater_forced)
-        "eco" -> if (target != null) stringResource(R.string.water_heater_eco_target, target)
-                 else stringResource(R.string.water_heater_eco)
-        "off" -> if (target != null) stringResource(R.string.water_heater_hot_target, target)
-                 else stringResource(R.string.water_heater_hot)
-        null -> stringResource(R.string.value_none)
-        else -> {
-            val label = waterHeaterModeLabel(mode)
-            if (target != null) "$label · ${stringResource(R.string.water_heater_target, target)}" else label
-        }
-    }
-}
-
-@Composable
 internal fun waterHeaterModeLabel(mode: String): String = when (mode) {
     "eco" -> stringResource(R.string.water_heater_mode_eco)
     "performance" -> stringResource(R.string.water_heater_mode_performance)
+    "heat" -> stringResource(R.string.water_heater_mode_heat)
     "off" -> stringResource(R.string.mode_off)
     "electric" -> stringResource(R.string.water_heater_mode_electric)
     "gas" -> stringResource(R.string.water_heater_mode_gas)
     "heat_pump" -> stringResource(R.string.water_heater_mode_heat_pump)
     "high_demand" -> stringResource(R.string.water_heater_mode_high_demand)
     else -> mode.replaceFirstChar { it.uppercase() }
+}
+
+@Composable
+internal fun heaterChipText(chip: HeaterChip): String = when (chip) {
+    is HeaterChip.Heating -> stringResource(R.string.water_heater_heating_power, chip.power)
+    HeaterChip.Idle -> stringResource(R.string.water_heater_idle)
+    HeaterChip.Off -> stringResource(R.string.value_off)
+    is HeaterChip.Mode -> waterHeaterModeLabel(chip.mode)
 }

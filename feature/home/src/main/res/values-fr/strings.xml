@@ -246,18 +246,17 @@
     <string name="vacuum_dock">Retour base</string>
     <string name="vacuum_locate">Localiser</string>
     <string name="sheet_suction">Aspiration</string>
-    <string name="water_heater_eco">Éco</string>
-    <string name="water_heater_eco_target">Éco · cible %1$s °C</string>
-    <string name="water_heater_forced">Forcé</string>
-    <string name="water_heater_forced_to">Forcé → %1$s °C</string>
-    <string name="water_heater_hot">Chaud</string>
-    <string name="water_heater_hot_target">Chaud · cible %1$s °C</string>
-    <string name="water_heater_target">cible %1$s °C</string>
     <string name="water_heater_mode_eco">Éco</string>
     <string name="water_heater_mode_performance">Forcé</string>
     <string name="water_heater_mode_electric">Électrique</string>
     <string name="water_heater_mode_gas">Gaz</string>
     <string name="water_heater_mode_heat_pump">Pompe à chaleur</string>
     <string name="water_heater_mode_high_demand">Forte demande</string>
+    <string name="water_heater_mode_heat">Chauffe</string>
+    <string name="water_heater_tank">Ballon</string>
+    <string name="water_heater_heating_power">Chauffe · %1$d %%</string>
+    <string name="water_heater_idle">Au repos</string>
+    <string name="water_heater_inlet">Arrivée %1$s</string>
+    <string name="card_description_water_heater">%1$s, %2$s, %3$s, %4$s</string>
     <string name="card_force_toggle">Forcer %1$s</string>
 </resources>
