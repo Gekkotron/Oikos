@@ -60,7 +60,7 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
         onLongClickLabel = stringResource(if (card.hasSheet) R.string.action_controls else R.string.action_customize),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            KindIcon(icon)
+            if (heater != null) TankGlyph(heating = heater.heating) else KindIcon(icon)
             Spacer(Modifier.weight(1f))
             card.forceToggle?.let { forced ->
                 val forceDescription = stringResource(R.string.card_force_toggle, card.name)
