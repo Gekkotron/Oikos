@@ -9,6 +9,8 @@ import com.gekkotron.oikos.state.kinds.Decoded
 import com.gekkotron.oikos.state.kinds.KindMapper
 import com.gekkotron.oikos.state.kinds.KindMappers
 import com.gekkotron.oikos.state.mqtt.MqttBindings
+import com.gekkotron.oikos.state.template.TemplateResult
+import com.gekkotron.oikos.state.template.Templates
 import com.gekkotron.oikos.state.template.normalize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -174,12 +176,33 @@ class StateStore(
             }
         }
         t.availability?.let { if (topic in it.spec.topics && it.onMessage(topic, payload)) s = s.copy(available = it.available) }
-        if (topic == t.attributesTopic) parseAttributes(payload)?.let { s = s.copy(attributes = it) }
+        if (topic == t.attributesTopic) parseAttributes(id, t.bindings, payload)?.let { s = s.copy(attributes = it) }
         states[id] = s.copy(stale = topic in restoredTopics)
         return confirmedNow
     }
 
-    private fun parseAttributes(payload: String): Map<String, Any?>? = try {
+    /** The attributes object, reshaped by `json_attributes_template` when there is one; null keeps the previous attributes. */
+    private fun parseAttributes(id: String, bindings: MqttBindings, payload: String): Map<String, Any?>? {
+        val template = bindings.str("json_attributes_template") ?: return parseObject(payload)
+        val r = Templates.renderValue(template, payload)
+        val rendered = when (val v = (r as? TemplateResult.Value)?.value) {
+            is String -> parseObject(v)
+            is JsonObject -> v.mapValues { normalize(it.value) }
+            is Map<*, *> -> v.entries.associate { (k, value) -> k.toString() to normalize(value) }
+            else -> null
+        }
+        if (rendered == null) {
+            val reason = when (r) {
+                is TemplateResult.Unsupported -> r.reason
+                is TemplateResult.Error -> r.reason
+                is TemplateResult.Value -> "the template did not give a JSON object"
+            }
+            reportOnce(id, "attributes", "cannot read attributes: $reason")
+        }
+        return rendered
+    }
+
+    private fun parseObject(payload: String): Map<String, Any?>? = try {
         (Json.parseToJsonElement(payload) as? JsonObject)?.mapValues { normalize(it.value) }
     } catch (e: SerializationException) {
         null

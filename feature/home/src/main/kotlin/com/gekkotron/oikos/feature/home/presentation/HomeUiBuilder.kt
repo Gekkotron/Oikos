@@ -198,6 +198,7 @@ object HomeUiBuilder {
     ): CardUi {
         val hasHistory = historyEnabled && HistoryRefs.of(entity) != null
         val value = state?.value ?: StateValue.Unknown
+        val heater = if (entity.kind == Kind.WATER_HEATER) HeaterView.of(state) else null
         return CardUi(
             id = entity.uniqueId,
             name = name,
@@ -209,7 +210,7 @@ object HomeUiBuilder {
             state = value,
             capabilities = entity.capabilities,
             unit = entity.unit,
-            on = isOn(entity.kind, value),
+            on = heater?.heating ?: isOn(entity.kind, value),
             wide = entity.kind == Kind.SENSOR && entity.deviceClass in WIDE_CLASSES,
             available = state?.available ?: true,
             pending = state?.pending ?: false,
@@ -223,6 +224,7 @@ object HomeUiBuilder {
             companions = companions,
             groupable = groupable,
             forceToggle = forceToggleFor(entity, value),
+            heater = heater,
         )
     }
 
@@ -245,9 +247,7 @@ object HomeUiBuilder {
         is StateValue.OnOff -> kind == Kind.SWITCH && v.on
         is StateValue.Cover -> v.state == CoverState.OPEN || v.state == CoverState.OPENING ||
             (v.state == CoverState.STOPPED && (v.position ?: 0) > 0)
-        is StateValue.Climate ->
-            if (kind == Kind.WATER_HEATER) v.mode == "performance"
-            else v.mode != null && v.mode != "off"
+        is StateValue.Climate -> v.mode != null && v.mode != "off"
         else -> false
     }
 }

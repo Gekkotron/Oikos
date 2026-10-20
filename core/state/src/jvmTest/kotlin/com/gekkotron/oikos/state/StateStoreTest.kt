@@ -74,7 +74,7 @@ class StateStoreTest {
 
     @Test
     fun `unsupported template shows Unsupported and is reported once`() {
-        val weird = testEntity("w", Kind.SENSOR, "sensor", """{"state_topic":"w","value_template":"{{ value | tojson }}"}""")
+        val weird = testEntity("w", Kind.SENSOR, "sensor", """{"state_topic":"w","value_template":"{{ value | sum }}"}""")
         store.setEntities(listOf(weird))
         store.onMessage("w", "1")
         store.onMessage("w", "2")
@@ -140,6 +140,36 @@ class StateStoreTest {
         store.setEntities(listOf(lamp))
         store.onMessage("s/attr", """{"linkquality":80,"update":"idle"}""")
         assertEquals(mapOf("linkquality" to 80L, "update" to "idle"), store.states.value.getValue("l").attributes)
+    }
+
+    private fun attributed(template: String) = testEntity(
+        "a", Kind.SWITCH, "switch",
+        """{"state_topic":"s","command_topic":"c","json_attributes_topic":"s/attr","json_attributes_template":${kotlinx.serialization.json.JsonPrimitive(template)}}""",
+    )
+
+    @Test
+    fun `json attributes template reshapes the payload`() {
+        store.setEntities(listOf(attributed("""{{ {"power": value_json.p | int} | tojson }}""")))
+        store.onMessage("s/attr", """{"p":43.2,"noise":1}""")
+        assertEquals(mapOf("power" to 43L), store.states.value.getValue("a").attributes)
+    }
+
+    @Test
+    fun `a failing attributes template keeps the previous attributes and reports once`() {
+        store.setEntities(listOf(attributed("""{{ {"power": value_json.p * 2} | tojson }}""")))
+        store.onMessage("s/attr", """{"p":2}""")
+        store.onMessage("s/attr", """{"p":"x"}""")
+        store.onMessage("s/attr", """{"p":"y"}""")
+        assertEquals(mapOf("power" to 4L), store.states.value.getValue("a").attributes)
+        assertEquals(1, diagnostics.count { "attributes" in it.message })
+    }
+
+    @Test
+    fun `an attributes template that renders a non-object is ignored`() {
+        store.setEntities(listOf(attributed("{{ value_json.p }}")))
+        store.onMessage("s/attr", """{"p":2}""")
+        assertEquals(emptyMap(), store.states.value.getValue("a").attributes)
+        assertEquals(1, diagnostics.count { "attributes" in it.message })
     }
 
     @Test

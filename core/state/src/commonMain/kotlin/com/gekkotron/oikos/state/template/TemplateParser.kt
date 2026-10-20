@@ -25,7 +25,16 @@ internal sealed interface Expression {
     /** `target is [not] none|defined|undefined`. */
     data class Test(val target: Expression, val name: String, val negated: Boolean) : Expression
     data class Eq(val left: Expression, val right: Expression) : Expression
+
+    /** `> < >= <=` between two numbers or two strings. */
+    data class Compare(val left: Expression, val op: String, val right: Expression) : Expression
+
+    /** Binary `+ - * /`; `/` is true division. */
+    data class Arithmetic(val left: Expression, val op: Char, val right: Expression) : Expression
     data class In(val key: String, val target: Expression) : Expression
+
+    /** `{"key": expr, …}` with string-literal keys, in source order. */
+    data class DictLiteral(val entries: List<Pair<String, Expression>>) : Expression
 }
 
 internal sealed interface Segment {
@@ -46,7 +55,7 @@ internal sealed interface Token {
 
 internal object TemplateParser {
     val TESTS = setOf("none", "defined", "undefined")
-    val FILTERS = setOf("int", "float", "round", "lower", "upper", "default", "string", "truncate")
+    val FILTERS = setOf("int", "float", "round", "lower", "upper", "default", "string", "truncate", "tojson")
 
     fun parse(template: String): List<Segment> {
         if ("{#" in template) throw UnsupportedTemplate("comments are not supported")
@@ -62,7 +71,7 @@ internal object TemplateParser {
             }
             if (next > i) out(Segment.Text(template.substring(i, next)))
             val isStatement = template[next + 1] == '%'
-            val close = template.indexOf(if (isStatement) "%}" else "}}", next + 2)
+            val close = closingIndex(template, next + 2, isStatement)
             if (close < 0) throw UnsupportedTemplate("unclosed '${template.substring(next, next + 2)}'")
             val body = template.substring(next + 2, close)
             if (!isStatement) {
@@ -93,6 +102,29 @@ internal object TemplateParser {
         }
         if (open.isNotEmpty()) throw UnsupportedTemplate("missing 'endif'")
         return segments
+    }
+
+    /**
+     * Where the `{{`/`{%` opened before [from] closes: the first `}}` (or `%}`) outside string literals and,
+     * for expressions, outside dict-literal braces, so `{{ {"a": {"b": 1}} | tojson }}` closes at the end.
+     */
+    private fun closingIndex(template: String, from: Int, isStatement: Boolean): Int {
+        var depth = 0
+        var quote: Char? = null
+        var i = from
+        while (i < template.length) {
+            val c = template[i]
+            when {
+                quote != null -> if (c == '\\') i++ else if (c == quote) quote = null
+                c == '\'' || c == '"' -> quote = c
+                isStatement -> if (c == '%' && template.getOrNull(i + 1) == '}') return i
+                c == '{' -> depth++
+                c == '}' && depth > 0 -> depth--
+                c == '}' && template.getOrNull(i + 1) == '}' -> return i
+            }
+            i++
+        }
+        return -1
     }
 
     /** One open `{% if %}`, its `{% elif %}` branches in order, and an optional `{% else %}` tail. */
@@ -128,7 +160,7 @@ internal object TemplateParser {
                     while (i < src.length && (src[i].isLetterOrDigit() || src[i] == '_')) i++
                     out += Token.Ident(src.substring(start, i))
                 }
-                c.isDigit() || (c == '-' && i + 1 < src.length && src[i + 1].isDigit()) -> {
+                c.isDigit() || (c == '-' && i + 1 < src.length && src[i + 1].isDigit() && expectsOperand(out.lastOrNull())) -> {
                     val start = i
                     i++
                     while (i < src.length && src[i].isDigit()) i++
@@ -161,7 +193,7 @@ internal object TemplateParser {
                     }
                     out += Token.Str(sb.toString())
                 }
-                c in ".[]|()," -> {
+                c in ".[]|(),{}:" -> {
                     out += Token.Sym(c)
                     i++
                 }
@@ -169,10 +201,29 @@ internal object TemplateParser {
                     out += Token.Op("$c=")
                     i += 2
                 }
+                c == '<' || c == '>' -> {
+                    val orEqual = i + 1 < src.length && src[i + 1] == '='
+                    out += Token.Op(if (orEqual) "$c=" else "$c")
+                    i += if (orEqual) 2 else 1
+                }
+                c in "+-*/" -> {
+                    out += Token.Op("$c")
+                    i++
+                }
                 else -> throw UnsupportedTemplate("unsupported syntax '$c'")
             }
         }
         return out
+    }
+
+    private val OPERAND_KEYWORDS = setOf("if", "else", "and", "or", "not", "in", "is")
+
+    /** A `-` before a digit is a negative literal only where an operand is expected, else it subtracts. */
+    private fun expectsOperand(previous: Token?): Boolean = when (previous) {
+        null, is Token.Op -> true
+        is Token.Sym -> previous.c in "(,[|:"
+        is Token.Ident -> previous.name in OPERAND_KEYWORDS
+        else -> false
     }
 }
 
@@ -186,7 +237,7 @@ private class ExpressionParser(private val tokens: List<Token>) {
         if ((next() as? Token.Sym)?.c != c) throw UnsupportedTemplate("expected '$c'")
     }
 
-    /** Full expression grammar: inline if-else < or < and < not < comparison < filter < postfix. */
+    /** Full expression grammar: inline if-else < or < and < not < comparison < additive < multiplicative < filter < postfix. */
     fun parseAll(): Expression {
         if (tokens.isEmpty()) throw UnsupportedTemplate("empty expression")
         val expr = parseInlineIf()
@@ -235,22 +286,27 @@ private class ExpressionParser(private val tokens: List<Token>) {
     }
 
     private fun parseComparison(): Expression {
-        val left = parseFiltered()
+        val left = parseAdditive()
+        val op = (peek() as? Token.Op)?.op
         return when {
-            (peek() as? Token.Op)?.op == "==" -> {
+            op == "==" -> {
                 next()
-                Expression.Eq(left, parseFiltered())
+                Expression.Eq(left, parseAdditive())
             }
-            (peek() as? Token.Op)?.op == "!=" -> {
+            op == "!=" -> {
                 next()
-                Expression.Not(Expression.Eq(left, parseFiltered()))
+                Expression.Not(Expression.Eq(left, parseAdditive()))
+            }
+            op in ORDERING -> {
+                next()
+                Expression.Compare(left, op!!, parseAdditive())
             }
             isIdent("in") -> {
                 next()
                 if (left !is Expression.Literal || left.value !is String) {
                     throw UnsupportedTemplate("'in' requires a string literal on its left")
                 }
-                Expression.In(left.value, parseFiltered())
+                Expression.In(left.value, parseAdditive())
             }
             isIdent("is") -> {
                 next()
@@ -260,6 +316,24 @@ private class ExpressionParser(private val tokens: List<Token>) {
                 Expression.Test(left, name!!, negated)
             }
             else -> left
+        }
+    }
+
+    private fun parseAdditive(): Expression {
+        var expr = parseMultiplicative()
+        while (true) {
+            val op = (peek() as? Token.Op)?.op?.takeIf { it == "+" || it == "-" } ?: return expr
+            next()
+            expr = Expression.Arithmetic(expr, op[0], parseMultiplicative())
+        }
+    }
+
+    private fun parseMultiplicative(): Expression {
+        var expr = parseFiltered()
+        while (true) {
+            val op = (peek() as? Token.Op)?.op?.takeIf { it == "*" || it == "/" } ?: return expr
+            next()
+            expr = Expression.Arithmetic(expr, op[0], parseFiltered())
         }
     }
 
@@ -290,12 +364,27 @@ private class ExpressionParser(private val tokens: List<Token>) {
         is Token.Ident -> keywordLiteral(t.name)?.let { Expression.Literal(it.value) } ?: Expression.Variable(t.name)
         is Token.Num -> Expression.Literal(t.value)
         is Token.Str -> Expression.Literal(t.value)
-        is Token.Sym -> if (t.c == '(') {
-            parseInlineIf().also { expectSym(')') }
-        } else {
-            throw UnsupportedTemplate("unexpected '${t.c}'")
+        is Token.Sym -> when (t.c) {
+            '(' -> parseInlineIf().also { expectSym(')') }
+            '{' -> parseDict()
+            else -> throw UnsupportedTemplate("unexpected '${t.c}'")
         }
         is Token.Op -> throw UnsupportedTemplate("unexpected '${t.op}'")
+    }
+
+    /** After the opening `{`: `"key": expr` entries separated by commas, then `}`. */
+    private fun parseDict(): Expression {
+        val entries = mutableListOf<Pair<String, Expression>>()
+        if (!isSym('}')) {
+            do {
+                if (entries.isNotEmpty()) next()
+                val key = (next() as? Token.Str)?.value ?: throw UnsupportedTemplate("dict keys must be string literals")
+                expectSym(':')
+                entries += key to parseInlineIf()
+            } while (isSym(','))
+        }
+        expectSym('}')
+        return Expression.DictLiteral(entries)
     }
 
     private fun parsePostfix(start: Expression): Expression {
@@ -334,6 +423,10 @@ private class ExpressionParser(private val tokens: List<Token>) {
     }
 
     private class Keyword(val value: Any?)
+
+    private companion object {
+        val ORDERING = setOf(">", "<", ">=", "<=")
+    }
 
     private fun keywordLiteral(name: String): Keyword? = when (name) {
         "true", "True" -> Keyword(true)

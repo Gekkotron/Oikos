@@ -37,7 +37,8 @@ class DemoBrokerTest {
         "demo_living_ac", "demo_living_vacuum", "demo_bedroom_temperature", "demo_bedroom_humidity", "demo_outdoor_temperature",
         "demo_solar_power", "demo_grid_power", "demo_house_power", "demo_water_heater_power", "demo_ac_power", "demo_solar_energy", "demo_grid_energy", "demo_house_energy", "demo_water_heater_energy", "demo_ac_energy", "demo_front_door", "demo_hallway_motion",
         "demo_bedroom_window", "demo_kitchen_smoke", "demo_garage_leak",
-        "demo_alarm", "demo_alarm_intrusion", "demo_water_heater", "demo_water_heater_force_power", "demo_vacuum_mode", "demo_vacuum_start",
+        "demo_alarm", "demo_alarm_intrusion", "demo_water_heater", "demo_water_heater_tank", "demo_water_heater_inlet",
+        "demo_water_heater_triac_0", "demo_water_heater_triac_1", "demo_water_heater_triac_2", "demo_vacuum_mode", "demo_vacuum_start",
         "demo_bedroom_strip", "demo_bedroom_strip_effect_speed", "demo_bedroom_strip_effect_intensity",
         "demo_living_shutter_side", "demo_living_door_shutter", "demo_living_ceiling", "demo_living_spot",
     )
@@ -119,22 +120,26 @@ class DemoBrokerTest {
     }
 
     @Test
-    fun `forcing the water heater round-trips through the demo broker`() = runTest {
+    fun `demo water heater reads like the WaterHeaterController`() = runTest {
         val h = start()
-        assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater", Command.SetHvacMode("performance")))
-        settle()
-        val forced = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
-        assertEquals("performance", forced.mode)
+        val heater = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
+        assertEquals("heat", heater.mode)
+        assertEquals(58.0, heater.current)
+        assertEquals(mapOf("inlet_temperature" to 17.9, "power" to 43L), h.source.states().first().getValue("demo_water_heater").attributes)
 
-        assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater", Command.SetHvacMode("eco")))
+        for (i in 0..2) assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater_triac_$i", Command.SetNumber(0.0)))
         settle()
-        val eco = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
-        assertEquals("eco", eco.mode)
+        assertEquals("off", assertIs<StateValue.Climate>(h.value("demo_water_heater")).mode)
+        assertEquals(0L, h.source.states().first().getValue("demo_water_heater").attributes["power"])
+    }
 
-        assertEquals(CommandResult.Accepted, h.source.send("demo_water_heater", Command.SetTemperature(58.0)))
-        settle()
-        val tempered = assertIs<StateValue.Climate>(h.value("demo_water_heater"))
-        assertEquals(58.0, tempered.target)
+    @Test
+    fun `demo water heater is titled once`() = runTest {
+        val h = start()
+        val entities = h.source.entities.value
+        assertEquals("Water heater", entities.getValue("demo_water_heater").name)
+        assertEquals("Water heater Power 1", entities.getValue("demo_water_heater_triac_0").name)
+        assertEquals("Power 1", entities.getValue("demo_water_heater_triac_0").label)
     }
 
     @Test

@@ -104,6 +104,8 @@ data class CardUi(
     val groupable: Boolean = false,
     /** Water heater on-card Force switch (spec §5): null = no toggle, true = currently in `performance`. */
     val forceToggle: Boolean? = null,
+    /** Water heater card extras (tank glow, activity chip, inlet); null for every other kind. */
+    val heater: HeaterView? = null,
 ) {
     val isGroup: Boolean get() = members.isNotEmpty()
 }

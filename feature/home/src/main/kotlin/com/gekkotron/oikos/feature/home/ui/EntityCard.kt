@@ -29,7 +29,15 @@ import com.gekkotron.oikos.feature.home.presentation.TapAction
 internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Unit, onForce: () -> Unit = {}, modifier: Modifier = Modifier) {
     val valueText = if (card.available) cardValueText(card.value, card.kind) else stringResource(R.string.value_unavailable)
     val room = card.areaName ?: stringResource(R.string.area_unassigned)
-    val description = stringResource(if (card.hidden) R.string.card_description_hidden else R.string.card_description, card.name, valueText, room)
+    val heater = card.heater
+    val heaterExtras = heater?.takeIf { card.available }?.let { h ->
+        listOfNotNull(h.chip?.let { heaterChipText(it) }, h.inlet?.let { inletText(card, it) }).joinToString(", ")
+    }.orEmpty()
+    val description = if (heaterExtras.isNotEmpty() && !card.hidden) {
+        stringResource(R.string.card_description_water_heater, card.name, valueText, heaterExtras, room)
+    } else {
+        stringResource(if (card.hidden) R.string.card_description_hidden else R.string.card_description, card.name, valueText, room)
+    }
     val onText = stringResource(R.string.value_on)
     val offText = stringResource(R.string.value_off)
     val staleText = stringResource(R.string.card_stale)
@@ -73,6 +81,7 @@ internal fun EntityCard(card: CardUi, onClick: () -> Unit, onLongClick: () -> Un
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(valueText, style = OikosTheme.type.cardValue)
+        if (heater != null && card.available) WaterHeaterDetails(card, heater, valueText)
+        else Text(valueText, style = OikosTheme.type.cardValue)
     }
 }

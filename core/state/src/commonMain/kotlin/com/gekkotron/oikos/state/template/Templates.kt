@@ -5,6 +5,7 @@ import kotlin.math.pow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -75,6 +76,7 @@ private fun truthy(v: Any?): Boolean = when (v) {
     is String -> v.isNotEmpty()
     is JsonObject -> v.isNotEmpty()
     is JsonArray -> v.isNotEmpty()
+    is Map<*, *> -> v.isNotEmpty()
     else -> true
 }
 
@@ -111,7 +113,10 @@ private fun eval(e: Expression, vars: Map<String, Any?>): Any? = when (e) {
         } != e.negated
     }
     is Expression.Eq -> equalsValue(eval(e.left, vars), eval(e.right, vars))
+    is Expression.Compare -> compare(e.op, eval(e.left, vars), eval(e.right, vars))
+    is Expression.Arithmetic -> arithmetic(e.op, eval(e.left, vars), eval(e.right, vars))
     is Expression.In -> containsKey(e.key, eval(e.target, vars))
+    is Expression.DictLiteral -> e.entries.associate { (key, value) -> key to eval(value, vars) }
 }
 
 /** `==`: strings compare to strings, numbers to numbers (0 == 0.0); undefined never equals anything. */
@@ -122,6 +127,59 @@ private fun equalsValue(a: Any?, b: Any?): Boolean {
         a is Number && b is Number -> a.toDouble() == b.toDouble()
         else -> false
     }
+}
+
+/** `> < >= <=`: numbers with numbers, strings with strings; anything else is an error, as in Jinja. */
+private fun compare(op: String, a: Any?, b: Any?): Boolean {
+    val order = when {
+        a is String && b is String -> a.compareTo(b)
+        else -> {
+            val x = looseNumber(a) ?: throw TemplateEvalError("cannot compare ${describe(a)} with '$op'")
+            val y = looseNumber(b) ?: throw TemplateEvalError("cannot compare ${describe(b)} with '$op'")
+            x.toDouble().compareTo(y.toDouble())
+        }
+    }
+    return when (op) {
+        ">" -> order > 0
+        "<" -> order < 0
+        ">=" -> order >= 0
+        else -> order <= 0
+    }
+}
+
+/**
+ * `+ - * /` on numbers (Long stays Long except for `/`), and `+` on two strings. Numeric strings count as
+ * numbers: command templates get `value` as text, where HA passes a number.
+ */
+private fun arithmetic(op: Char, a: Any?, b: Any?): Any {
+    if (op == '+' && a is String && b is String) return a + b
+    val x = looseNumber(a) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(a)}")
+    val y = looseNumber(b) ?: throw TemplateEvalError("cannot apply '$op' to ${describe(b)}")
+    if (op == '/') {
+        if (y.toDouble() == 0.0) throw TemplateEvalError("division by zero")
+        return x.toDouble() / y.toDouble()
+    }
+    if (x is Long && y is Long) {
+        return when (op) {
+            '+' -> x + y
+            '-' -> x - y
+            else -> x * y
+        }
+    }
+    val dx = x.toDouble()
+    val dy = y.toDouble()
+    return when (op) {
+        '+' -> dx + dy
+        '-' -> dx - dy
+        else -> dx * dy
+    }
+}
+
+private fun describe(v: Any?): String = when (v) {
+    Undefined -> "an undefined value"
+    null -> "none"
+    is String -> "a string"
+    else -> "a ${v::class.simpleName}"
 }
 
 /** `<literal> in <expr>`: key membership, false unless the target is a JSON object. */
@@ -160,7 +218,21 @@ private fun applyFilter(name: String, v: Any?, args: List<Any?>): Any? = when (n
     }
     "lower" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").lowercase()
     "upper" -> if (v === Undefined) "" else (v.asPayloadString() ?: "None").uppercase()
+    "tojson" -> toJson(v).toString()
     else -> throw TemplateEvalError("unknown filter '$name'")
+}
+
+/** Compact JSON for `tojson`; an undefined value anywhere is an error, as in Jinja. */
+private fun toJson(v: Any?): JsonElement = when (v) {
+    Undefined -> throw TemplateEvalError("tojson of an undefined value")
+    null -> JsonNull
+    is JsonElement -> v
+    is String -> JsonPrimitive(v)
+    is Boolean -> JsonPrimitive(v)
+    is Number -> JsonPrimitive(v)
+    is Map<*, *> -> JsonObject(v.entries.associate { (key, value) -> key.toString() to toJson(value) })
+    is List<*> -> JsonArray(v.map(::toJson))
+    else -> throw TemplateEvalError("tojson cannot serialize ${v::class.simpleName}")
 }
 
 // Pure-Kotlin HALF_UP (away from zero) to the given decimal precision; matches

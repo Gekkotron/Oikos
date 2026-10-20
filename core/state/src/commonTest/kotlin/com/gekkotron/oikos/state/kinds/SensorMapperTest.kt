@@ -32,7 +32,7 @@ class SensorMapperTest {
     @Test
     fun `errors and unsupported templates are surfaced`() {
         assertIs<Decoded.Error>(SensorMapper.decode(temp, "z", "online", Unknown))
-        val weird = bindings("sensor", """{"state_topic":"s","value_template":"{{ value | tojson }}"}""")
+        val weird = bindings("sensor", """{"state_topic":"s","value_template":"{{ value | sum }}"}""")
         assertIs<Decoded.Unsupported>(SensorMapper.decode(weird, "s", "1", Unknown))
     }
 }
