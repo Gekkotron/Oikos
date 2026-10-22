@@ -133,7 +133,7 @@ class SecurityViewModelTest {
 
     private val history = FakeHistoryClient()
     private val t0 = Instant.parse("2026-10-14T06:00:00Z")
-    private val doorRef = HistoryRef("zigbee2mqtt/front", "contact")
+    private val doorRef = HistoryRef("front")
 
     private fun mqttSource() = FakeEntitySource().apply {
         entities.value = listOf(mqttSensor("front", "door"), mqttSensor("hall", "motion", key = "occupancy")).associateBy { it.uniqueId }
@@ -146,7 +146,7 @@ class SecurityViewModelTest {
         history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
         val vm = SecurityViewModel(src, dispatcher, history)
         backgroundScope.launch { vm.state.collect {} }
-        assertEquals(listOf(setOf(doorRef, HistoryRef("zigbee2mqtt/hall", "occupancy"))), history.asked.map { it.toSet() })
+        assertEquals(listOf(setOf(doorRef, HistoryRef("hall"))), history.asked.map { it.toSet() })
         assertEquals(Since.At(t0), vm.state.value.sensors.first { it.id == "front" }.since)
         src.stateMap.value += "hall" to on("hall", true) // a state change is not a ref change
         assertEquals(1, history.asked.size)
@@ -178,18 +178,6 @@ class SecurityViewModelTest {
         assertEquals(2, history.asked.size)
         assertEquals(Since.At(t0), vm.state.value.sensors.first { it.id == "front" }.since)
         assertTrue(events.isEmpty())
-    }
-
-    @Test
-    fun `two sensors on one topic and key both get the time`() = runTest(dispatcher) {
-        val src = FakeEntitySource().apply {
-            entities.value = listOf(mqttSensor("a", "door", topic = "zigbee2mqtt/front"), mqttSensor("b", "door", topic = "zigbee2mqtt/front"))
-                .associateBy { it.uniqueId }
-        }
-        history.answer = HistoryResult.Ok(mapOf(doorRef to LastChange.At(t0)))
-        val vm = SecurityViewModel(src, dispatcher, history)
-        backgroundScope.launch { vm.state.collect {} }
-        assertEquals(listOf(Since.At(t0), Since.At(t0)), vm.state.value.sensors.map { it.since })
     }
 
     @Test

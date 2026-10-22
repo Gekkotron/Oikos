@@ -23,7 +23,7 @@ class EnergyTodayTest {
         val r = requests(power("heater_power", EnergyRole.CONSUMER, "d"), counter("heater_energy", "d"))
         assertEquals(setOf("heater_energy"), r.keys)
         val (ref, scale) = r.getValue("heater_energy")
-        assertEquals(HistoryRef("zigbee2mqtt/heater_energy", "energy"), ref)
+        assertEquals(HistoryRef("heater_energy"), ref)
         assertEquals(EnergyKind.COUNTER, scale.kind)
     }
 
@@ -35,8 +35,8 @@ class EnergyTodayTest {
     }
 
     @Test
-    fun `an entity without a JSON key asks nothing`() {
-        assertEquals(emptyMap(), requests(energyEntity("heater", EnergyRole.CONSUMER)))
+    fun `an entity without a unit asks nothing`() {
+        assertEquals(emptyMap(), requests(energyEntity("heater", EnergyRole.CONSUMER, unit = null)))
     }
 
     @Test
@@ -54,9 +54,4 @@ class EnergyTodayTest {
         assertEquals(emptyMap(), requests(power("grid", EnergyRole.GRID, "g")))
     }
 
-    @Test
-    fun `a paired meter without a ref asks nothing, not the power integral`() {
-        val unrecorded = energyEntity("heater_energy", null, unit = "kWh").copy(deviceId = "d")
-        assertEquals(emptyMap(), requests(power("heater_power", EnergyRole.CONSUMER, "d"), unrecorded))
-    }
 }

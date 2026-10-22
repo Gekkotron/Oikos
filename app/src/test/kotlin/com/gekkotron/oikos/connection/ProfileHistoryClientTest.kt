@@ -44,20 +44,20 @@ class ProfileHistoryClientTest {
     fun `direct without an override asks the service next to the broker`() = runTest {
         val c = client()
         states.value = ProfileState.Ready(direct)
-        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.H24))
+        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t"), HistoryRange.H24))
         assertEquals(1, urls.size)
-        assertTrue(urls.single().startsWith("http://192.168.1.91:8090/v1/"), urls.single())
+        assertTrue(urls.single().startsWith("http://192.168.1.91:8081/api/v1/history/"), urls.single())
     }
 
     @Test
     fun `direct with an override asks the override, the demo never asks`() = runTest {
         val c = client()
         states.value = ProfileState.Ready(direct.copy(historyUrl = "http://nas:9000"))
-        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.H24))
+        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t"), HistoryRange.H24))
         assertEquals(1, urls.size)
-        assertTrue(urls.single().startsWith("http://nas:9000/v1/"), urls.single())
+        assertTrue(urls.single().startsWith("http://nas:9000/api/v1/history/"), urls.single())
         states.value = ProfileState.Ready(ConnectionProfile.Demo)
-        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t", "k"), HistoryRange.D7))
+        assertIs<HistoryResult.Ok<*>>(c.series(HistoryRef("t"), HistoryRange.D7))
         assertEquals(1, urls.size)
     }
 
@@ -65,7 +65,7 @@ class ProfileHistoryClientTest {
     fun `lastChanges goes to the service for a direct profile`() = runTest {
         val c = client()
         states.value = ProfileState.Ready(direct)
-        c.lastChanges(listOf(HistoryRef("t", "k")))
-        assertEquals("http://192.168.1.91:8090/v1/last_change?topic=t&key=k", urls.single())
+        c.lastChanges(listOf(HistoryRef("t")))
+        assertEquals("http://192.168.1.91:8081/api/v1/history/last_change?entity=t", urls.single())
     }
 }

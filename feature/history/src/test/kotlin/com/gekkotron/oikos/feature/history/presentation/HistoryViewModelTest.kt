@@ -79,7 +79,7 @@ class HistoryViewModelTest {
         backgroundScope.launch { vm.state.collect {} }
         val line = vm.state.first { it.content is ChartContent.Line }.content as ChartContent.Line
         assertEquals(Triple(19.0, 21.0, 23.0), Triple(line.min, line.avg, line.max))
-        assertEquals(listOf("series temperature 24h"), history.calls)
+        assertEquals(listOf("series thermo 24h"), history.calls)
         assertFalse(vm.state.value.energy)
         assertEquals(21.5, vm.state.value.live)
     }
@@ -118,7 +118,7 @@ class HistoryViewModelTest {
         vm.selectMode(ChartMode.DAILY)
         val bars = vm.state.first { it.content is ChartContent.Bars }.content as ChartContent.Bars
         assertEquals(7.5, bars.total)
-        assertEquals("daily energy 7 COUNTER", history.calls.last())
+        assertEquals("daily plug_energy 7 COUNTER", history.calls.last())
     }
 
     @Test
@@ -129,7 +129,7 @@ class HistoryViewModelTest {
         vm.selectRange(HistoryRange.D30)
         vm.selectMode(ChartMode.DAILY)
         vm.state.first { it.content is ChartContent.Bars }
-        assertEquals("daily power 30 POWER", history.calls.last())
+        assertEquals("daily plug_power 30 POWER", history.calls.last())
     }
 
     @Test
@@ -141,7 +141,7 @@ class HistoryViewModelTest {
         val ui = vm.state.first { it.content is ChartContent.Bars }
         assertEquals(ChartMode.DAILY, ui.mode)
         assertFalse(ui.toggle)
-        assertEquals("daily energy 7 COUNTER", history.calls.last())
+        assertEquals("daily plug_energy 7 COUNTER", history.calls.last())
     }
 
     @Test

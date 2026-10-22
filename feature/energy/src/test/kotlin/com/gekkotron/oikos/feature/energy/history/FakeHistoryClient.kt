@@ -26,18 +26,18 @@ class FakeHistoryClient : HistoryClient {
     var gate: CompletableDeferred<Unit>? = null
 
     override suspend fun series(ref: HistoryRef, range: HistoryRange): HistoryResult<Series> {
-        calls += "series ${ref.key} ${range.query}"
+        calls += "series ${ref.id} ${range.query}"
         gate?.takeIf { range == HistoryRange.H24 }?.await()
         return this.series.invoke(ref, range)
     }
 
     override suspend fun daily(ref: HistoryRef, days: Int, scale: EnergyScale): HistoryResult<DailyTotals> {
-        calls += "daily ${ref.key} $days ${scale.kind}"
+        calls += "daily ${ref.id} $days ${scale.kind}"
         return this.daily.invoke(ref, days, scale)
     }
 
     override suspend fun today(ref: HistoryRef, scale: EnergyScale): HistoryResult<Double?> {
-        calls += "today ${ref.key} ${scale.kind}"
+        calls += "today ${ref.id} ${scale.kind}"
         return this.today.invoke(ref, scale)
     }
 }

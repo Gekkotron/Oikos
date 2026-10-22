@@ -396,8 +396,8 @@ class HomeUiBuilderTest {
     }
 
     @Test
-    fun `a sensor without a json key never opens history`() {
-        val entities = listOf(thermometer(null)).associateBy { it.uniqueId }
+    fun `a sensor without a unit never opens history`() {
+        val entities = listOf(thermometer("{{ value_json.temperature }}").copy(unit = null)).associateBy { it.uniqueId }
         val card = HomeUiBuilder.build(entities, emptyMap(), areas, RoomFilter.All, link, Locale.ROOT, historyEnabled = true).card("thermo")!!
         assertEquals(TapAction.NONE, card.tap)
         assertFalse(card.hasHistory)

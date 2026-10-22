@@ -121,10 +121,10 @@ class SettingsViewModelTest {
         val profiles = ProfileRepository.create(tmp.root.resolve("profile4.json"), PassThrough, storage)
         profiles.save(ConnectionProfile.Direct(LocalBroker("h")))
         val vm = SettingsViewModel(profiles, prefs, FakePushStatusSource(), FakeEntitySource(), SpeechAvailability.Status.Ready)
-        assertTrue(vm.setHistoryUrl(" http://192.168.1.91:8090/ "))
-        profiles.awaitHistoryUrl("http://192.168.1.91:8090")
+        assertTrue(vm.setHistoryUrl(" http://192.168.1.91:8081/ "))
+        profiles.awaitHistoryUrl("http://192.168.1.91:8081")
         assertFalse(vm.setHistoryUrl("192.168.1.91"))
-        profiles.awaitHistoryUrl("http://192.168.1.91:8090")
+        profiles.awaitHistoryUrl("http://192.168.1.91:8081")
         assertTrue(vm.setHistoryUrl("  "))
         profiles.awaitHistoryUrl(null)
     }

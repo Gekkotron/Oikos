@@ -32,14 +32,14 @@ class EnergyHistoryImplTest {
         source.entities.value = entities.associateBy { it.uniqueId }
     }
 
-    private fun series(vararg byTopic: Pair<String, List<HistoryPoint>>) {
-        val map = byTopic.toMap()
-        history.series = { ref, _ -> HistoryResult.Ok(Series(600, map.getValue(ref.topic.removePrefix("zigbee2mqtt/")))) }
+    private fun series(vararg byId: Pair<String, List<HistoryPoint>>) {
+        val map = byId.toMap()
+        history.series = { ref, _ -> HistoryResult.Ok(Series(600, map.getValue(ref.id))) }
     }
 
-    private fun daily(vararg byTopic: Pair<String, List<DayTotal>>) {
-        val map = byTopic.toMap()
-        history.daily = { ref, _, _ -> HistoryResult.Ok(DailyTotals(map.getValue(ref.topic.removePrefix("zigbee2mqtt/")))) }
+    private fun daily(vararg byId: Pair<String, List<DayTotal>>) {
+        val map = byId.toMap()
+        history.daily = { ref, _, _ -> HistoryResult.Ok(DailyTotals(map.getValue(ref.id))) }
     }
 
     /** Solar with its meter, grid with its import and export meters: the house a derived total needs. */
@@ -58,8 +58,8 @@ class EnergyHistoryImplTest {
             HistoryResult.Ok(
                 Series(
                     600,
-                    when (ref.topic) {
-                        "zigbee2mqtt/solar" -> listOf(HistoryPoint(1, 3000.0, 2900.0, 3100.0), HistoryPoint(2, 2000.0, 1900.0, 2100.0), HistoryPoint(3, 0.0, 0.0, 0.0))
+                    when (ref.id) {
+                        "solar" -> listOf(HistoryPoint(1, 3000.0, 2900.0, 3100.0), HistoryPoint(2, 2000.0, 1900.0, 2100.0), HistoryPoint(3, 0.0, 0.0, 0.0))
                         else -> listOf(HistoryPoint(1, -500.0, -600.0, -400.0), HistoryPoint(3, 400.0, 300.0, 500.0))
                     },
                 ),
@@ -115,14 +115,15 @@ class EnergyHistoryImplTest {
         given(power("house", EnergyRole.HOUSE, "h"), power("solar", EnergyRole.SOLAR, "s"))
         series("house" to listOf(HistoryPoint(1, 700.0, 600.0, 800.0)))
         assertEquals(listOf(HistoryPoint(1, 700.0, 600.0, 800.0)), (impl.houseSeries(HistoryRange.H24) as HistoryResult.Ok).value.points)
-        assertEquals(listOf("series power 24h"), history.calls)
+        assertEquals(listOf("series house 24h"), history.calls)
     }
 
     @Test
     fun `no inputs or an unrecorded input makes the house series NotRecorded`() = runBlocking {
         given(power("plug", EnergyRole.CONSUMER, "p"))
         assertEquals(HistoryResult.NotRecorded, impl.houseSeries(HistoryRange.H24))
-        given(power("solar", EnergyRole.SOLAR, "s"), energyEntity("grid", EnergyRole.GRID).copy(deviceId = "g"))
+        // A grid entity without a unit cannot produce a HistoryRef, so the whole house is NotRecorded.
+        given(power("solar", EnergyRole.SOLAR, "s"), energyEntity("grid", EnergyRole.GRID, unit = null).copy(deviceId = "g"))
         assertEquals(HistoryResult.NotRecorded, impl.houseSeries(HistoryRange.H24))
     }
 
@@ -167,7 +168,7 @@ class EnergyHistoryImplTest {
         history.daily = { _, _, s -> scale = s.factor; HistoryResult.Ok(DailyTotals(listOf(DayTotal(1, 6.0)))) }
         assertEquals(listOf(DayTotal(1, 6.0)), (impl.houseDaily(7) as HistoryResult.Ok).value.days)
         assertEquals(0.001, scale)
-        assertEquals(listOf("daily energy 7 COUNTER"), history.calls)
+        assertEquals(listOf("daily house_energy 7 COUNTER"), history.calls)
     }
 
     @Test
@@ -190,7 +191,7 @@ class EnergyHistoryImplTest {
         given(*solarAndGrid)
         history.series = { _, _ -> HistoryResult.NotAllowed }
         assertEquals(HistoryResult.NotAllowed, impl.houseSeries(HistoryRange.H24))
-        history.daily = { ref, _, _ -> if (ref.topic.endsWith("grid_energy")) HistoryResult.Unavailable("down") else HistoryResult.Ok(DailyTotals(emptyList())) }
+        history.daily = { ref, _, _ -> if (ref.id.endsWith("grid_energy")) HistoryResult.Unavailable("down") else HistoryResult.Ok(DailyTotals(emptyList())) }
         assertEquals(HistoryResult.Unavailable("down"), impl.houseDaily(7))
     }
 

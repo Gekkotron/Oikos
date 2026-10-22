@@ -1,7 +1,7 @@
 package com.gekkotron.oikos.history
 
-/** Where an entity was recorded: the MQTT topic and the JSON key inside its payload. */
-data class HistoryRef(val topic: String, val key: String)
+/** The hub's entity id (its `unique_id`), as sent to the `/api/v1/history/...` routes under `entity=`. */
+data class HistoryRef(val id: String)
 
 /** A window of history; [ttlMillis] is how long a cached answer stays fresh. */
 enum class HistoryRange(val query: String, val ttlMillis: Long) {

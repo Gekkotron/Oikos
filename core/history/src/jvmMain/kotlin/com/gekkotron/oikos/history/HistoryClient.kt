@@ -30,7 +30,7 @@ interface HistoryClient {
     }
 }
 
-/** Over OikosHistory (spec §3.3); answers are kept in memory for their TTL (spec §4.2). */
+/** Over the hub's `/api/v1/history/...` routes; answers are kept in memory for their TTL (spec §4.2). */
 class HttpHistoryClient(
     private val baseUrl: suspend () -> String?,
     private val get: suspend (url: String) -> HttpGetResult,
@@ -51,7 +51,7 @@ class HttpHistoryClient(
 
     override suspend fun lastChanges(refs: List<HistoryRef>): HistoryResult<Map<HistoryRef, LastChange>> {
         // Sorted and de-duplicated: the same set of refs is the same URL, so the same cache entry.
-        val sorted = refs.distinct().sortedWith(compareBy({ it.topic }, { it.key }))
+        val sorted = refs.distinct().sortedBy { it.id }
         if (sorted.isEmpty()) return HistoryResult.Ok(emptyMap())
         val all = HashMap<HistoryRef, LastChange>()
         for (chunk in sorted.chunked(MAX_REFS)) {

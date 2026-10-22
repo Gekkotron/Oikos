@@ -116,12 +116,12 @@ class EnergyViewModelTest {
         val vm = EnergyViewModel(recordedSource, StandardTestDispatcher(testScheduler), history) { now }
         backgroundScope.launch { vm.state.collect {} }
         runCurrent()
-        assertEquals(listOf("today power POWER"), history.calls)
+        assertEquals(listOf("today solar POWER"), history.calls)
         advanceTimeBy(4.minutes)
         runCurrent()
         assertEquals(1, history.calls.size)
         advanceTimeBy(1.minutes)
         runCurrent()
-        assertEquals(listOf("today power POWER", "today power POWER"), history.calls)
+        assertEquals(listOf("today solar POWER", "today solar POWER"), history.calls)
     }
 }

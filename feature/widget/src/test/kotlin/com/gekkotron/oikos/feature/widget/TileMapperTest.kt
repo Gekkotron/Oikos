@@ -111,8 +111,8 @@ class TileMapperTest {
 
     @Test
     fun history_needs_both_enabled_and_a_ref() {
-        // NoBindings is not MqttBindings, so HistoryRefs finds no ref even when history is enabled.
-        val tile = TileMapper.map(entity("t", Kind.SENSOR, unit = "°C"), EntityState("t", StateValue.Numeric(1.0), lastUpdate = t0), null, historyEnabled = true, complete = true)!!
+        // A SWITCH is a non-charted kind, so HistoryRefs finds no ref even when history is enabled.
+        val tile = TileMapper.map(entity("sw", Kind.SWITCH), EntityState("sw", StateValue.OnOff(true), lastUpdate = t0), null, historyEnabled = true, complete = true)!!
         assertEquals(false, tile.historyAvailable)
     }
 

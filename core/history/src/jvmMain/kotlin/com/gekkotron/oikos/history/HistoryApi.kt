@@ -4,44 +4,39 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.net.URLEncoder
-import java.time.Duration
 import java.time.Instant
 
-/** The OikosHistory HTTP contract (history spec §3.3). */
+/** The hub's `/api/v1/history/...` HTTP contract (see `crates/oikos-api/src/history.rs`). */
 internal object HistoryApi {
     fun seriesUrl(base: String, ref: HistoryRef, range: HistoryRange) = url(base, "series", ref, "range" to range.query)
     fun dailyUrl(base: String, ref: HistoryRef, days: Int, kind: EnergyKind) = url(base, "daily", ref, "days" to "$days", "kind" to kind.query)
     fun todayUrl(base: String, ref: HistoryRef, kind: EnergyKind) = url(base, "today", ref, "kind" to kind.query)
 
-    /** Pairs repeated in order (last-change spec A.1). */
+    /** Repeated `entity=` in order; the hub answers one `items[i]` per `entity`. */
     fun lastChangeUrl(base: String, refs: List<HistoryRef>): String =
-        refs.joinToString("&", prefix = "${base.trimEnd('/')}/v1/last_change?") { "topic=${encode(it.topic)}&key=${encode(it.key)}" }
+        refs.joinToString("&", prefix = "${base.trimEnd('/')}/api/v1/history/last_change?") { "entity=${encode(it.id)}" }
 
     fun parseLastChange(text: String, refs: List<HistoryRef>): Map<HistoryRef, LastChange> {
         val o = (Json.parseToJsonElement(text) as? JsonObject ?: error("not an object"))
-        val window = Duration.ofSeconds(o.getValue("window").jsonPrimitive.longOrNull ?: error("bad window"))
         val items = o.getValue("items").jsonArray
         require(items.size == refs.size) { "expected ${refs.size} items, got ${items.size}" }
         return refs.zip(items).associate { (ref, item) ->
             val i = item as? JsonObject ?: error("bad item")
             val at = i["changed_at"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.longOrNull
-            ref to when {
-                at != null -> LastChange.At(Instant.ofEpochSecond(at))
-                i["recorded"]?.jsonPrimitive?.booleanOrNull == true -> LastChange.OlderThan(window)
-                else -> LastChange.NotRecorded
-            }
+            // The hub emits `{changed_at: <ts>, recorded: true}` or `{changed_at: null, recorded: false}`;
+            // the OlderThan branch OikosHistory used (recorded without a timestamp) is gone with the hub.
+            ref to if (at != null) LastChange.At(Instant.ofEpochSecond(at)) else LastChange.NotRecorded
         }
     }
 
     private fun url(base: String, path: String, ref: HistoryRef, vararg extra: Pair<String, String>): String =
-        (listOf("topic" to ref.topic, "key" to ref.key) + extra)
-            .joinToString("&", prefix = "${base.trimEnd('/')}/v1/$path?") { (k, v) -> "$k=${encode(v)}" }
+        (listOf("entity" to ref.id) + extra)
+            .joinToString("&", prefix = "${base.trimEnd('/')}/api/v1/history/$path?") { (k, v) -> "$k=${encode(v)}" }
 
     private fun encode(v: String) = URLEncoder.encode(v, Charsets.UTF_8).replace("+", "%20")
 

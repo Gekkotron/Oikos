@@ -39,7 +39,7 @@ class SettingsScreenTest {
     private var rooms = 0
     private var licences = 0
 
-    private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null, historyDefault = "http://192.168.1.91:8090")
+    private val direct = ConnectionSummary.Direct("192.168.1.91:1883", tls = true, ws = false, username = "oikos", prefix = "homeassistant", gatewayUrl = "https://gw.example", historyUrl = null, historyDefault = "http://192.168.1.91:8081")
 
     private fun show(state: SettingsUi = SettingsUi(connection = direct), route: Route? = Route.AUTO) = compose.setContent {
         OikosTheme(ThemeChoice.NIGHT_GLASS) {
@@ -201,7 +201,7 @@ class SettingsScreenTest {
         }
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("History service").performScrollTo()
-        compose.onNodeWithText("Automatic (http://192.168.1.91:8090)").performClick()
+        compose.onNodeWithText("Automatic (http://192.168.1.91:8081)").performClick()
         settle()
     }
 
@@ -237,7 +237,7 @@ class SettingsScreenTest {
         OikosTheme(ThemeChoice.NIGHT_GLASS) {
             var failed by remember { mutableStateOf(false) }
             HistoryUrlDialogContent(
-                "nope", failed, hint = "http://h:8090", onTextChange = {},
+                "nope", failed, hint = "http://h:8081", onTextChange = {},
                 onSave = { if (accept) onDismiss() else failed = true },
                 onCancel = {},
             )
@@ -258,7 +258,7 @@ class SettingsScreenTest {
     @Test
     fun `the dialog hints at the derived address`() {
         showContent(accept = true) {}
-        compose.onNodeWithText("http://h:8090").assertExists()
+        compose.onNodeWithText("http://h:8081").assertExists()
     }
 
     @Test
