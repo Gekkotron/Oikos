@@ -11,7 +11,7 @@ class PushTargetsTest {
     @Test
     fun `a direct profile registers on the default topic with its install id`() {
         val state = ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))
-        assertEquals(PushTarget.Ready("abc", "oikos-push/tokens/abc"), pushTargetFor(state, "abc"))
+        assertEquals(PushTarget.Ready("abc", "oikos/push/tokens/abc"), pushTargetFor(state, "abc"))
     }
 
     @Test

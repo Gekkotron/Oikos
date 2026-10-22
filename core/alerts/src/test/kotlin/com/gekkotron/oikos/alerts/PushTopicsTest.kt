@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class PushTopicsTest {
     @Test
     fun `the default template gets the install id`() {
-        assertEquals("oikos-push/tokens/abc-123", PushTopics.tokenTopic(null, "abc-123"))
+        assertEquals("oikos/push/tokens/abc-123", PushTopics.tokenTopic(null, "abc-123"))
     }
 
     @Test
@@ -16,7 +16,12 @@ class PushTopicsTest {
 
     @Test
     fun `the fixed topics`() {
-        assertEquals("oikos-push/responses", PushTopics.RESPONSES)
-        assertEquals("oikos-push/history", PushTopics.HISTORY)
+        assertEquals("oikos/push/responses", PushTopics.RESPONSES)
+        assertEquals("oikos/push/history", PushTopics.HISTORY)
+    }
+
+    @Test
+    fun `the legacy token topic carries the install id`() {
+        assertEquals("oikos-push/tokens/abc-123", PushTopics.legacyTokenTopic("abc-123"))
     }
 }

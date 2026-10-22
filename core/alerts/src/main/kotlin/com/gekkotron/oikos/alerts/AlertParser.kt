@@ -36,7 +36,7 @@ object AlertParser {
         )
     }
 
-    /** One entry of `oikos-push/history`: the same keys with typed values. [Alert.receivedAt] is its `sent_at`. */
+    /** One entry of `oikos/push/history`: the same keys with typed values. [Alert.receivedAt] is its `sent_at`. */
     fun fromHistory(obj: JsonObject, now: Instant = Instant.now()): Alert? {
         val data = obj.mapNotNull { (key, value) ->
             when (value) {

@@ -50,8 +50,8 @@ class SetUpAgainCleanupTest {
     private val now = Instant.parse("2026-10-07T12:00:00Z")
 
     private val targets = object : PushTargets {
-        override suspend fun current(): PushTarget = PushTarget.Ready("install-1", "oikos-push/tokens/install-1")
-        override val changes: Flow<PushTarget> get() = flowOf(PushTarget.Ready("install-1", "oikos-push/tokens/install-1"))
+        override suspend fun current(): PushTarget = PushTarget.Ready("install-1", "oikos/push/tokens/install-1")
+        override val changes: Flow<PushTarget> get() = flowOf(PushTarget.Ready("install-1", "oikos/push/tokens/install-1"))
     }
     private val tokens = object : FcmTokens {
         override suspend fun token() = "token-1"
@@ -106,7 +106,7 @@ class SetUpAgainCleanupTest {
         val sent = mutableListOf<Triple<String, String, Boolean>>()
         cleanup({ topic, payload, retain -> sent += Triple(topic, payload.decodeToString(), retain); Result.success(Unit) }, imageCache, videos).run()
 
-        assertEquals(listOf(Triple("oikos-push/tokens/install-1", "", true)), sent)
+        assertEquals(listOf(Triple("oikos/push/tokens/install-1", "", true)), sent)
         assertTrue(repo.all(null).first().isEmpty())
         assertNull(imageCache.open("http://h/s.jpg"))
         assertEquals(0, videoDir.listFiles()!!.size)

@@ -143,7 +143,7 @@ class HistorySyncTest {
         val scope = CoroutineScope(Dispatchers.Unconfined)
         sync.start(scope)
         messages.emit(MqttMessage("homeassistant/switch/x/config", payload(entry("wrong")).encodeToByteArray(), retained = true))
-        messages.emit(MqttMessage("oikos-push/history", payload(entry("right")).encodeToByteArray(), retained = true))
+        messages.emit(MqttMessage("oikos/push/history", payload(entry("right")).encodeToByteArray(), retained = true))
         // Room writes on its own executor: wait for the row instead of reading it the instant emit returns.
         assertNotNull(withTimeout(5_000) { repo.byId("right").first { it != null } })
         assertNull(repo.byId("wrong").first())
@@ -175,8 +175,8 @@ class HistorySyncTest {
         val failing = HistorySync(messages, flaky) { logged += it }
         val scope = CoroutineScope(Dispatchers.Unconfined)
         failing.start(scope)
-        messages.emit(MqttMessage("oikos-push/history", payload(entry("boom")).encodeToByteArray(), retained = true))
-        messages.emit(MqttMessage("oikos-push/history", payload(entry("fine")).encodeToByteArray(), retained = true))
+        messages.emit(MqttMessage("oikos/push/history", payload(entry("boom")).encodeToByteArray(), retained = true))
+        messages.emit(MqttMessage("oikos/push/history", payload(entry("fine")).encodeToByteArray(), retained = true))
         assertNotNull(withTimeout(5_000) { repo.byId("fine").first { it != null } })
         assertTrue(logged.any { it.contains("IllegalStateException") })
         assertTrue(logged.none { it.contains("disk") })

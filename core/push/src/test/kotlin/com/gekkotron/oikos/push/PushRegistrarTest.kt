@@ -39,15 +39,55 @@ class PushRegistrarTest {
     fun `register publishes the retained token payload to the substituted topic and remembers it`(): Unit = runTest {
         val store = newStore()
         assertEquals(PushRegistrar.RegisterOutcome.Done, registrar(store).register())
-        val sent = publisher.sent.single()
-        assertEquals("oikos-push/tokens/install-1", sent.topic)
+        val sent = publisher.sent.first()
+        assertEquals("oikos/push/tokens/install-1", sent.topic)
         assertTrue(sent.retain)
         val json = Json.parseToJsonElement(sent.payload).jsonObject
         assertEquals("token-1", json["token"]!!.jsonPrimitive.content)
         assertEquals("Pixel 6a", json["device_name"]!!.jsonPrimitive.content)
         assertEquals("fr", json["lang"]!!.jsonPrimitive.content)
         assertEquals(1_790_000_000L, json["updated_at"]!!.jsonPrimitive.content.toLong())
-        assertEquals(LastRegistration("token-1", "oikos-push/tokens/install-1", now), store.last())
+        assertEquals(LastRegistration("token-1", "oikos/push/tokens/install-1", now, legacyCleared = true), store.last())
+    }
+
+    @Test
+    fun `the first successful register also clears the legacy oikos-push token topic, exactly once`(): Unit = runTest {
+        val store = newStore()
+        registrar(store).register()
+        val legacy = publisher.sent[1]
+        assertEquals("oikos-push/tokens/install-1", legacy.topic)
+        assertEquals("", legacy.payload)
+        assertTrue(legacy.retain)
+        assertTrue(store.legacyCleared())
+
+        // A second register does not resend to the legacy topic.
+        registrar(store).register()
+        assertEquals(3, publisher.sent.size)
+        assertEquals("oikos/push/tokens/install-1", publisher.sent[2].topic)
+    }
+
+    @Test
+    fun `a failed legacy clear does not fail the registration and is retried next time`(): Unit = runTest {
+        val store = newStore()
+        var fail = true
+        val pub = object : TopicPublisher {
+            val sent = mutableListOf<Triple<String, String, Boolean>>()
+            override suspend fun publish(topic: String, payload: ByteArray, retain: Boolean): Result<Unit> {
+                sent += Triple(topic, payload.decodeToString(), retain)
+                return if (topic.startsWith("oikos-push/") && fail) Result.failure(IOException("legacy down")) else Result.success(Unit)
+            }
+        }
+        assertEquals(PushRegistrar.RegisterOutcome.Done, registrar(store, pub).register())
+        assertEquals(listOf("oikos/push/tokens/install-1", "oikos-push/tokens/install-1"), pub.sent.map { it.first })
+        assertEquals(false, store.legacyCleared())
+
+        fail = false
+        assertEquals(PushRegistrar.RegisterOutcome.Done, registrar(store, pub).register())
+        assertEquals(
+            listOf("oikos/push/tokens/install-1", "oikos-push/tokens/install-1", "oikos/push/tokens/install-1", "oikos-push/tokens/install-1"),
+            pub.sent.map { it.first },
+        )
+        assertTrue(store.legacyCleared())
     }
 
     @Test
@@ -104,13 +144,13 @@ class PushRegistrarTest {
     fun `the topic template comes from the profile`(): Unit = runTest {
         targets.target = PushTarget.Ready("install-2", "custom/tokens/install-2")
         registrar().register()
-        assertEquals("custom/tokens/install-2", publisher.sent.single().topic)
+        assertEquals("custom/tokens/install-2", publisher.sent.first().topic)
     }
 
     @Test
     fun `a connect republishes only when the token or the topic differs from the last registration`(): Unit = runTest {
         val store = newStore()
-        store.save("token-1", "oikos-push/tokens/install-1", now)
+        store.save("token-1", "oikos/push/tokens/install-1", now)
         val r = registrar(store)
         r.onLinkConnected()
         assertEquals(0, queue.enqueued)
@@ -137,7 +177,7 @@ class PushRegistrarTest {
         r.onLinkConnected()
         targets.target = PushTarget.Demo
         r.onLinkConnected()
-        targets.target = PushTarget.Ready("install-1", "oikos-push/tokens/install-1")
+        targets.target = PushTarget.Ready("install-1", "oikos/push/tokens/install-1")
         tokens.failure = FirebaseUnavailable()
         r.onLinkConnected()
         assertEquals(0, queue.enqueued)
@@ -159,12 +199,12 @@ class PushRegistrarTest {
     @Test
     fun `unregister cancels pending work before publishing, then deletes the token and forgets the registration`(): Unit = runTest {
         val store = newStore()
-        store.save("token-1", "oikos-push/tokens/install-1", now)
+        store.save("token-1", "oikos/push/tokens/install-1", now)
         val pub = RecordingPublisher(onPublish = { events += "publish" })
         registrar(store, pub).unregister()
         assertEquals(listOf("cancel", "publish"), events)
         val sent = pub.sent.single()
-        assertEquals("oikos-push/tokens/install-1", sent.topic)
+        assertEquals("oikos/push/tokens/install-1", sent.topic)
         assertEquals("", sent.payload)
         assertTrue(sent.retain)
         assertEquals(1, tokens.deleted)
@@ -174,7 +214,7 @@ class PushRegistrarTest {
     @Test
     fun `unregister gives up on a publish that hangs after 5 seconds but still finishes the cleanup`(): Unit = runTest {
         val store = newStore()
-        store.save("token-1", "oikos-push/tokens/install-1", now)
+        store.save("token-1", "oikos/push/tokens/install-1", now)
         val hanging = RecordingPublisher(onPublish = { delay(60_000) })
         registrar(store, hanging).unregister()
         assertEquals(5_000, testScheduler.currentTime)
@@ -194,7 +234,7 @@ class PushRegistrarTest {
     @Test
     fun `unregister gives up on a token delete that never returns and still forgets the registration`(): Unit = runTest {
         val store = newStore()
-        store.save("token-1", "oikos-push/tokens/install-1", now)
+        store.save("token-1", "oikos/push/tokens/install-1", now)
         val stuck = object : FcmTokens {
             override suspend fun token() = "token-1"
             override suspend fun delete() = awaitCancellation()

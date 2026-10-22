@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 
-class FakeTargets(var target: PushTarget = PushTarget.Ready("install-1", "oikos-push/tokens/install-1")) : PushTargets {
+class FakeTargets(var target: PushTarget = PushTarget.Ready("install-1", "oikos/push/tokens/install-1")) : PushTargets {
     override suspend fun current(): PushTarget = target
     override val changes: Flow<PushTarget> get() = flowOf(target)
 }

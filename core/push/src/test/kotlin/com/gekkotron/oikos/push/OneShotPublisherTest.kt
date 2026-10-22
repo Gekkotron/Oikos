@@ -38,13 +38,13 @@ class OneShotPublisherTest {
         gatewayApi = { gatewayApi },
     )
 
-    private suspend fun OneShotPublisher.send(retain: Boolean = true) = publish("oikos-push/tokens/abc", payload, retain)
+    private suspend fun OneShotPublisher.send(retain: Boolean = true) = publish("oikos/push/tokens/abc", payload, retain)
 
     @Test
     fun `a connected live transport is used first and nothing else is touched`(): Unit = runTest {
         live.setLink(LinkState.Connected(TransportMode.DIRECT))
         assertTrue(publisher(routed(Route.AUTO)).send().isSuccess)
-        assertEquals(listOf("oikos-push/tokens/abc" to """{"token":"t"}"""), live.publishedStrings())
+        assertEquals(listOf("oikos/push/tokens/abc" to """{"token":"t"}"""), live.publishedStrings())
         assertEquals(true, live.published.single().retained)
         assertEquals(0, probes)
         assertTrue(directs.isEmpty() && gatewayApi.published.isEmpty())
@@ -64,7 +64,7 @@ class OneShotPublisherTest {
         assertTrue(publisher(routed(Route.AUTO)).send(retain = true).isSuccess)
         val transport = directs.single()
         assertTrue(transport.started)
-        assertTrue(transport.fake.published.single().let { it.topic == "oikos-push/tokens/abc" })
+        assertTrue(transport.fake.published.single().let { it.topic == "oikos/push/tokens/abc" })
         assertTrue(transport.closed)
         assertTrue(gatewayApi.published.isEmpty())
     }
@@ -75,7 +75,7 @@ class OneShotPublisherTest {
         assertTrue(publisher(routed(Route.AUTO)).send().isSuccess)
         assertTrue(directs.isEmpty())
         val sent = gatewayApi.published.single()
-        assertEquals("oikos-push/tokens/abc", sent.topic)
+        assertEquals("oikos/push/tokens/abc", sent.topic)
         assertEquals(true, sent.retained)
     }
 

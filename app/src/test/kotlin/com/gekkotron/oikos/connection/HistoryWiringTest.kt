@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 class HistoryWiringTest {
     @Test
     fun `a direct profile subscribes to the history topic`() {
-        assertEquals(setOf("oikos-push/history"), historyFilters(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))))
+        assertEquals(setOf("oikos/push/history"), historyFilters(ProfileState.Ready(ConnectionProfile.Direct(LocalBroker("192.168.1.91")))))
     }
 
     @Test

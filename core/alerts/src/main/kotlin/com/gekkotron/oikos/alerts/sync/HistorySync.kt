@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Catches the history up from the retained `oikos-push/history` message; it never posts a notification (spec §6.2). */
+/** Catches the history up from the retained `oikos/push/history` message; it never posts a notification (spec §6.2). */
 class HistorySync(
     private val messages: Flow<MqttMessage>,
     private val repository: AlertRepository,

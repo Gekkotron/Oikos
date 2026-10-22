@@ -12,22 +12,22 @@ class SharedSubscriptionsTest {
     @Test
     fun `the source's filters and the extra ones are subscribed together`(): Unit = runTest {
         shared.setSubscriptions(setOf("homeassistant/#"))
-        shared.setExtra(setOf("oikos-push/history"))
-        assertEquals(setOf("homeassistant/#", "oikos-push/history"), fake.subscriptions)
+        shared.setExtra(setOf("oikos/push/history"))
+        assertEquals(setOf("homeassistant/#", "oikos/push/history"), fake.subscriptions)
     }
 
     @Test
     fun `the source replacing its filters keeps the extra ones`(): Unit = runTest {
-        shared.setExtra(setOf("oikos-push/history"))
+        shared.setExtra(setOf("oikos/push/history"))
         shared.setSubscriptions(setOf("homeassistant/#", "z2m/#"))
         shared.setSubscriptions(emptySet())
-        assertEquals(setOf("oikos-push/history"), fake.subscriptions)
+        assertEquals(setOf("oikos/push/history"), fake.subscriptions)
     }
 
     @Test
     fun `clearing the extra ones leaves the source's`(): Unit = runTest {
         shared.setSubscriptions(setOf("homeassistant/#"))
-        shared.setExtra(setOf("oikos-push/history"))
+        shared.setExtra(setOf("oikos/push/history"))
         shared.setExtra(emptySet())
         assertEquals(setOf("homeassistant/#"), fake.subscriptions)
     }

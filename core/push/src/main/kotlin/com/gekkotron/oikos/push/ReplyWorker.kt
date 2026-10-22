@@ -13,7 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-/** Publishes `{"id","action","install_id","ts"}` to `oikos-push/responses`, QoS 1, not retained (spec §5.5). */
+/** Publishes `{"id","action","install_id","ts"}` to `oikos/push/responses`, QoS 1, not retained (spec §5.5). */
 class ReplyWorker(
     context: Context,
     params: WorkerParameters,

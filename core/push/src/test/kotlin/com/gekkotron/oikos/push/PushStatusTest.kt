@@ -18,8 +18,8 @@ class PushStatusTest {
     val tmp = TemporaryFolder()
 
     private val at = Instant.ofEpochSecond(1_790_000_000)
-    private val ready = PushTarget.Ready("install-1", "oikos-push/tokens/install-1")
-    private val registered = LastRegistration("t", "oikos-push/tokens/install-1", at)
+    private val ready = PushTarget.Ready("install-1", "oikos/push/tokens/install-1")
+    private val registered = LastRegistration("t", "oikos/push/tokens/install-1", at)
 
     private fun status(
         target: PushTarget = ready,

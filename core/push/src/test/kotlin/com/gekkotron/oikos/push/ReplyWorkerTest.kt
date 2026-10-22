@@ -48,7 +48,7 @@ class ReplyWorkerTest {
     fun `it publishes the answer to the responses topic, not retained`() {
         assertEquals(Result.success(), run())
         val sent = publisher.sent.single()
-        assertEquals("oikos-push/responses", sent.topic)
+        assertEquals("oikos/push/responses", sent.topic)
         assertFalse(sent.retain)
         val json = Json.parseToJsonElement(sent.payload).jsonObject
         assertEquals("frigate-1", json["id"]!!.jsonPrimitive.content)
