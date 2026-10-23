@@ -191,9 +191,10 @@ class HomeUiBuilderTest {
     }
 
     @Test
-    fun `cards carry their area id and override, and rooms exclude Unassigned`() {
+    fun `cards carry their area id and override, and rooms exclude Unassigned and empty rooms`() {
         val s = build(
             testEntity("lamp", Kind.LIGHT, area = "living", ui = UiOverride(favorite = true)),
+            testEntity("coffee", Kind.SWITCH, area = "kitchen"),
             testEntity("x", Kind.SWITCH),
             areaList = areas + Area(UNASSIGNED_AREA, UNASSIGNED_AREA),
         )
@@ -201,7 +202,8 @@ class HomeUiBuilderTest {
         assertEquals("living", lamp.areaId)
         assertEquals(UiOverride(favorite = true), lamp.ui)
         assertEquals(UNASSIGNED_AREA, s.card("x")!!.areaId)
-        assertEquals(areas, s.rooms)
+        // "garage" has no entity so the picker drops it; "living" and "kitchen" stay.
+        assertEquals(listOf("living", "kitchen"), s.rooms.map { it.id })
     }
 
     @Test

@@ -1,7 +1,9 @@
 package com.gekkotron.oikos.feature.settings.rooms
 
 import com.gekkotron.oikos.feature.settings.FakeEntitySource
+import com.gekkotron.oikos.feature.settings.testEntity
 import com.gekkotron.oikos.model.Area
+import com.gekkotron.oikos.model.Kind
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +23,11 @@ class RoomOrderViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val source = FakeEntitySource().apply {
         areas.value = listOf(Area("bath", "Bath"), Area("living", "Living"), Area("office", "Office"), Area(UNASSIGNED_AREA, UNASSIGNED_AREA))
+        entities.value = listOf(
+            testEntity("tub", Kind.SWITCH, area = "bath"),
+            testEntity("sofa", Kind.LIGHT, area = "living"),
+            testEntity("desk", Kind.LIGHT, area = "office"),
+        ).associateBy { it.uniqueId }
     }
 
     @Before
@@ -58,6 +65,14 @@ class RoomOrderViewModelTest {
         assertEquals(listOf("bath", "office", "living"), ids(vm))
         vm.move("bath", -1)
         assertEquals(1, source.published.size)
+    }
+
+    @Test
+    fun `rooms with no entity are dropped`() = runTest(dispatcher) {
+        source.entities.value = mapOf("sofa" to testEntity("sofa", Kind.LIGHT, area = "living"))
+        val vm = RoomOrderViewModel(source)
+        backgroundScope.launch { vm.state.collect {} }
+        assertEquals(listOf("living"), ids(vm))
     }
 
     @Test

@@ -27,10 +27,11 @@ object RoomsUiBuilder {
                 )
             }
             .sortedWith(compareBy<RoomRowUi>({ it.areaId != UNASSIGNED_AREA }, { it.name.lowercase(locale) }, { it.id }))
+        val occupied = entities.values.mapTo(mutableSetOf()) { it.area }
         return RoomsUiState(
             loading = entities.isEmpty(),
             rows = rows,
-            rooms = areas.filter { it.id != UNASSIGNED_AREA },
+            rooms = areas.filter { it.id != UNASSIGNED_AREA && it.id in occupied },
             assigned = rows.count { it.areaId != UNASSIGNED_AREA },
         )
     }

@@ -3,6 +3,7 @@ package com.gekkotron.oikos.feature.settings.rooms
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gekkotron.oikos.model.Area
+import com.gekkotron.oikos.model.Entity
 import com.gekkotron.oikos.model.UNASSIGNED_AREA
 import com.gekkotron.oikos.source.EntitySource
 import com.gekkotron.oikos.transport.PublishFailed
@@ -11,7 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,9 +26,8 @@ sealed interface RoomOrderEvent {
 
 @HiltViewModel
 class RoomOrderViewModel @Inject constructor(private val source: EntitySource) : ViewModel() {
-    val state: StateFlow<RoomOrderUi> = source.areas
-        .map(::toUi)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), toUi(source.areas.value))
+    val state: StateFlow<RoomOrderUi> = combine(source.areas, source.entities, ::toUi)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), toUi(source.areas.value, source.entities.value))
 
     private val _events = Channel<RoomOrderEvent>(Channel.BUFFERED)
     val events: Flow<RoomOrderEvent> = _events.receiveAsFlow()
@@ -54,5 +54,8 @@ class RoomOrderViewModel @Inject constructor(private val source: EntitySource) :
         commit(ids)
     }
 
-    private fun toUi(areas: List<Area>) = RoomOrderUi(areas.filter { it.id != UNASSIGNED_AREA }, areas.any { it.id == UNASSIGNED_AREA })
+    private fun toUi(areas: List<Area>, entities: Map<String, Entity>): RoomOrderUi {
+        val occupied = entities.values.mapTo(mutableSetOf()) { it.area }
+        return RoomOrderUi(areas.filter { it.id != UNASSIGNED_AREA && it.id in occupied }, areas.any { it.id == UNASSIGNED_AREA })
+    }
 }

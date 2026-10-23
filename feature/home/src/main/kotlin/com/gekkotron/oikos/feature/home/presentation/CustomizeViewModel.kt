@@ -39,7 +39,10 @@ class CustomizeViewModel @Inject constructor(
         when {
             entities.isEmpty() -> CustomizeLoad.Loading
             else -> HomeUiBuilder.cardFor(entities, states, areas, id, Locale.getDefault(), labels, history.available.value)
-                ?.let { CustomizeLoad.Ready(it, areas.filter { a -> a.id != UNASSIGNED_AREA }) }
+                ?.let {
+                    val occupied = entities.values.mapTo(mutableSetOf()) { e -> e.area }
+                    CustomizeLoad.Ready(it, areas.filter { a -> a.id != UNASSIGNED_AREA && a.id in occupied })
+                }
                 ?: CustomizeLoad.Gone
         }
     }

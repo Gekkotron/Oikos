@@ -33,7 +33,8 @@ class RoomsUiBuilderTest {
         assertEquals("kitchen", s.rows.last().areaId)
         assertEquals("Kitchen", s.rows.last().areaName)
         assertEquals(1, s.assigned)
-        assertEquals(listOf("kitchen", "living"), s.rooms.map { it.id })
+        // "living" has no entity, so the picker drops it.
+        assertEquals(listOf("kitchen"), s.rooms.map { it.id })
     }
 
     @Test

@@ -49,6 +49,7 @@ object HomeUiBuilder {
         val grid = visible.filter { it.uniqueId != hero?.uniqueId }
         val groupable = RoomGroups.groupableIds(grid)
 
+        val occupied = entities.values.mapTo(mutableSetOf()) { it.area }
         val used = grid.mapTo(mutableSetOf()) { it.area }
         val groupFavorites: Map<String, Set<String>> = areas.filter { it.groupFavorites.isNotEmpty() }
             .associate { it.id to it.groupFavorites }
@@ -103,7 +104,7 @@ object HomeUiBuilder {
             chips = chips,
             selected = effective,
             cards = cards,
-            rooms = areas.filter { it.id != UNASSIGNED_AREA },
+            rooms = areas.filter { it.id != UNASSIGNED_AREA && it.id in occupied },
             hiddenCount = hidden.size,
             query = query,
         )
