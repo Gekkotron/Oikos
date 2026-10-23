@@ -133,6 +133,26 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `the 1 y range fetches a year of daily bars for a kWh meter`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("plug_energy"))
+        backgroundScope.launch { vm.state.collect {} }
+        vm.selectRange(HistoryRange.Y1)
+        vm.state.first { it.content is ChartContent.Bars }
+        assertEquals("daily plug_energy 365 COUNTER", history.calls.last())
+    }
+
+    @Test
+    fun `the 1 y range fetches a year-long series for a plain sensor`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.bind(HistoryTarget.Entity("thermo"))
+        backgroundScope.launch { vm.state.collect {} }
+        vm.selectRange(HistoryRange.Y1)
+        vm.state.first { it.range == HistoryRange.Y1 && it.content is ChartContent.Line }
+        assertEquals("series thermo 1y", history.calls.last())
+    }
+
+    @Test
     fun `a kWh meter goes straight to daily bars on 7 d and has no toggle`() = runTest(dispatcher) {
         val vm = vm()
         vm.bind(HistoryTarget.Entity("plug_energy"))

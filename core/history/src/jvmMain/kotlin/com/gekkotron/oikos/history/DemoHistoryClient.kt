@@ -20,6 +20,7 @@ class DemoHistoryClient(private val clock: () -> Long = System::currentTimeMilli
             HistoryRange.H24 -> 86_400L
             HistoryRange.D7 -> 7 * 86_400L
             HistoryRange.D30 -> 30 * 86_400L
+            HistoryRange.Y1 -> 365 * 86_400L
         }
         val step = window / POINTS
         val end = clock() / 1000 / step * step

@@ -99,7 +99,11 @@ class HistoryViewModel @Inject constructor(
     fun retry() = selection.update { it.copy(attempt = it.attempt + 1) }
 
     private suspend fun load(s: Selection): ChartContent {
-        val days = if (s.range == HistoryRange.D7) 7 else 30
+        val days = when (s.range) {
+            HistoryRange.D7 -> 7
+            HistoryRange.Y1 -> 365
+            else -> 30
+        }
         val daily = s.mode == ChartMode.DAILY && s.range != HistoryRange.H24
         return when (val target = s.target) {
             null -> ChartContent.Loading

@@ -4,6 +4,7 @@
     <string name="history_range_24h">24 h</string>
     <string name="history_range_7d">7 j</string>
     <string name="history_range_30d">30 j</string>
+    <string name="history_range_1y">1 an</string>
     <string name="history_mode_power">Puissance</string>
     <string name="history_mode_daily">kWh par jour</string>
     <string name="history_min">Min</string>
@@ -21,6 +22,7 @@
     <string name="history_cd_range_24h">dernières 24 heures</string>
     <string name="history_cd_range_7d">7 derniers jours</string>
     <string name="history_cd_range_30d">30 derniers jours</string>
+    <string name="history_cd_range_1y">dernière année</string>
     <string name="history_binary_on">Marche</string>
     <string name="history_binary_off">Arrêt</string>
     <string name="history_binary_open">Ouvert</string>

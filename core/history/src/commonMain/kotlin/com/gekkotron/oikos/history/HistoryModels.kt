@@ -8,6 +8,7 @@ enum class HistoryRange(val query: String, val ttlMillis: Long) {
     H24("24h", 60_000),
     D7("7d", 600_000),
     D30("30d", 600_000),
+    Y1("1y", 600_000),
 }
 
 enum class EnergyKind(val query: String) {

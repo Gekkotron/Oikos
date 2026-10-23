@@ -263,20 +263,23 @@ private fun rangeLabel(range: HistoryRange) = when (range) {
     HistoryRange.H24 -> R.string.history_range_24h
     HistoryRange.D7 -> R.string.history_range_7d
     HistoryRange.D30 -> R.string.history_range_30d
+    HistoryRange.Y1 -> R.string.history_range_1y
 }
 
 private fun rangeDescription(range: HistoryRange) = when (range) {
     HistoryRange.H24 -> R.string.history_cd_range_24h
     HistoryRange.D7 -> R.string.history_cd_range_7d
     HistoryRange.D30 -> R.string.history_cd_range_30d
+    HistoryRange.Y1 -> R.string.history_cd_range_1y
 }
 
-/** 24 h → `HH:mm`; 7 d → `EEE HH:mm`; 30 d and days → `d MMM`. */
+/** 24 h → `HH:mm`; 7 d → `EEE HH:mm`; 30 d and days → `d MMM`; 1 y → `MMM yy`. */
 private fun timeFormatter(range: HistoryRange, zone: ZoneId, locale: Locale): (Long) -> String {
     val pattern = when (range) {
         HistoryRange.H24 -> "HH:mm"
         HistoryRange.D7 -> "EEE HH:mm"
         HistoryRange.D30 -> "d MMM"
+        HistoryRange.Y1 -> "MMM yy"
     }
     val formatter = DateTimeFormatter.ofPattern(pattern, locale).withZone(zone)
     return { seconds -> formatter.format(Instant.ofEpochSecond(seconds)) }
